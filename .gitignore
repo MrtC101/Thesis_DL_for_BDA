@@ -1,0 +1,10 @@
+.vscode/
+envs/
+data/
+src/baseline_model
+.my_modelsvenv/
+__pycache__
+__pycache__/
+*/__pycache__/
+*/*/__pycache__/
+src/maskrcnn
