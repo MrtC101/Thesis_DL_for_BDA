@@ -1,5 +1,6 @@
 .vscode/
 envs/
+venv/
 data/
 src/baseline_model
 .my_modelsvenv/

@@ -1,7 +1,7 @@
 import pandas as pd
 import json
 import os
-from progress import print_progress
+from .progress import print_progress
 
 
 class DisasterZoneFolder:
@@ -28,17 +28,17 @@ class DisasterZoneFolder:
     def get_pre(self):
         return f"{self.zone_id}_pre.png"
 
-    def get_post(self):
-        return f"{self.zone_id}_post.png"
+    def get_mask(self):
+        return f"{self.zone_id}_mask.png"
+
+    def get_instance_mask(self):
+        return f"{self.zone_id}_instance_mask.png"
 
     def get_pre_json(self):
         return f"{self.zone_id}_pre.json"
 
-    def get_post_json(self):
-        return f"{self.zone_id}_post.json"
-
-    def get_instance_mask(self):
-        return f"{self.zone_id}_instance_mask.png"
+    def get_post(self):
+        return f"{self.zone_id}_post.png"
 
     def get_class_mask(self):
         return f"{self.zone_id}_class_mask.png"
@@ -46,26 +46,28 @@ class DisasterZoneFolder:
     def get_bbox(self):
         return f"{self.zone_id}_bounding_boxes.csv"
 
+    def get_post_json(self):
+        return f"{self.zone_id}_post.json"
+
 
 def load_processed_data(processed_path: os.PathLike,
                         augmented_path: os.PathLike | None):
-    """ 
-        Method data returns a list of folders from 
+    """
+        Method data returns a list of folders from
         processed data folder and augmented data folder if exists.
     """
     processed_list = []
-    processed_list.append()
     for i, id in enumerate(os.listdir(processed_path)):
         folder = (id, DisasterZoneFolder(processed_path, id))
         processed_list.append(folder)
         print_progress("Processed folders read:", i,
-                    len(os.listdir(processed_path)))
+                       len(os.listdir(processed_path)))
     if (os.path.exists(augmented_path)):
-       for i, id in enumerate(os.listdir(augmented_path)):
-            folder = (id, DisasterZoneFolder(processed_path, id))
+        for i, id in enumerate(os.listdir(augmented_path)):
+            folder = (id, DisasterZoneFolder(augmented_path, id))
             processed_list.append(folder)
             print_progress("Augmented folders read:", i,
-                           len(os.listdir(processed_path)))
+                           len(os.listdir(augmented_path)))
     return dict(processed_list)
 
 

@@ -2,7 +2,7 @@ import os
 import shutil
 import typing
 from os.path import join
-from progress import print_progress
+from .progress import print_progress
 
 
 class DatasetFileNomenclature:
@@ -95,40 +95,52 @@ def load_raw_data(raw_path) -> dict[DisasterZone]:
     return zone_dict
 
 
-def organize_dataset(zone_dict: dict[DisasterZone], raw_path: os.path,
-                     proc_path: os.path):
+def organize_dataset(raw_path: os.path, proc_path: os.path):
     """
         Renames and moves each file to its corresponding processed
         data folder.
     """
+    
+    if (not os.path.exists(proc_path)):
+        os.mkdir(proc_path)
+
+    zone_dict = load_raw_data(raw_path)
     zone: DisasterZone
     for i, zone in enumerate(zone_dict.values()):
         zone_id = zone.get_disaster_zone_id()
         zone_path = join(proc_path, zone_id)
         # move pre image
-        path = join(raw_path, "/images",
+        os.makedirs(zone_path)
+
+        path = join(raw_path, "images",
                     zone.get_pre().get_image_file_name())
-        shutil.copy(path, join(zone_path, f"{zone_id}_pre.png"))
+        shutil.move(path, join(zone_path, f"{zone_id}_pre.png"))
 
         # move post image
-        path = join(raw_path, "/images",
+        path = join(raw_path, "images",
                     zone.get_post().get_image_file_name())
-        shutil.copy(path, join(zone_path, f"/{zone_id}_post.png"))
+        shutil.move(path, join(zone_path, f"{zone_id}_post.png"))
 
         # move pre labels
-        path = join(raw_path, "/labels",
+        path = join(raw_path, "labels",
                     zone.get_pre().get_json_file_name())
-        shutil.copy(path, join(zone_path, f"{zone_id}_pre.json"))
+        shutil.move(path, join(zone_path, f"{zone_id}_pre.json"))
 
         # move post labels
-        path = join(raw_path, "/labels",
+        path = join(raw_path, "labels",
                     zone.get_post().get_json_file_name())
-        shutil.copy(path, join(zone_path, f"/{zone_id}_post.json"))
+        shutil.move(path, join(zone_path, f"{zone_id}_post.json"))
 
         # move post target
-        path = join(raw_path, "/targets",
+        path = join(raw_path, "targets",
+                    zone.get_pre().get_target_file_name())
+        shutil.move(path, join(zone_path, f"{zone_id}_mask.png"))
+
+        # move post target
+        path = join(raw_path, "targets",
                     zone.get_post().get_target_file_name())
-        shutil.copy(path, join(zone_path, f"{zone_id}_class_mask.png"))
+        shutil.move(path, join(zone_path, f"{zone_id}_class_mask.png"))
 
         print_progress("Zone\'s data folder created:", i,
                        len(zone_dict.values()))
+    shutil.rmtree(raw_path)
