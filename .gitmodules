@@ -1,0 +1,3 @@
+[submodule "models/mrcnn"]
+	path = models/mrcnn
+	url = git@github.com:z-mahmud22/Mask-RCNN_TF2.14.0.git
