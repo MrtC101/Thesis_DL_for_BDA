@@ -1,7 +1,8 @@
 .vscode/
+models/
 envs/
 venv/
-data/
+./data/
 src/baseline_model
 .my_modelsvenv/
 __pycache__
