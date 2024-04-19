@@ -1,8 +1,11 @@
-Damage Building Assessment
+![](reports/UncuyoLogo.png)
+
+Deep Learning applied on Building Damage Assessment for satellite images after natural disasters
 ==============================
 
-Project Organization
-------------
+This is a thesis project for a degree in computer science from "Universidad Nacional de Cuyo facultad de ingeniería" related to **Deep Learning** applied on **Building Damage Assessment** for VHR satellite images taken after a natural disaster from the dataset xBD from the competition xView2. [Preview](http://mrtc101.github.io/thesis_dl_for_bda)
+
+## Project Organization
 
     ├── README.md          <- The top-level README for developers using this project.
     ├── data
@@ -38,7 +41,33 @@ Project Organization
     │
     └── tox.ini            <- tox file with settings for running tox; see tox.readthedocs.io
 
-
---------
-
 <p><small>Project based on the <a target="_blank" href="https://drivendata.github.io/cookiecutter-data-science/">cookiecutter data science project template</a>. #cookiecutterdatascience</small></p>
+
+## Project
+
+This project consists on a comparison of three segmentation architectures for instance segmentation on buildings form satellite images.
+
+### Frameworks used
+- keras
+- Tensowrflow
+- Pandas
+- Numpy
+- cv2
+
+### Table of contents
+
+ -
+ -
+ - 
+ - 
+
+## Installation
+
+## Usage
+
+## Author
+
+## Acknowledgment
+- 
+- 
+- 
