@@ -1,3 +1,6 @@
 [submodule "models/mrcnn"]
 	path = models/mrcnn
 	url = git@github.com:z-mahmud22/Mask-RCNN_TF2.14.0.git
+[submodule "models/siames"]
+	path = models/siames
+	url = git@github.com:microsoft/building-damage-assessment-cnn-siamese.git
