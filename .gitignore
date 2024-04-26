@@ -2,7 +2,6 @@ Tesina/
 .vscode/
 envs/
 venv/
-./data/
 src/baseline_model
 .my_modelsvenv/
 __pycache__
@@ -89,8 +88,6 @@ target/
 # Jupyter NB Checkpoints
 .ipynb_checkpoints/
 
-# exclude data from source control by default
-/data/
 
 # Mac OS-specific storage files
 .DS_Store
