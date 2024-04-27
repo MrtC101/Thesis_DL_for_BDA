@@ -33,7 +33,7 @@ config = {'labels_dmg': [0, 1, 2, 3, 4],
           'mode': 'dmg',
           'init_learning_rate': 0.0005,#dmg: 0.005, #UNet: 0.01,           
           'device': 'cpu',
-          'epochs': 1,
+          'epochs': 1500,
           'batch_size': 32,
           'num_chips_to_viz': 1,
           'experiment_name': 'train_UNet', #train_dmg
