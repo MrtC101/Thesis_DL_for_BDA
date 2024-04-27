@@ -54,9 +54,9 @@ logging.info(f'Using device: {device}.')
 
 def main():
 
-    eval_results_val_dmg = pd.DataFrame(columns=['class', 'precision', 'recall', 'f1', 'accuracy'])
-    eval_results_val_dmg_building_level = pd.DataFrame(columns=['class', 'precision', 'recall', 'f1', 'accuracy'])
-    eval_results_val_bld = pd.DataFrame(columns=['class', 'precision', 'recall', 'f1', 'accuracy'])
+    eval_results_val_dmg = []
+    eval_results_val_dmg_building_level = []
+    eval_results_val_bld = []
 
     # set up directories    
     logger_dir = os.path.join(args.output_dir, args.experiment_name, 'logs')
@@ -110,7 +110,8 @@ def main():
         if (int(row['class']) in labels_set_dmg[1:]) & (metrics == 'f1'):
             f1_harmonic_mean += 1.0/(row[metrics]+1e-10)
     f1_harmonic_mean = 4.0/f1_harmonic_mean
-    eval_results_val_dmg = eval_results_val_dmg.append({'class':'harmonic-mean-of-all', 'precision':'-', 'recall':'-', 'f1':f1_harmonic_mean, 'accuracy':'-'}, ignore_index=True)
+    
+    eval_results_val_dmg.loc[len(eval_results_val_dmg.index)] = {'class':'harmonic-mean-of-all', 'precision':'-', 'recall':'-', 'f1':f1_harmonic_mean, 'accuracy':'-'}
     
     # damage level eval validation (building-level)
     eval_results_val_dmg_building_level = compute_eval_metrics(labels_set_dmg, confusion_mtrx_df_val_dmg_building_level, eval_results_val_dmg_building_level)
@@ -120,7 +121,8 @@ def main():
         if (int(row['class']) in labels_set_dmg[1:]) & (metrics == 'f1'):
             f1_harmonic_mean += 1.0/(row[metrics]+1e-10)
     f1_harmonic_mean = 4.0/f1_harmonic_mean
-    eval_results_val_dmg_building_level = eval_results_val_dmg_building_level.append({'class':'harmonic-mean-of-all', 'precision':'-', 'recall':'-', 'f1':f1_harmonic_mean, 'accuracy':'-'}, ignore_index=True)
+    
+    eval_results_val_dmg_building_level.loc[len(eval_results_val_dmg_building_level.index)] = {'class':'harmonic-mean-of-all', 'precision':'-', 'recall':'-', 'f1':f1_harmonic_mean, 'accuracy':'-'}
     
 
     # bld detection eval validation (pixelwise)
@@ -147,10 +149,10 @@ def validate(loader, model, logger_test, samples_idx_list, evals_dir):
     """
     softmax = torch.nn.Softmax(dim=1)
     model.eval()  # put model to evaluation mode
-    confusion_mtrx_df_val_dmg = pd.DataFrame(columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total'])
-    confusion_mtrx_df_val_bld = pd.DataFrame(columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total'])
-    confusion_mtrx_df_val_dmg_building_level = pd.DataFrame(columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total'])
-
+    confusion_mtrx_list_val_dmg = []
+    confusion_mtrx_list_val_bld = []
+    confusion_mtrx_df_val_dmg_building_level : pd.DataFrame
+    
     with torch.no_grad():
         for img_idx, data in enumerate(tqdm(loader)): # assume batch size is 1
             c = data['pre_image'].size()[0]
@@ -184,17 +186,19 @@ def validate(loader, model, logger_test, samples_idx_list, evals_dir):
             pred_polygons_and_class, label_polygons_and_class = get_label_and_pred_polygons_for_tile_mask_input(y_cls.cpu().numpy().astype(np.uint8), path_pred_mask)
             results, list_preds, list_labels = _evaluate_tile(pred_polygons_and_class, label_polygons_and_class, allowed_classes, 0.1)
             total_objects = results[-1]
+            val_dmg_building_level = []
             for label_class in results:
                 if label_class != -1:
                     true_pos_cls = results[label_class]['tp'] if 'tp' in results[label_class].keys() else 0
                     true_neg_cls = results[label_class]['tn'] if 'tn' in results[label_class].keys() else 0
                     false_pos_cls = results[label_class]['fp'] if 'fp' in results[label_class].keys() else 0
                     false_neg_cls = results[label_class]['fn'] if 'fn' in results[label_class].keys() else 0
-                    confusion_mtrx_df_val_dmg_building_level = confusion_mtrx_df_val_dmg_building_level.append({'img_idx':img_idx, 'class':label_class, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total':total_objects}, ignore_index=True)
-
+                    val_dmg_building_level.append({'img_idx':img_idx, 'class':label_class, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total':total_objects})
+            confusion_mtrx_df_val_dmg_building_level = pd.DataFrame(val_dmg_building_level,columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total'])
+            
             # compute comprehensive pixel-level comfusion metrics
-            confusion_mtrx_df_val_dmg = compute_confusion_mtrx(confusion_mtrx_df_val_dmg, img_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
-            confusion_mtrx_df_val_bld = compute_confusion_mtrx(confusion_mtrx_df_val_bld, img_idx, labels_set_bld, preds_seg_pre, y_seg, [])
+            confusion_mtrx_df_val_dmg = compute_confusion_mtrx(confusion_mtrx_list=confusion_mtrx_list_val_dmg, img_idx=img_idx, labels_set=labels_set_dmg, y_preds=preds_cls, y_true=y_cls, y_true_bld_mask=y_seg)
+            confusion_mtrx_df_val_bld = compute_confusion_mtrx(confusion_mtrx_list=confusion_mtrx_list_val_bld, img_idx=img_idx, labels_set=labels_set_bld, y_preds=preds_seg_pre, y_true=y_seg, y_true_bld_mask=[])
 
             # add viz results to logger
             if img_idx in samples_idx_list:
@@ -216,21 +220,31 @@ def load_dataset():
     return test_dataset, samples_idx_list
 
 def compute_eval_metrics(labels_set, confusion_mtrx_df, eval_results):
+    res = []
+    print(confusion_mtrx_df.columns)
+    print(confusion_mtrx_df['class'])
     for cls in labels_set: 
         class_idx = (confusion_mtrx_df['class']==cls)
         precision = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_pos'].sum() + sys.float_info.epsilon)
         recall = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_neg'].sum() + sys.float_info.epsilon)
         f1 = 2 * (precision * recall)/(precision + recall + sys.float_info.epsilon)
         accuracy = (confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'true_neg'].sum())/(confusion_mtrx_df.loc[class_idx,'total'].sum() + sys.float_info.epsilon)
-        eval_results = eval_results.append({'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy}, ignore_index=True)
+        res.append({'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy})
+    eval_results = pd.DataFrame(res,columns=['class', 'precision', 'recall', 'f1', 'accuracy'])
     return eval_results
 
-def compute_confusion_mtrx(confusion_mtrx_df, img_idx, labels_set, y_preds, y_true, y_true_bld_mask):
+def compute_confusion_mtrx(confusion_mtrx_list : list, img_idx, labels_set, y_preds, y_true, y_true_bld_mask):    
+    all = []
     for cls in labels_set[1:]:
-        confusion_mtrx_df = compute_confusion_mtrx_class(confusion_mtrx_df, img_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls)
+        A = compute_confusion_mtrx_class(confusion_mtrx_list, img_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls)
+        all.append(A)
+    res = []
+    for x in all:
+        res.extend(x)
+    confusion_mtrx_df = pd.DataFrame(res,columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total'])
     return confusion_mtrx_df
 
-def compute_confusion_mtrx_class(confusion_mtrx_df, img_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls):
+def compute_confusion_mtrx_class(confusion_mtrx_list : list, img_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls):
 
     y_true_binary = y_true.detach().clone()
     y_preds_binary = y_preds.detach().clone()
@@ -267,9 +281,9 @@ def compute_confusion_mtrx_class(confusion_mtrx_df, img_idx, labels_set, y_preds
         total_pixels = 1
         for item in y_true_binary.size():
             total_pixels *= item
-
-    confusion_mtrx_df = confusion_mtrx_df.append({'class':cls, 'img_idx':img_idx, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total':total_pixels}, ignore_index=True)
-    return confusion_mtrx_df
+        
+    confusion_mtrx_list.append({'class':cls, 'img_idx':img_idx, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total':total_pixels})
+    return confusion_mtrx_list
 
 def prepare_for_vis(item, logger, model, device, softmax):
     

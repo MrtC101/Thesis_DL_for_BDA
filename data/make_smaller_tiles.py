@@ -15,10 +15,10 @@ import torchvision.transforms.functional as TF
 
 config = {
     'batch_size': 1,
-    'data_dir': './xBD/',
-    'sliced_data_dir': './final_mdl_all_disaster_splits/',
-    'disaster_splits_json': './nlrc.building-damage-assessment/constants/splits/final_mdl_all_disaster_splits.json',
-    'disaster_splits_json_sliced': './nlrc.building-damage-assessment/constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json'
+    'data_dir': 'public_datasets/xBD/',
+    'sliced_data_dir': 'public_datasets/xBD/final_mdl_all_disaster_splits/',
+    'disaster_splits_json': 'constants/splits/final_mdl_all_disaster_splits.json',
+    'disaster_splits_json_sliced': 'constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json'
 }
 
 logging.basicConfig(
@@ -68,11 +68,11 @@ def load_dataset():
         logging.info(f'disaster_name: {disaster_name}.')
         l = len(splits['train'])
         logging.info(f'training set number of tiles: {l}.')
-
+        
         train_ls += splits['train']
         val_ls += splits['val']
         test_ls += splits['test']
- 
+    
     for disaster_name,  splits in sliced_data_json.items():
         new_vals_tr = []
         new_vals_ts = []
@@ -176,7 +176,7 @@ class SliceDataset(Dataset):
         return sliced_sample_dic
 
     def __getitem__(self, i):
-        
+
         imgs_dir = os.path.join(self.data_dir, self.data_dir_ls[i].replace('labels', 'images'))
         masks_dir = os.path.join(self.data_dir, self.data_dir_ls[i].replace('labels', 'targets_border2'))
 
