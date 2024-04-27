@@ -11,6 +11,7 @@ __pycache__/
 */*/__pycache__/
 src/mask_r-cnn
 src/baseline
+nlrc_outputs
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

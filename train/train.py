@@ -16,7 +16,9 @@ from torchvision import transforms
 from time import localtime, strftime
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-from utils.raster_label_visualizer import RasterLabelVisualizer
+#print(os.path.join(os.getcwd(),"data"))
+sys.path.append("./")
+from data.raster_label_visualizer import RasterLabelVisualizer
 from models.end_to_end_Siam_UNet import SiamUnet
 from utils.train_utils import AverageMeter
 from utils.train_utils import load_json_files, dump_json_files
@@ -30,18 +32,18 @@ config = {'labels_dmg': [0, 1, 2, 3, 4],
           'weights_loss': [0, 0, 1],
           'mode': 'dmg',
           'init_learning_rate': 0.0005,#dmg: 0.005, #UNet: 0.01,           
-          'device': 'cuda:2',
-          'epochs': 1500,
+          'device': 'cpu',
+          'epochs': 1,
           'batch_size': 32,
           'num_chips_to_viz': 1,
           'experiment_name': 'train_UNet', #train_dmg
-          'out_dir': './nlrc_outputs/',
-          'data_dir_shards': './xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
+          'out_dir': 'nlrc_outputs/',
+          'data_dir_shards': 'public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
           'shard_no': 0,
-          'disaster_splits_json': './nlrc.building-damage-assessment/constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
-          'disaster_mean_stddev': './nlrc.building-damage-assessment/constants/splits/all_disaster_mean_stddev_tiles_0_1.json',
-          'label_map_json': './nlrc.building-damage-assessment/constants/class_lists/xBD_label_map.json',
-          'starting_checkpoint_path': './nlrc_outputs/UNet_all_data_dmg/checkpoints/checkpoint_epoch120_2021-06-30-10-28-49.pth.tar'}
+          'disaster_splits_json': 'constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
+          'disaster_mean_stddev': 'constants/splits/all_disaster_mean_stddev_tiles_0_1.json',
+          'label_map_json': 'constants/class_lists/xBD_label_map.json',
+          'starting_checkpoint_path': 'nlrc_outputs/UNet_all_data_dmg/checkpoints/checkpoint_epoch120_2021-06-30-10-28-49.pth.tar'}
 
 logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO,
@@ -143,7 +145,7 @@ def main():
     weights_seg_tf = torch.FloatTensor(config['weights_seg'])
     weights_damage_tf = torch.FloatTensor(config['weights_damage'])
     weights_loss = config['weights_loss']
-
+    
     criterion_seg_1 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
     criterion_seg_2 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
     criterion_damage = nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
@@ -265,8 +267,8 @@ def train(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, opt
     """
     Train the model on dataset of the loader
     """
-    confusion_mtrx_df_tr_dmg = pd.DataFrame(columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
-    confusion_mtrx_df_tr_bld = pd.DataFrame(columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
+    confusion_mtrx_list_tr_dmg = []
+    confusion_mtrx_list_tr_bld = []
 
     losses_tr = AverageMeter()
     loss_seg_pre = AverageMeter()
@@ -289,7 +291,7 @@ def train(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, opt
         preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
         for c in range(0,scores[2].shape[1]):
             scores[2][:,c,:,:] = torch.mul(scores[2][:,c,:,:], preds_seg_pre)
-            
+        
         loss = weights_loss[0]*criterion_seg_1(scores[0], y_seg) + weights_loss[1]*criterion_seg_2(scores[1], y_seg) + weights_loss[2]*criterion_damage(scores[2], y_cls)
         loss_seg_pre_tr = criterion_seg_1(scores[0], y_seg)
         loss_seg_post_tr = criterion_seg_2(scores[1], y_seg)
@@ -309,8 +311,8 @@ def train(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, opt
         preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
         preds_cls = torch.argmax(softmax(scores[2]), dim=1)
 
-        confusion_mtrx_df_tr_dmg = compute_confusion_mtrx(confusion_mtrx_df_tr_dmg, epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
-        confusion_mtrx_df_tr_bld = compute_confusion_mtrx(confusion_mtrx_df_tr_bld, epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
+        confusion_mtrx_df_tr_dmg = compute_confusion_mtrx(confusion_mtrx_list_tr_dmg, epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
+        confusion_mtrx_df_tr_bld = compute_confusion_mtrx(confusion_mtrx_list_tr_bld, epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
 
 
     # logging image viz        
@@ -327,8 +329,8 @@ def validation(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage
     """
     Evaluate the model on dataset of the loader
     """
-    confusion_mtrx_df_val_dmg = pd.DataFrame(columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
-    confusion_mtrx_df_val_bld = pd.DataFrame(columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
+    confusion_mtrx_list_val_dmg = []
+    confusion_mtrx_list_val_bld = []
     losses_val = AverageMeter()
     loss_seg_pre = AverageMeter()
     loss_seg_post = AverageMeter()
@@ -366,29 +368,36 @@ def validation(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage
             preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
             preds_cls = torch.argmax(softmax(scores[2]), dim=1)
             
-            confusion_mtrx_df_val_dmg = compute_confusion_mtrx(confusion_mtrx_df_val_dmg, epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
-            confusion_mtrx_df_val_bld = compute_confusion_mtrx(confusion_mtrx_df_val_bld, epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
+            confusion_mtrx_df_val_dmg = compute_confusion_mtrx(confusion_mtrx_list_val_dmg, epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
+            confusion_mtrx_df_val_bld = compute_confusion_mtrx(confusion_mtrx_list_val_bld, epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
 
     logger_val.add_scalars('loss_val', {'_total': losses_val.avg, '_seg_pre': loss_seg_pre.avg, '_seg_post': loss_seg_post.avg, '_dmg': loss_dmg.avg}, epoch)
 
     return confusion_mtrx_df_val_dmg, confusion_mtrx_df_val_bld, losses_val.avg
 
 def compute_eval_metrics(epoch, labels_set, confusion_mtrx_df, eval_results):
+    eval_results = []
     for cls in labels_set: 
         class_idx = (confusion_mtrx_df['class']==cls)
         precision = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_pos'].sum())
         recall = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_neg'].sum())
         f1 = 2 * (precision * recall)/(precision + recall)
         accuracy = (confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'true_neg'].sum())/(confusion_mtrx_df.loc[class_idx,'total_pixels'].sum())
-        eval_results = eval_results.append({'epoch':epoch, 'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy}, ignore_index=True)
-    return eval_results
+        eval_results.append({'epoch':epoch, 'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy})
+    return pd.DataFrame(eval_results,columns=['epoch','class','precision','recall','f1','accuracy'])
 
 def compute_confusion_mtrx(confusion_mtrx_df, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask):
+    all = []
     for cls in labels_set[1:]:
-        confusion_mtrx_df = compute_confusion_mtrx_class(confusion_mtrx_df, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls)
+        A = compute_confusion_mtrx_class(confusion_mtrx_df, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls)
+        all.append(A)
+    res = []
+    for x in all:
+        res.extend(x)
+    confusion_mtrx_df = pd.DataFrame(res,columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
     return confusion_mtrx_df
 
-def compute_confusion_mtrx_class(confusion_mtrx_df, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls):
+def compute_confusion_mtrx_class(confusion_mtrx_list : list, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls):
     
     y_true_binary = y_true.detach().clone()
     y_preds_binary = y_preds.detach().clone()
@@ -428,10 +437,10 @@ def compute_confusion_mtrx_class(confusion_mtrx_df, epoch, batch_idx, labels_set
         total_pixels = 1
         for item in y_true_binary.size():
             total_pixels *= item
-
-    confusion_mtrx_df = confusion_mtrx_df.append({'epoch':epoch, 'class':cls, 'batch_idx':batch_idx, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels}, ignore_index=True)
     
-    return confusion_mtrx_df
+    confusion_mtrx_list.append({'epoch':epoch, 'class':cls, 'batch_idx':batch_idx, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels})
+    
+    return confusion_mtrx_list
 
 def save_checkpoint(state, is_best, checkpoint_dir='../checkpoints'):
     """
@@ -668,8 +677,9 @@ def test(loader, model, epoch):
     """
     softmax = torch.nn.Softmax(dim=1)
     model.eval()  # put model to evaluation mode
-    confusion_mtrx_df_test_dmg = pd.DataFrame(columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
-    confusion_mtrx_df_test_bld = pd.DataFrame(columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
+
+    confusion_mtrx_list_test_dmg = [] 
+    confusion_mtrx_list_test_bld = [] 
 
     with torch.no_grad():
         for batch_idx, data in enumerate(tqdm(loader)):
@@ -693,8 +703,8 @@ def test(loader, model, epoch):
             preds_cls = torch.argmax(softmax(scores[2]), dim=1)
              
             # compute comprehensive comfusion metrics
-            confusion_mtrx_df_test_dmg = compute_confusion_mtrx(confusion_mtrx_df_test_dmg, epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
-            confusion_mtrx_df_test_bld = compute_confusion_mtrx(confusion_mtrx_df_test_bld, epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
+            confusion_mtrx_df_test_dmg = compute_confusion_mtrx(confusion_mtrx_list_test_dmg, epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
+            confusion_mtrx_df_test_bld = compute_confusion_mtrx(confusion_mtrx_list_test_bld, epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
 
     return confusion_mtrx_df_test_dmg, confusion_mtrx_df_test_bld
 

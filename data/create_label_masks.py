@@ -48,7 +48,8 @@ from tqdm import tqdm
 # keep as a tuple, not a list
 # add a _ at the end of the disaster-name so they are prefix-free
 
-DISASTERS_OF_INTEREST = ('guatemala-volcano_', 'hurricane-florence_', 'hurricane-harvey_', 'mexico-earthquake_', 'midwest-flooding_', 'palu-tsunami_', 'santa-rosa-wildfire_', 'socal-fire_', 'lower-puna-volcano_', 'nepal-flooding_', 'pinery-bushfire_', 'portugal-wildfire_', 'sunda-tsunami_', 'woolsey-fire_')
+#DISASTERS_OF_INTEREST = ('guatemala-volcano_', 'hurricane-florence_', 'hurricane-harvey_', 'mexico-earthquake_', 'midwest-flooding_', 'palu-tsunami_', 'santa-rosa-wildfire_', 'socal-fire_', 'lower-puna-volcano_', 'nepal-flooding_', 'pinery-bushfire_', 'portugal-wildfire_', 'sunda-tsunami_', 'woolsey-fire_')
+DISASTERS_OF_INTEREST = ('mexico-earthquake_', 'palu-tsunami_', 'sunda-tsunami_')
 
 # running from repo root
 with open('constants/class_lists/xBD_label_map.json') as label_map_file:
@@ -149,7 +150,7 @@ def mask_polygons_together_with_border(size, polys, border):
         fillPoly(mask_img, [ns_poly], (damage_class_num, damage_class_num, damage_class_num))
 
     mask_img = mask_img[:, :, 0].squeeze()
-    print(f'shape of final mask_img: {mask_img.shape}')
+    #print(f'shape of final mask_img: {mask_img.shape}')
     return mask_img
 
 

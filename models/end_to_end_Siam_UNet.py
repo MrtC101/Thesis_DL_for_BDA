@@ -10,8 +10,10 @@ class SiamUnet(nn.Module):
 
     def __init__(self, in_channels=3, out_channels_s=2, out_channels_c=5, init_features=16):
         super(SiamUnet, self).__init__()
-
         features = init_features
+        self.encoder1 = SiamUnet._block(in_channels, features, name="enc1")
+        
+        """features = init_features
         
         # UNet layers
         self.encoder1 = SiamUnet._block(in_channels, features, name="enc1")
@@ -49,10 +51,16 @@ class SiamUnet(nn.Module):
         self.upconv1_c = nn.ConvTranspose2d(features * 4, features, kernel_size=2, stride=2)
         self.conv1_c = SiamUnet._block(features * 2, features * 2, name="conv1")
 
-        self.conv_c = nn.Conv2d(in_channels=features * 2, out_channels=out_channels_c, kernel_size=1)
+        self.conv_c = nn.Conv2d(in_channels=features * 2, out_channels=out_channels_c, kernel_size=1)"""
 
 
     def forward(self, x1, x2):
+        a = nn.Conv2d(3, 2, kernel_size=1)(x1)
+        b = nn.Conv2d(3, 5, kernel_size=1)(x2)
+        return a,a,b
+        
+
+    """def forward(self, x1, x2):
         
         # UNet on x1
         enc1_1 = self.encoder1(x1)
@@ -119,7 +127,7 @@ class SiamUnet(nn.Module):
         dec5_c = torch.cat((diff_5, dec4_c), dim=1)
         dec5_c = self.conv1_c(dec5_c)
         
-        return self.conv_s(dec1_1), self.conv_s(dec1_2), self.conv_c(dec5_c)
+        return self.conv_s(dec1_1), self.conv_s(dec1_2), self.conv_c(dec5_c)"""
 
     @staticmethod
     def _block(in_channels, features, name):

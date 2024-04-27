@@ -119,8 +119,8 @@ class DisasterDataset(Dataset):
 
         if self.normalize is True:
             # normalize the images based on a tilewise mean & std dev --> pre_
-            mean_pre = self.data_mean_stddev[pre_img_tile_name][0]
-            stddev_pre = self.data_mean_stddev[pre_img_tile_name][1]
+            mean_pre = self.data_mean_stddev[os.path.join(self.data_dir,pre_img_tile_name)][0]
+            stddev_pre = self.data_mean_stddev[os.path.join(self.data_dir,pre_img_tile_name)][1]
             norm_pre = transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize(mean=mean_pre, std=stddev_pre)
@@ -128,8 +128,8 @@ class DisasterDataset(Dataset):
             pre_img = norm_pre(np.array(pre_img).astype(dtype='float64')/255.0)
 
             # normalize the images based on a tilewise mean & std dev --> post_
-            mean_post = self.data_mean_stddev[post_img_tile_name][0]
-            stddev_post = self.data_mean_stddev[post_img_tile_name][1]
+            mean_post = self.data_mean_stddev[os.path.join(self.data_dir,post_img_tile_name)][0]
+            stddev_post = self.data_mean_stddev[os.path.join(self.data_dir,post_img_tile_name)][1]
             norm_post = transforms.Compose([
                     transforms.ToTensor(),
                     transforms.Normalize(mean=mean_post, std=stddev_post)

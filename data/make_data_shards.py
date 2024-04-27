@@ -27,17 +27,24 @@ import os
 import sys
 import math
 import numpy as np
+import json
 from dataset_shard_save import DisasterDataset
-from train_utils import load_json_files, dump_json_files
-
-
+#from train_utils import load_json_files, dump_json_files
 from tqdm import tqdm
 
+
+def load_json_files(json_filename):
+    with open(json_filename) as f:
+        file_content = json.load(f)
+    return file_content
+
+
 config = {'num_shards': 1,
-          'out_dir': './xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
-          'data_dir': './xBD_sliced_augmented_20_alldisasters/',
-          'data_splits_json': './nlrc.building-damage-assessment/constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
-          'data_mean_stddev': './nlrc.building-damage-assessment/constants/splits/all_disaster_mean_stddev_tiles_0_1.json'}
+          'out_dir': 'public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
+          'data_dir': 'public_datasets/xBD/final_mdl_all_disaster_splits/',
+          'data_splits_json': 'constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
+          'data_mean_stddev': 'constants/splits/all_disaster_mean_stddev_tiles_0_1.json'}
+
 
 def load_dataset():
     splits = load_json_files(config['data_splits_json'])
