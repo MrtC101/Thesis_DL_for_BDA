@@ -221,8 +221,6 @@ def load_dataset():
 
 def compute_eval_metrics(labels_set, confusion_mtrx_df, eval_results):
     res = []
-    print(confusion_mtrx_df.columns)
-    print(confusion_mtrx_df['class'])
     for cls in labels_set: 
         class_idx = (confusion_mtrx_df['class']==cls)
         precision = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_pos'].sum() + sys.float_info.epsilon)
