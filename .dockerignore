@@ -1,0 +1,8 @@
+lib/*
+nlrc_outputs/*
+out/*
+public_datasets/*
+images/
+constants/splits/*
+__pycache__/
+*/__pycache__/

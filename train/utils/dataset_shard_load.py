@@ -82,7 +82,7 @@ class DisasterDataset(Dataset):
             mask, pre_img, post_img, damage_class = self.apply_transform(mask, pre_img, post_img, damage_class)
         
         if self.normalize is True:
-            pre_img_tile_name =   self.pre_img_tile_chip_shard[i]
+            pre_img_tile_name =   "/original_siames/"+self.pre_img_tile_chip_shard[i]
             post_img_tile_name = pre_img_tile_name.replace('pre', 'post')
     
             # normalize the images based on a tilewise mean & std dev --> pre_

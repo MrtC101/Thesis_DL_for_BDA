@@ -215,3 +215,4 @@ mensajes del logger se encuentren mezclados entre todo el código
 13. Realizar una búsqueda de hiperparámetros.
 14. Lograr una forma de poder aplicar object-level o building-level evaluation. (poder separar los edificios entre si (segmentación de instancias?))
 15. Crear métricas para visualización de la función de perdida durante el entrenamiento y la función de perdida de validación
+16. Docker multi-stage
