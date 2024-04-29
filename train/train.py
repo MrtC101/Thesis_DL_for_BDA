@@ -37,13 +37,13 @@ config = {'labels_dmg': [0, 1, 2, 3, 4],
           'batch_size': 32,
           'num_chips_to_viz': 1,
           'experiment_name': 'train_UNet', #train_dmg
-          'out_dir': 'nlrc_outputs/',
-          'data_dir_shards': 'public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
+          'out_dir': '/original_siames/nlrc_outputs/',
+          'data_dir_shards': '/original_siames/public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
           'shard_no': 0,
-          'disaster_splits_json': 'constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
-          'disaster_mean_stddev': 'constants/splits/all_disaster_mean_stddev_tiles_0_1.json',
-          'label_map_json': 'constants/class_lists/xBD_label_map.json',
-          'starting_checkpoint_path': 'nlrc_outputs/UNet_all_data_dmg/checkpoints/checkpoint_epoch120_2021-06-30-10-28-49.pth.tar'}
+          'disaster_splits_json': '/original_siames/constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
+          'disaster_mean_stddev': '/original_siames/constants/splits/all_disaster_mean_stddev_tiles_0_1.json',
+          'label_map_json': '/original_siames/constants/class_lists/xBD_label_map.json',
+          'starting_checkpoint_path': '/original_siames/nlrc_outputs/UNet_all_data_dmg/checkpoints/checkpoint_epoch120_2021-06-30-10-28-49.pth.tar'}
 
 logging.basicConfig(stream=sys.stdout,
                     level=logging.INFO,

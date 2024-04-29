@@ -1,5 +1,5 @@
 {
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000001_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000001_pre_disaster": [
         [
             0.34232543496524603,
             0.3751892837823607,
@@ -11,7 +11,7 @@
             0.10514736622930437
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000001_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000001_post_disaster": [
         [
             0.15955316132190178,
             0.2542494268978342,
@@ -23,7 +23,7 @@
             0.10537983421603811
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000003_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000003_pre_disaster": [
         [
             0.20451377045874486,
             0.24751426098393464,
@@ -35,7 +35,7 @@
             0.06804970140395973
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000003_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000003_post_disaster": [
         [
             0.12451699574788411,
             0.21286110597498278,
@@ -47,7 +47,7 @@
             0.0802699460626907
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000005_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000005_pre_disaster": [
         [
             0.3619186289170209,
             0.3859441719803156,
@@ -59,7 +59,7 @@
             0.10458532694135517
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000005_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000005_post_disaster": [
         [
             0.34070990693335457,
             0.36888441198012417,
@@ -71,7 +71,7 @@
             0.1356399992552458
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000023_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000023_pre_disaster": [
         [
             0.371009475109624,
             0.40662832447126807,
@@ -83,7 +83,7 @@
             0.12623830492629107
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000023_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000023_post_disaster": [
         [
             0.37390742956423306,
             0.40839584200989965,
@@ -95,7 +95,7 @@
             0.125644479720437
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000030_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000030_pre_disaster": [
         [
             0.20297476450602223,
             0.25252712474149813,
@@ -107,7 +107,7 @@
             0.09305144720738585
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000030_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000030_post_disaster": [
         [
             0.130468069338331,
             0.2644950043921375,
@@ -119,7 +119,7 @@
             0.08868258997882751
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000040_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000040_pre_disaster": [
         [
             0.1962557175580194,
             0.2102086048500209,
@@ -131,7 +131,7 @@
             0.16052860459094886
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000040_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000040_post_disaster": [
         [
             0.39413837358063347,
             0.41528187546075535,
@@ -143,31 +143,7 @@
             0.09246922030330686
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000044_pre_disaster": [
-        [
-            0.3634900635364008,
-            0.3834504819383809,
-            0.31406444100772635
-        ],
-        [
-            0.11018608449565676,
-            0.08442326454297829,
-            0.09799531975242111
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000044_post_disaster": [
-        [
-            0.4069892958098769,
-            0.4233331829893822,
-            0.344885631636077
-        ],
-        [
-            0.13178264672051707,
-            0.11087028782459864,
-            0.11713723678623761
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000048_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000048_pre_disaster": [
         [
             0.2860141716751397,
             0.31304513893875424,
@@ -179,7 +155,7 @@
             0.1311608508829001
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000048_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000048_post_disaster": [
         [
             0.23008639765720737,
             0.30108547958673215,
@@ -191,487 +167,7 @@
             0.14339172918365412
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000054_pre_disaster": [
-        [
-            0.3861863977768839,
-            0.39860584408629185,
-            0.33350596708409924
-        ],
-        [
-            0.12199293657624086,
-            0.10002790458644255,
-            0.11477545380954154
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000054_post_disaster": [
-        [
-            0.4186468947167488,
-            0.43338299171597366,
-            0.35498029297473405
-        ],
-        [
-            0.13850749590906322,
-            0.11536514930487192,
-            0.12792821986513836
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000057_pre_disaster": [
-        [
-            0.33897858040005546,
-            0.3689907148772592,
-            0.3343119116390453
-        ],
-        [
-            0.17124888623884088,
-            0.1328539016808319,
-            0.12397083820261486
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000057_post_disaster": [
-        [
-            0.3080660801307828,
-            0.3693689421111464,
-            0.32810278873817594
-        ],
-        [
-            0.19530616147832872,
-            0.1311797133128841,
-            0.12149458625837047
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000066_pre_disaster": [
-        [
-            0.26665618746888403,
-            0.3488041185865215,
-            0.31219056073357077
-        ],
-        [
-            0.12766838257274182,
-            0.08598223977602003,
-            0.08567553470943977
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000066_post_disaster": [
-        [
-            0.22474570554845472,
-            0.3532274321013806,
-            0.31424332039028996
-        ],
-        [
-            0.16344614280419079,
-            0.09924044752906175,
-            0.09510673772195295
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000072_pre_disaster": [
-        [
-            0.38565471499573944,
-            0.3836076212864297,
-            0.3361470540364585
-        ],
-        [
-            0.10826695341165925,
-            0.08842030841708655,
-            0.10337191597223913
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000072_post_disaster": [
-        [
-            0.3848166634054746,
-            0.3829507378970875,
-            0.33314362320245494
-        ],
-        [
-            0.1360219788887738,
-            0.11185195161913168,
-            0.13009564062085624
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000076_pre_disaster": [
-        [
-            0.07043495552212584,
-            0.07297350191602518,
-            0.05859901203828701
-        ],
-        [
-            0.15325577261987275,
-            0.1556708165819493,
-            0.12959064376395674
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000076_post_disaster": [
-        [
-            0.07439138001086665,
-            0.07649802787631164,
-            0.06290868871352251
-        ],
-        [
-            0.16526620136543624,
-            0.16598055544976317,
-            0.14292727846441383
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000077_pre_disaster": [
-        [
-            0.06364319371242148,
-            0.06324122933780446,
-            0.04965327393774893
-        ],
-        [
-            0.13618587279326233,
-            0.13251332844069724,
-            0.10423213097775585
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000077_post_disaster": [
-        [
-            0.06755385679357193,
-            0.06552177130007274,
-            0.05177673265045765
-        ],
-        [
-            0.14914549337928254,
-            0.14161257795968696,
-            0.11532256296784418
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000086_pre_disaster": [
-        [
-            0.3556669085633519,
-            0.38254078135770914,
-            0.307452673070571
-        ],
-        [
-            0.11666932018418429,
-            0.09049027166832506,
-            0.10465444427683884
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000086_post_disaster": [
-        [
-            0.35738079968620756,
-            0.3765963386086858,
-            0.2980641720341702
-        ],
-        [
-            0.11585607278297312,
-            0.09978744754423216,
-            0.11127634214401275
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000088_pre_disaster": [
-        [
-            0.302577273050944,
-            0.3490716672411153,
-            0.31200234656240433
-        ],
-        [
-            0.1488530453074436,
-            0.106235997944229,
-            0.10761550920688884
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000088_post_disaster": [
-        [
-            0.26548572615081195,
-            0.3512477949553843,
-            0.3128648570939607
-        ],
-        [
-            0.17526308862266515,
-            0.11252711320760944,
-            0.10804769845305641
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000090_pre_disaster": [
-        [
-            0.41838105893602534,
-            0.4470574958651672,
-            0.3844172571219651
-        ],
-        [
-            0.1463411807536866,
-            0.14057219113498576,
-            0.16365937379752565
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000090_post_disaster": [
-        [
-            0.37867150774189084,
-            0.40148975147920496,
-            0.34090265760234767
-        ],
-        [
-            0.18356389303225615,
-            0.1602207358732417,
-            0.17345533648381528
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000101_pre_disaster": [
-        [
-            0.0786869946648093,
-            0.0765528361002604,
-            0.06605772504619524
-        ],
-        [
-            0.16538230003269555,
-            0.15962979017450918,
-            0.14181655313436753
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000101_post_disaster": [
-        [
-            0.07946726481119792,
-            0.07818688411338656,
-            0.06763942194919959
-        ],
-        [
-            0.17024217538423744,
-            0.16473622026426502,
-            0.14714427848810233
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000107_pre_disaster": [
-        [
-            0.33882951175465276,
-            0.3862441530414654,
-            0.3229545929852655
-        ],
-        [
-            0.15498561449987824,
-            0.12300178162604201,
-            0.12613423823540618
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000107_post_disaster": [
-        [
-            0.26006903928868913,
-            0.3462582419900334,
-            0.29549298005945546
-        ],
-        [
-            0.1976387051622455,
-            0.1353927418150796,
-            0.12932246736502975
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000118_pre_disaster": [
-        [
-            0.42243780248305374,
-            0.41273572585161966,
-            0.37068791108972876
-        ],
-        [
-            0.1019104434590377,
-            0.09441193940297089,
-            0.10634284149351728
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000118_post_disaster": [
-        [
-            0.4664702583761778,
-            0.4495817408842201,
-            0.38892553740856695
-        ],
-        [
-            0.13475103596736568,
-            0.11326455004127353,
-            0.12191344844028158
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000133_pre_disaster": [
-        [
-            0.087770518134622,
-            0.08640568303126915,
-            0.07507912130916818
-        ],
-        [
-            0.19147331322758188,
-            0.18619947328743025,
-            0.16730552390772577
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000133_post_disaster": [
-        [
-            0.08189353194891234,
-            0.08440724541159235,
-            0.07266516217998431
-        ],
-        [
-            0.1842312267859301,
-            0.1854362606536398,
-            0.16612340197964998
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000142_pre_disaster": [
-        [
-            0.45405092800364794,
-            0.4643771003274356,
-            0.3614197263530655
-        ],
-        [
-            0.18500981181982815,
-            0.15863590065646804,
-            0.16810483367075887
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000142_post_disaster": [
-        [
-            0.4591372957416609,
-            0.45921143924488733,
-            0.3798406152164233
-        ],
-        [
-            0.2019505331118606,
-            0.17476023413153216,
-            0.17593853146115745
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000145_pre_disaster": [
-        [
-            0.3647189233817307,
-            0.40366356419581995,
-            0.33640870486988733
-        ],
-        [
-            0.19038804140244373,
-            0.15310839741997354,
-            0.1401101834622354
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000145_post_disaster": [
-        [
-            0.31146700241986447,
-            0.38957971311083023,
-            0.3333446540084541
-        ],
-        [
-            0.22117605217345462,
-            0.1550414865439024,
-            0.1347134782662657
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000152_pre_disaster": [
-        [
-            0.41210236268885,
-            0.3969832364250634,
-            0.3603527405682731
-        ],
-        [
-            0.11114009481450975,
-            0.1043566199504242,
-            0.11466221806541982
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000152_post_disaster": [
-        [
-            0.40478578829297823,
-            0.39096042782652607,
-            0.3566312303730087
-        ],
-        [
-            0.13097489750980712,
-            0.1170988557892949,
-            0.12820759233235224
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000164_pre_disaster": [
-        [
-            0.38423294740564673,
-            0.3997484020158358,
-            0.3017624836342009
-        ],
-        [
-            0.12983305407715753,
-            0.08977158568215998,
-            0.10896780451974217
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000164_post_disaster": [
-        [
-            0.3931317497702204,
-            0.40193267523073684,
-            0.3024973439235313
-        ],
-        [
-            0.13482326614561613,
-            0.09422409079336447,
-            0.11141335020906293
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000177_pre_disaster": [
-        [
-            0.4148378820980294,
-            0.4131887884700997,
-            0.3644978055766983
-        ],
-        [
-            0.14145379256784166,
-            0.12678249354738438,
-            0.15064904412026567
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000177_post_disaster": [
-        [
-            0.41090293211095463,
-            0.4195943682801488,
-            0.3623817406448664
-        ],
-        [
-            0.16153082556849063,
-            0.14722812240363478,
-            0.16240261004884957
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000071_pre_disaster": [
-        [
-            0.3518628625308768,
-            0.34677113925709474,
-            0.2821350322050207
-        ],
-        [
-            0.11206166156784157,
-            0.08047266512999027,
-            0.08453845940448818
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000071_post_disaster": [
-        [
-            0.38154620376287735,
-            0.36455448001038787,
-            0.2994166916491938
-        ],
-        [
-            0.14586069975612867,
-            0.1170535059289143,
-            0.11671867415755377
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000183_pre_disaster": [
-        [
-            0.39170709871778303,
-            0.3846783469705022,
-            0.2915739134246227
-        ],
-        [
-            0.10849133173688087,
-            0.07762006292085682,
-            0.08504477400742931
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000183_post_disaster": [
-        [
-            0.4629725774129232,
-            0.42579668082442923,
-            0.33392136517692994
-        ],
-        [
-            0.09743021803333049,
-            0.07141820096015204,
-            0.07308825398781019
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000050_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000050_pre_disaster": [
         [
             0.08576525145885991,
             0.08441842397054035,
@@ -683,7 +179,7 @@
             0.15437653038546678
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000050_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000050_post_disaster": [
         [
             0.07807068918265544,
             0.07924459868786386,
@@ -695,31 +191,271 @@
             0.14613911061965743
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000122_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000054_pre_disaster": [
         [
-            0.3943644280527152,
-            0.40514833412918394,
-            0.35528336319268916
+            0.3861863977768839,
+            0.39860584408629185,
+            0.33350596708409924
         ],
         [
-            0.13182805148374815,
-            0.11214125953250224,
-            0.1258168119882454
+            0.12199293657624086,
+            0.10002790458644255,
+            0.11477545380954154
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000122_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000054_post_disaster": [
         [
-            0.3776014253204944,
-            0.3882596520816581,
-            0.3424282260969576
+            0.4186468947167488,
+            0.43338299171597366,
+            0.35498029297473405
         ],
         [
-            0.1539792532803904,
-            0.13882491318798773,
-            0.1476706200785544
+            0.13850749590906322,
+            0.11536514930487192,
+            0.12792821986513836
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000131_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000057_pre_disaster": [
+        [
+            0.33897858040005546,
+            0.3689907148772592,
+            0.3343119116390453
+        ],
+        [
+            0.17124888623884088,
+            0.1328539016808319,
+            0.12397083820261486
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000057_post_disaster": [
+        [
+            0.3080660801307828,
+            0.3693689421111464,
+            0.32810278873817594
+        ],
+        [
+            0.19530616147832872,
+            0.1311797133128841,
+            0.12149458625837047
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000066_pre_disaster": [
+        [
+            0.26665618746888403,
+            0.3488041185865215,
+            0.31219056073357077
+        ],
+        [
+            0.12766838257274182,
+            0.08598223977602003,
+            0.08567553470943977
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000066_post_disaster": [
+        [
+            0.22474570554845472,
+            0.3532274321013806,
+            0.31424332039028996
+        ],
+        [
+            0.16344614280419079,
+            0.09924044752906175,
+            0.09510673772195295
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000071_pre_disaster": [
+        [
+            0.3518628625308768,
+            0.34677113925709474,
+            0.2821350322050207
+        ],
+        [
+            0.11206166156784157,
+            0.08047266512999027,
+            0.08453845940448818
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000071_post_disaster": [
+        [
+            0.38154620376287735,
+            0.36455448001038787,
+            0.2994166916491938
+        ],
+        [
+            0.14586069975612867,
+            0.1170535059289143,
+            0.11671867415755377
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000072_pre_disaster": [
+        [
+            0.38565471499573944,
+            0.3836076212864297,
+            0.3361470540364585
+        ],
+        [
+            0.10826695341165925,
+            0.08842030841708655,
+            0.10337191597223913
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000072_post_disaster": [
+        [
+            0.3848166634054746,
+            0.3829507378970875,
+            0.33314362320245494
+        ],
+        [
+            0.1360219788887738,
+            0.11185195161913168,
+            0.13009564062085624
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000077_pre_disaster": [
+        [
+            0.06364319371242148,
+            0.06324122933780446,
+            0.04965327393774893
+        ],
+        [
+            0.13618587279326233,
+            0.13251332844069724,
+            0.10423213097775585
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000077_post_disaster": [
+        [
+            0.06755385679357193,
+            0.06552177130007274,
+            0.05177673265045765
+        ],
+        [
+            0.14914549337928254,
+            0.14161257795968696,
+            0.11532256296784418
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000086_pre_disaster": [
+        [
+            0.3556669085633519,
+            0.38254078135770914,
+            0.307452673070571
+        ],
+        [
+            0.11666932018418429,
+            0.09049027166832506,
+            0.10465444427683884
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000086_post_disaster": [
+        [
+            0.35738079968620756,
+            0.3765963386086858,
+            0.2980641720341702
+        ],
+        [
+            0.11585607278297312,
+            0.09978744754423216,
+            0.11127634214401275
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000088_pre_disaster": [
+        [
+            0.302577273050944,
+            0.3490716672411153,
+            0.31200234656240433
+        ],
+        [
+            0.1488530453074436,
+            0.106235997944229,
+            0.10761550920688884
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000088_post_disaster": [
+        [
+            0.26548572615081195,
+            0.3512477949553843,
+            0.3128648570939607
+        ],
+        [
+            0.17526308862266515,
+            0.11252711320760944,
+            0.10804769845305641
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000090_pre_disaster": [
+        [
+            0.41838105893602534,
+            0.4470574958651672,
+            0.3844172571219651
+        ],
+        [
+            0.1463411807536866,
+            0.14057219113498576,
+            0.16365937379752565
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000090_post_disaster": [
+        [
+            0.37867150774189084,
+            0.40148975147920496,
+            0.34090265760234767
+        ],
+        [
+            0.18356389303225615,
+            0.1602207358732417,
+            0.17345533648381528
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000107_pre_disaster": [
+        [
+            0.33882951175465276,
+            0.3862441530414654,
+            0.3229545929852655
+        ],
+        [
+            0.15498561449987824,
+            0.12300178162604201,
+            0.12613423823540618
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000107_post_disaster": [
+        [
+            0.26006903928868913,
+            0.3462582419900334,
+            0.29549298005945546
+        ],
+        [
+            0.1976387051622455,
+            0.1353927418150796,
+            0.12932246736502975
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000118_pre_disaster": [
+        [
+            0.42243780248305374,
+            0.41273572585161966,
+            0.37068791108972876
+        ],
+        [
+            0.1019104434590377,
+            0.09441193940297089,
+            0.10634284149351728
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000118_post_disaster": [
+        [
+            0.4664702583761778,
+            0.4495817408842201,
+            0.38892553740856695
+        ],
+        [
+            0.13475103596736568,
+            0.11326455004127353,
+            0.12191344844028158
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000131_pre_disaster": [
         [
             0.39042862536860456,
             0.39244315577488315,
@@ -731,7 +467,7 @@
             0.11641292484519102
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000131_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000131_post_disaster": [
         [
             0.3857300103879443,
             0.3932834700042125,
@@ -743,7 +479,103 @@
             0.1344409388086497
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000167_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000133_pre_disaster": [
+        [
+            0.087770518134622,
+            0.08640568303126915,
+            0.07507912130916818
+        ],
+        [
+            0.19147331322758188,
+            0.18619947328743025,
+            0.16730552390772577
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000133_post_disaster": [
+        [
+            0.08189353194891234,
+            0.08440724541159235,
+            0.07266516217998431
+        ],
+        [
+            0.1842312267859301,
+            0.1854362606536398,
+            0.16612340197964998
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000142_pre_disaster": [
+        [
+            0.45405092800364794,
+            0.4643771003274356,
+            0.3614197263530655
+        ],
+        [
+            0.18500981181982815,
+            0.15863590065646804,
+            0.16810483367075887
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000142_post_disaster": [
+        [
+            0.4591372957416609,
+            0.45921143924488733,
+            0.3798406152164233
+        ],
+        [
+            0.2019505331118606,
+            0.17476023413153216,
+            0.17593853146115745
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000145_pre_disaster": [
+        [
+            0.3647189233817307,
+            0.40366356419581995,
+            0.33640870486988733
+        ],
+        [
+            0.19038804140244373,
+            0.15310839741997354,
+            0.1401101834622354
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000145_post_disaster": [
+        [
+            0.31146700241986447,
+            0.38957971311083023,
+            0.3333446540084541
+        ],
+        [
+            0.22117605217345462,
+            0.1550414865439024,
+            0.1347134782662657
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000164_pre_disaster": [
+        [
+            0.38423294740564673,
+            0.3997484020158358,
+            0.3017624836342009
+        ],
+        [
+            0.12983305407715753,
+            0.08977158568215998,
+            0.10896780451974217
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000164_post_disaster": [
+        [
+            0.3931317497702204,
+            0.40193267523073684,
+            0.3024973439235313
+        ],
+        [
+            0.13482326614561613,
+            0.09422409079336447,
+            0.11141335020906293
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000167_pre_disaster": [
         [
             0.3770957348393458,
             0.40250466664632173,
@@ -755,7 +587,7 @@
             0.1149204585450019
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000167_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000167_post_disaster": [
         [
             0.43510938906202135,
             0.4223310358384076,
@@ -767,7 +599,175 @@
             0.10599638035507024
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000018_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000177_pre_disaster": [
+        [
+            0.4148378820980294,
+            0.4131887884700997,
+            0.3644978055766983
+        ],
+        [
+            0.14145379256784166,
+            0.12678249354738438,
+            0.15064904412026567
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000177_post_disaster": [
+        [
+            0.41090293211095463,
+            0.4195943682801488,
+            0.3623817406448664
+        ],
+        [
+            0.16153082556849063,
+            0.14722812240363478,
+            0.16240261004884957
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000044_pre_disaster": [
+        [
+            0.3634900635364008,
+            0.3834504819383809,
+            0.31406444100772635
+        ],
+        [
+            0.11018608449565676,
+            0.08442326454297829,
+            0.09799531975242111
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000044_post_disaster": [
+        [
+            0.4069892958098769,
+            0.4233331829893822,
+            0.344885631636077
+        ],
+        [
+            0.13178264672051707,
+            0.11087028782459864,
+            0.11713723678623761
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000183_pre_disaster": [
+        [
+            0.39170709871778303,
+            0.3846783469705022,
+            0.2915739134246227
+        ],
+        [
+            0.10849133173688087,
+            0.07762006292085682,
+            0.08504477400742931
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000183_post_disaster": [
+        [
+            0.4629725774129232,
+            0.42579668082442923,
+            0.33392136517692994
+        ],
+        [
+            0.09743021803333049,
+            0.07141820096015204,
+            0.07308825398781019
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000076_pre_disaster": [
+        [
+            0.07043495552212584,
+            0.07297350191602518,
+            0.05859901203828701
+        ],
+        [
+            0.15325577261987275,
+            0.1556708165819493,
+            0.12959064376395674
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000076_post_disaster": [
+        [
+            0.07439138001086665,
+            0.07649802787631164,
+            0.06290868871352251
+        ],
+        [
+            0.16526620136543624,
+            0.16598055544976317,
+            0.14292727846441383
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000101_pre_disaster": [
+        [
+            0.0786869946648093,
+            0.0765528361002604,
+            0.06605772504619524
+        ],
+        [
+            0.16538230003269555,
+            0.15962979017450918,
+            0.14181655313436753
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000101_post_disaster": [
+        [
+            0.07946726481119792,
+            0.07818688411338656,
+            0.06763942194919959
+        ],
+        [
+            0.17024217538423744,
+            0.16473622026426502,
+            0.14714427848810233
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000122_pre_disaster": [
+        [
+            0.3943644280527152,
+            0.40514833412918394,
+            0.35528336319268916
+        ],
+        [
+            0.13182805148374815,
+            0.11214125953250224,
+            0.1258168119882454
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000122_post_disaster": [
+        [
+            0.3776014253204944,
+            0.3882596520816581,
+            0.3424282260969576
+        ],
+        [
+            0.1539792532803904,
+            0.13882491318798773,
+            0.1476706200785544
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000152_pre_disaster": [
+        [
+            0.41210236268885,
+            0.3969832364250634,
+            0.3603527405682731
+        ],
+        [
+            0.11114009481450975,
+            0.1043566199504242,
+            0.11466221806541982
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/palu-tsunami_00000152_post_disaster": [
+        [
+            0.40478578829297823,
+            0.39096042782652607,
+            0.3566312303730087
+        ],
+        [
+            0.13097489750980712,
+            0.1170988557892949,
+            0.12820759233235224
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000018_pre_disaster": [
         [
             0.36569367951037846,
             0.35700267342960135,
@@ -779,7 +779,7 @@
             0.1400622247034888
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000018_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000018_post_disaster": [
         [
             0.3576036266252105,
             0.34965012868245454,
@@ -791,7 +791,7 @@
             0.12117185332375913
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000020_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000020_pre_disaster": [
         [
             0.3885063919366574,
             0.3836888331992953,
@@ -803,7 +803,7 @@
             0.14330772722476898
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000020_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000020_post_disaster": [
         [
             0.41348976434445844,
             0.402604290083343,
@@ -815,7 +815,7 @@
             0.11638629225541273
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000027_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000027_pre_disaster": [
         [
             0.3994415283203125,
             0.3866481930601831,
@@ -827,7 +827,7 @@
             0.139969078628629
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000027_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000027_post_disaster": [
         [
             0.382928627612544,
             0.3602410035974839,
@@ -839,7 +839,7 @@
             0.10017245143791202
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000033_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000033_pre_disaster": [
         [
             0.34803888283523854,
             0.34783161761713965,
@@ -851,7 +851,7 @@
             0.09155304701635716
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000033_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000033_post_disaster": [
         [
             0.3096727296417835,
             0.3270576664045744,
@@ -863,7 +863,7 @@
             0.06415684603538556
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000040_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000040_pre_disaster": [
         [
             0.38210503073299634,
             0.37698253556793815,
@@ -875,7 +875,7 @@
             0.12883465541416877
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000040_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000040_post_disaster": [
         [
             0.36758225010890583,
             0.3655177284689512,
@@ -887,7 +887,7 @@
             0.10359045470670361
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000041_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000041_pre_disaster": [
         [
             0.38906952353084784,
             0.36623541140088844,
@@ -899,7 +899,7 @@
             0.1155328710925938
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000041_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000041_post_disaster": [
         [
             0.35985774993896474,
             0.3371265411376952,
@@ -911,31 +911,7 @@
             0.0897580259934793
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000042_pre_disaster": [
-        [
-            0.4055348751591699,
-            0.3857219097661039,
-            0.31282795176786543
-        ],
-        [
-            0.16584913419961175,
-            0.14683750302940254,
-            0.1441936775723384
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000042_post_disaster": [
-        [
-            0.3862788069481942,
-            0.3587181053909599,
-            0.2838040295769187
-        ],
-        [
-            0.13930137211469923,
-            0.11670993036014747,
-            0.11161481233445864
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000083_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000083_pre_disaster": [
         [
             0.42785108977673075,
             0.4185240465051987,
@@ -947,7 +923,7 @@
             0.1507800345627792
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000083_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000083_post_disaster": [
         [
             0.3807699203491211,
             0.37708484051274316,
@@ -959,7 +935,7 @@
             0.14079823598919564
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000086_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000086_pre_disaster": [
         [
             0.40334887411080156,
             0.3829085406135113,
@@ -971,7 +947,7 @@
             0.14666413551600063
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000086_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000086_post_disaster": [
         [
             0.40790118797152625,
             0.3803574206782324,
@@ -983,7 +959,7 @@
             0.11229122826951773
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000088_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000088_pre_disaster": [
         [
             0.3981962802363379,
             0.3873721029244217,
@@ -995,7 +971,7 @@
             0.14826387382833778
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000088_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000088_post_disaster": [
         [
             0.4077345492793065,
             0.38961279625986134,
@@ -1007,7 +983,7 @@
             0.10492013940196117
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000096_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000096_pre_disaster": [
         [
             0.30704591414507687,
             0.313612268485275,
@@ -1019,7 +995,7 @@
             0.060888241257219006
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000096_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000096_post_disaster": [
         [
             0.3052618774713255,
             0.3255112965901694,
@@ -1031,7 +1007,7 @@
             0.041043993291327026
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000112_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000112_pre_disaster": [
         [
             0.4236185036453546,
             0.4039490643669578,
@@ -1043,7 +1019,7 @@
             0.16343710765793204
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000112_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000112_post_disaster": [
         [
             0.41755542007147106,
             0.3947998009476008,
@@ -1055,7 +1031,7 @@
             0.17087573619675742
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000122_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000122_pre_disaster": [
         [
             0.4275252996706495,
             0.4156088361553115,
@@ -1067,7 +1043,7 @@
             0.15355489342105616
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000122_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000122_post_disaster": [
         [
             0.3936723970899395,
             0.3790507709278778,
@@ -1079,31 +1055,7 @@
             0.1175699272601155
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000126_pre_disaster": [
-        [
-            0.3657617007984835,
-            0.3502412721222521,
-            0.2727119931987687
-        ],
-        [
-            0.143680410755032,
-            0.12716559420973128,
-            0.12697392618923306
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000126_post_disaster": [
-        [
-            0.3641026515586704,
-            0.34542040731392654,
-            0.2720396341062059
-        ],
-        [
-            0.12073380542920867,
-            0.09700434709316114,
-            0.09949935922696893
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000132_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000132_pre_disaster": [
         [
             0.3849879059137084,
             0.3766451330745922,
@@ -1115,7 +1067,7 @@
             0.11990025713108347
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000132_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000132_post_disaster": [
         [
             0.387696797240014,
             0.38550738540350243,
@@ -1127,7 +1079,7 @@
             0.08995141875459552
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000136_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000136_pre_disaster": [
         [
             0.43793667063993574,
             0.4201296301449048,
@@ -1139,7 +1091,7 @@
             0.1734298023586434
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000136_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000136_post_disaster": [
         [
             0.44639057084625855,
             0.4260291679232727,
@@ -1151,7 +1103,7 @@
             0.17046628910554237
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000140_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000140_pre_disaster": [
         [
             0.4352249930886658,
             0.4209839652566348,
@@ -1163,7 +1115,7 @@
             0.15580620549159363
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000140_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000140_post_disaster": [
         [
             0.42858595380596076,
             0.4183410644531253,
@@ -1175,7 +1127,7 @@
             0.1393445890633951
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000146_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000146_pre_disaster": [
         [
             0.24380927366368915,
             0.23314046298756316,
@@ -1187,7 +1139,7 @@
             0.18789674546981391
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000146_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000146_post_disaster": [
         [
             0.20705696928734865,
             0.19780887902951713,
@@ -1199,103 +1151,7 @@
             0.15120388676037727
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000177_pre_disaster": [
-        [
-            0.3196127947639015,
-            0.3334322798485848,
-            0.24854994007185402
-        ],
-        [
-            0.1556786792432595,
-            0.13963465659057203,
-            0.14134189161761584
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000177_post_disaster": [
-        [
-            0.32913038590375127,
-            0.33278683681114046,
-            0.2456379310757506
-        ],
-        [
-            0.11543351554488501,
-            0.10420494693536297,
-            0.11320987481895835
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000184_pre_disaster": [
-        [
-            0.26067600624234066,
-            0.25784050062590946,
-            0.2025177338544061
-        ],
-        [
-            0.2357547691946645,
-            0.23030307242745682,
-            0.19556152597502907
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000184_post_disaster": [
-        [
-            0.266662264805214,
-            0.2556141759835038,
-            0.1965767542521159
-        ],
-        [
-            0.21804199107473346,
-            0.2057489390934987,
-            0.16862472627853828
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000024_pre_disaster": [
-        [
-            0.4010013692519244,
-            0.3839630500943053,
-            0.309223070331648
-        ],
-        [
-            0.18241498988510127,
-            0.1673258340050191,
-            0.1660226971982664
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000024_post_disaster": [
-        [
-            0.40402168947107636,
-            0.38383499220305795,
-            0.310260757745481
-        ],
-        [
-            0.1607946115055048,
-            0.14047296451235486,
-            0.1423060854406136
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000144_pre_disaster": [
-        [
-            0.4124409619499656,
-            0.3954093708711512,
-            0.33389109817205687
-        ],
-        [
-            0.18090275846837467,
-            0.16536026307875962,
-            0.1703078817767617
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000144_post_disaster": [
-        [
-            0.43739143820369975,
-            0.4148319206985771,
-            0.35243107664818857
-        ],
-        [
-            0.17392605162321803,
-            0.16503323341659396,
-            0.17142373319640877
-        ]
-    ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000152_pre_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000152_pre_disaster": [
         [
             0.29498638452268106,
             0.3107489342783012,
@@ -1307,7 +1163,7 @@
             0.0800291197373904
         ]
     ],
-    "public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000152_post_disaster": [
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000152_post_disaster": [
         [
             0.2536184984094955,
             0.26341062807569315,
@@ -1317,6 +1173,150 @@
             0.05806562103598971,
             0.056359704078423147,
             0.05681277409447516
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000177_pre_disaster": [
+        [
+            0.3196127947639015,
+            0.3334322798485848,
+            0.24854994007185402
+        ],
+        [
+            0.1556786792432595,
+            0.13963465659057203,
+            0.14134189161761584
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000177_post_disaster": [
+        [
+            0.32913038590375127,
+            0.33278683681114046,
+            0.2456379310757506
+        ],
+        [
+            0.11543351554488501,
+            0.10420494693536297,
+            0.11320987481895835
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000184_pre_disaster": [
+        [
+            0.26067600624234066,
+            0.25784050062590946,
+            0.2025177338544061
+        ],
+        [
+            0.2357547691946645,
+            0.23030307242745682,
+            0.19556152597502907
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000184_post_disaster": [
+        [
+            0.266662264805214,
+            0.2556141759835038,
+            0.1965767542521159
+        ],
+        [
+            0.21804199107473346,
+            0.2057489390934987,
+            0.16862472627853828
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000024_pre_disaster": [
+        [
+            0.4010013692519244,
+            0.3839630500943053,
+            0.309223070331648
+        ],
+        [
+            0.18241498988510127,
+            0.1673258340050191,
+            0.1660226971982664
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000024_post_disaster": [
+        [
+            0.40402168947107636,
+            0.38383499220305795,
+            0.310260757745481
+        ],
+        [
+            0.1607946115055048,
+            0.14047296451235486,
+            0.1423060854406136
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000042_pre_disaster": [
+        [
+            0.4055348751591699,
+            0.3857219097661039,
+            0.31282795176786543
+        ],
+        [
+            0.16584913419961175,
+            0.14683750302940254,
+            0.1441936775723384
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000042_post_disaster": [
+        [
+            0.3862788069481942,
+            0.3587181053909599,
+            0.2838040295769187
+        ],
+        [
+            0.13930137211469923,
+            0.11670993036014747,
+            0.11161481233445864
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000126_pre_disaster": [
+        [
+            0.3657617007984835,
+            0.3502412721222521,
+            0.2727119931987687
+        ],
+        [
+            0.143680410755032,
+            0.12716559420973128,
+            0.12697392618923306
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000126_post_disaster": [
+        [
+            0.3641026515586704,
+            0.34542040731392654,
+            0.2720396341062059
+        ],
+        [
+            0.12073380542920867,
+            0.09700434709316114,
+            0.09949935922696893
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000144_pre_disaster": [
+        [
+            0.4124409619499656,
+            0.3954093708711512,
+            0.33389109817205687
+        ],
+        [
+            0.18090275846837467,
+            0.16536026307875962,
+            0.1703078817767617
+        ]
+    ],
+    "/original_siames/public_datasets/xBD/final_mdl_all_disaster_splits/raw/train/images/mexico-earthquake_00000144_post_disaster": [
+        [
+            0.43739143820369975,
+            0.4148319206985771,
+            0.35243107664818857
+        ],
+        [
+            0.17392605162321803,
+            0.16503323341659396,
+            0.17142373319640877
         ]
     ]
 }
