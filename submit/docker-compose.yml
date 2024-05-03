@@ -1,0 +1,18 @@
+services:
+  train:
+      build: .
+      image: "thesis_siames_training:0.0.4"
+      shm_size: '10gb'
+      volumes:
+        - type: bind
+          source: ${data_fp}
+          target: "/original_siames/public_datasets/xBD/raw/train"
+        - type: bind
+          source: ${out1_fp}
+          target: "/original_siames/nlrc_outputs/"
+        - type: bind
+          source: ${out2_fp}
+          target: "/original_siames/out/"
+        - type: bind
+          source: ${cons_fp}
+          target: "/original_siames/constants/splits"

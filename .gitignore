@@ -1,18 +1,5 @@
-public_datasets/*
-outputs/
-out/
-.vscode/
-envs/
-venv/
-src/baseline_model
-.my_modelsvenv/
-__pycache__
-__pycache__/
-*/__pycache__/
-*/*/__pycache__/
-src/mask_r-cnn
-src/baseline
-nlrc_outputs
+data/*
+out/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
