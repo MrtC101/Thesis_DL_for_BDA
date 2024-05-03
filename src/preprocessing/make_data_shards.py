@@ -28,7 +28,7 @@ import sys
 import math
 import numpy as np
 import json
-from dataset_shard_save import DisasterDataset
+from utils.filemanager.dataset_shard_save import DisasterDataset
 #from train_utils import load_json_files, dump_json_files
 from tqdm import tqdm
 
