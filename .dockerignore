@@ -1,8 +1,9 @@
-lib/*
-nlrc_outputs/*
-out/*
-public_datasets/*
-images/
-constants/splits/*
 __pycache__/
 */__pycache__/
+.vscode/
+images/
+notebooks/
+out/*
+submit/
+data/data_splits/*
+data/xBD/*

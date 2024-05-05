@@ -1,6 +1,6 @@
 import logging
 
-def get_logger(name: str, level: int) -> logging.Logger:
+def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
         """
         Configura y devuelve un objeto Logger.
 
