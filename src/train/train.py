@@ -1,5 +1,15 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+
+import os
+import sys
+if(os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.logger import get_logger
+l = get_logger("delete_extra")
+
+
 import os
 import sys
 import math

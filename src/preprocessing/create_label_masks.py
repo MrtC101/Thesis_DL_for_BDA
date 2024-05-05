@@ -33,15 +33,17 @@ Below is their copyright statement:
 # DM19-0988                                                                                                                                                         #
 #####################################################################################################################################################################
 
-
 import os
 import sys
-sys.path.append(os.environ.get("SRC_PATH"))
+if(os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.logger import get_logger
+l = get_logger("delete_extra")
+
 
 import argparse
-import json
-
-# documentation for cv2 fillPoly https://docs.opencv.org/master/d6/d6e/group__imgproc__draw.html#ga8c69b68fab5f25e2223b6496aa60dad5
+from os.path import join
 from shapely import wkt
 from shapely.geometry import mapping, Polygon
 from tqdm import tqdm
@@ -153,13 +155,13 @@ def mask_polygons_together_with_border(size, polys, border):
     return mask_img
 
 
-def mask_tiles(images_dir, label_paths, targets_dir, border_width, overwrite_target):
+def mask_tiles(images_dir, json_paths, targets_dir, border_width, overwrite_target):
 
-    for label_path in tqdm(label_paths):
+    for json_path in tqdm(json_paths):
 
-        tile_id = os.path.basename(label_path).split('.json')[0]  # just the file name without extension
-        image_path = os.path.join(images_dir, f'{tile_id}.png')
-        target_path = os.path.join(targets_dir, f'{tile_id}_b{border_width}.png')
+        tile_id = os.path.basename(json_path).split('.json')[0]  # just the file name without extension
+        image_path = join(images_dir, f'{tile_id}.png')
+        target_path = join(targets_dir, f'{tile_id}_b{border_width}.png')
 
         if os.path.exists(target_path) and not overwrite_target:
             continue
@@ -178,46 +180,42 @@ def mask_tiles(images_dir, label_paths, targets_dir, border_width, overwrite_tar
         imwrite(target_path, mask_img)
 
 
-def main():
+def create_masks(data_path : str,border_width : int, overwrite_target : bool):
+    images_dir = join(data_path, 'images')
+    labels_dir = join(data_path, 'labels')
 
-
-    images_dir = os.path.join(args.root_dir, 'images')
-    labels_dir = os.path.join(args.root_dir, 'labels')
-
-    assert os.path.exists(args.root_dir), 'root_dir does not exist'
-    assert os.path.isdir(args.root_dir), 'root_dir needs to be path to a directory'
-    assert os.path.exists(images_dir), 'root_dir does not contain the folder `images`'
-    assert os.path.exists(labels_dir), 'root_dir does not contain the folder `labels`'
-    assert args.border_width >= 0, 'border_width < 0'
-    assert args.border_width < 5, 'specified border_width is > 4 pixels - are you sure?'
-
+    assert os.path.isdir(data_path), f'{data_path} is not a directory'
+    assert os.path.isdir(images_dir), f'{data_path} does not contain the folder `images`'
+    assert os.path.isdir(labels_dir), f'{data_path} does not contain the folder `labels`'
+    assert border_width >= 0, 'border_width < 0'
+    assert border_width < 5, 'specified border_width is > 4 pixels - are you sure?'
     assert isinstance(DISASTERS_OF_INTEREST, tuple)
     for i in DISASTERS_OF_INTEREST:
         assert i.endswith('_')
 
-    print(f'Disasters to create the masks for: {DISASTERS_OF_INTEREST}')
+    l.info(f'Disasters to create the masks for: {DISASTERS_OF_INTEREST}')
 
-    targets_dir = os.path.join(args.root_dir, f'targets_border{args.border_width}')
+    targets_dir = join(data_path, f'targets_border{border_width}')
     print(f'A targets directory is at {targets_dir}')
     os.makedirs(targets_dir, exist_ok=True)
 
     # list out label files for the disaster of interest
-    li_label_fn = os.listdir(labels_dir)
-    li_label_fn = sorted([i for i in li_label_fn if i.endswith('.json')])
-    li_label_paths = [os.path.join(labels_dir, i) for i in li_label_fn if i.startswith(DISASTERS_OF_INTEREST)]
-
-    print(f'{len(li_label_fn)} label jsons found in labels_dir, '
-          f'{len(li_label_paths)} are for the disasters of interest.')
-
-    mask_tiles(images_dir, li_label_paths, targets_dir, args.border_width, args.overwrite_target)
-    print('Done!')
+    json_files = [file for file in os.listdir(labels_dir) 
+                  if file.endswith('.json')]
+    json_paths = [join(labels_dir, file) for file in json_files 
+                  if file.startswith(DISASTERS_OF_INTEREST)]
+    l.info(f'{len(json_files)} label jsons found in labels_dir, ' \
+           f'{len(json_paths)} are for the disasters of interest.')
+    
+    mask_tiles(images_dir, json_paths, targets_dir, border_width, overwrite_target)
+    l.info("Mask for disasters created.")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create masks for each label json file for disasters specified at the top of the script.')
     parser.add_argument(
-        'root_dir',
+        'data_path',
         help=('Path to the directory that contains both the `images` and `labels` folders. '
               'The `targets_border{border_width}` folder will be created if it does not already exist.')
     )
@@ -232,4 +230,4 @@ if __name__ == '__main__':
         action='store_true'
     )
     args = parser.parse_args()
-    main()
+    create_masks(*args)

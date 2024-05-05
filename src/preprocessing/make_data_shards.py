@@ -21,6 +21,14 @@ python data/make_chip_shards.py --config_module_path training_wcs/experiments/el
 ```
 """
 
+import os
+import sys
+if(os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.logger import get_logger
+l = get_logger("delete_extra")
+
 import argparse
 import importlib
 import os
