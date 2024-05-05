@@ -33,17 +33,24 @@ Below is their copyright statement:
 # DM19-0988                                                                                                                                                         #
 #####################################################################################################################################################################
 
+
+import os
+import sys
+sys.path.append(os.environ.get("SRC_PATH"))
+
 import argparse
 import json
-import os
 
 # documentation for cv2 fillPoly https://docs.opencv.org/master/d6/d6e/group__imgproc__draw.html#ga8c69b68fab5f25e2223b6496aa60dad5
-from cv2 import fillPoly, imwrite
-import numpy as np
 from shapely import wkt
 from shapely.geometry import mapping, Polygon
-from skimage.io import imread
 from tqdm import tqdm
+from utils.files.common import read_json, dump_json
+
+import numpy as np
+from skimage.io import imread
+from cv2 import fillPoly, imwrite
+
 
 # keep as a tuple, not a list
 # add a _ at the end of the disaster-name so they are prefix-free
@@ -52,24 +59,16 @@ from tqdm import tqdm
 DISASTERS_OF_INTEREST = ('mexico-earthquake_', 'palu-tsunami_', 'sunda-tsunami_')
 
 # running from repo root
-with open('constants/class_lists/xBD_label_map.json') as label_map_file:
-    LABEL_NAME_TO_NUM = json.load(label_map_file)['label_name_to_num']
-
+LABEL_NAME_TO_NUM = read_json('constants/class_lists/xBD_label_map.json')['label_name_to_num']
 
 def get_dimensions(file_path):
-    """ Returns (width, height, channels) of the image at file_path
+    """
+        Returns (width, height, channels) of the image at file_path
     """
     pil_img = imread(file_path)
     img = np.array(pil_img)
     w, h, c = img.shape
     return (w, h, c)
-
-
-def read_json(json_path):
-    with open(json_path) as f:
-        j = json.load(f)
-    return j
-
 
 def get_feature_info(feature):
     """Reading coordinate and category information from the label json file
@@ -180,24 +179,7 @@ def mask_tiles(images_dir, label_paths, targets_dir, border_width, overwrite_tar
 
 
 def main():
-    parser = argparse.ArgumentParser(
-        description='Create masks for each label json file for disasters specified at the top of the script.')
-    parser.add_argument(
-        'root_dir',
-        help=('Path to the directory that contains both the `images` and `labels` folders. '
-              'The `targets_border{border_width}` folder will be created if it does not already exist.')
-    )
-    parser.add_argument(
-        '-b', '--border_width',
-        type=int,
-        default=1
-    )
-    parser.add_argument(
-        '-o', '--overwrite_target',
-        help='flag if we want to generate all targets anew',
-        action='store_true'
-    )
-    args = parser.parse_args()
+
 
     images_dir = os.path.join(args.root_dir, 'images')
     labels_dir = os.path.join(args.root_dir, 'labels')
@@ -232,4 +214,22 @@ def main():
 
 
 if __name__ == '__main__':
+    parser = argparse.ArgumentParser(
+        description='Create masks for each label json file for disasters specified at the top of the script.')
+    parser.add_argument(
+        'root_dir',
+        help=('Path to the directory that contains both the `images` and `labels` folders. '
+              'The `targets_border{border_width}` folder will be created if it does not already exist.')
+    )
+    parser.add_argument(
+        '-b', '--border_width',
+        type=int,
+        default=1
+    )
+    parser.add_argument(
+        '-o', '--overwrite_target',
+        help='flag if we want to generate all targets anew',
+        action='store_true'
+    )
+    args = parser.parse_args()
     main()
