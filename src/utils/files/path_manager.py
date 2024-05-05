@@ -102,7 +102,7 @@ class DisasterDict(dict):
     def add(self,folder_path,file_name):
         file_path = join(folder_path, file_name)
         assert os.path.isfile(file_path), f"{file_path} is not a file."
-        zone = self.split_file_name(file_name)
+        zone = self._split_file_name(file_name)
         if(zone["id"] not in self.keys()):
             self[zone["id"]] = ZoneDict(zone["id"])
         tiles = self[zone["id"]]
@@ -134,7 +134,7 @@ class DisasterDict(dict):
         """
         path_dict : dict = {}
         zone : ZoneDict
-        for zone_id,zone in self.disaster_zone_dict.items():
+        for zone_id,zone in self.items():
             tile : TileDict
             for tile_id,tile in zone.items():
                 files: TileFilesDict
@@ -144,11 +144,22 @@ class DisasterDict(dict):
                             path_dict[zone_id] = []
                         path_dict[zone_id].append(file_path)    
         return path_dict
+    
+    def to_split_dict(self)->dict:
+        split_dict : dict = {}
+        zone : ZoneDict
+        for zone_id,zone in self.items():
+            tile : TileDict
+            for tile_id,tile in zone.items():
+                new_id = zone_id+"_"+tile_id
+                split_dict[new_id] = tile
+        return split_dict
+    
 
 class RawPathManager:
 
     @classmethod
-    def load_dataset(data_path: str) -> DisasterDict:
+    def load_dataset(cls,data_path: str) -> DisasterDict:
         """
             Creates a DisasterDict that stores each file path
         """
