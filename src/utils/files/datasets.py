@@ -1,11 +1,18 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-import l
+
 import os
+import sys
+if(os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.logger import get_logger
+l = get_logger("delete_extra")
+
 from skimage import transform
 from torch.utils.data import Dataset
 from glob import glob
-import logging as l
+
 from PIL import Image
 import cv2
 import numpy as np
@@ -15,6 +22,42 @@ import torchvision.transforms.functional as TF
 from torchvision import transforms
 import random
 from os.path import join
+
+from utils.files.common import read_json
+
+
+class TilesDataset(Dataset):
+
+    def __init__(self,data : dict):
+        self.tile_list = [(dis_id,tile_id,tile) 
+                          for dis_id in data.keys()
+                          for tile_id, tile in data[dis_id].items()]
+
+    def __len__(self):
+        return len(self.tile_list)
+
+    def __getitem__(self, i):
+
+        disaster_id, tile_id, tile = self.tile_list[i]
+
+        pre_img = cv2.imread(tile["pre"]["image"],cv2.COLOR_BGR2RGB)
+        post_img = cv2.imread(tile["post"]["image"],cv2.COLOR_BGR2RGB)
+        post_json = read_json(tile["post"]["json"])
+        pre_json = read_json(tile["pre"]["json"])
+
+        assert pre_img.shape == post_img.shape, \
+            f'Pre_ & _post disaster Images {disaster_id}_{tile_id} should be the same size, {pre_img.shape} != {post_img.shape}.'
+
+        return {
+            "dis_id": disaster_id,
+            "tile_id": tile_id,
+            "pre_img": pre_img ,
+            "post_img": post_img,
+            "pre_json": pre_json,
+            "post_json": post_json
+            }
+
+
 
 class DisasterDataset(Dataset):
     """
@@ -280,7 +323,7 @@ class TestDataset(DisasterDataset):
         return {'pre_image': torch.from_numpy(pre_img).type(torch.FloatTensor), 'post_image': torch.from_numpy(post_img).type(torch.FloatTensor), 'building_mask': torch.from_numpy(mask).type(torch.LongTensor), 'damage_mask': torch.from_numpy(damage_class).type(torch.LongTensor), 'pre_image_orig': transforms.ToTensor()(pre_img_orig), 'post_image_orig': transforms.ToTensor()(post_img_orig), 'img_file_idx': imgs_dir[0:-1*(len(img_suffix))].split('/')[-1] + img_suffix, 'preds_img_dir': preds_dir}
 
     
-class TilesDataset(DisasterDataset):
+class Tiles2Dataset(DisasterDataset):
 
     def __init__(self, data_dir, data_mean_stddev, transform: bool, normalize: bool):
         super.__init__()
