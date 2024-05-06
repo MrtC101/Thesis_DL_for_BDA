@@ -1,5 +1,17 @@
 import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.logger import get_logger
+l = get_logger("delete_extra")
+
 from os.path import join
+from utils.files.common import is_dir, is_file
+
+"""
+
+XBD dataset file nomenclature:
 
 dataset = ["xBD"]
 dataset_subset = ["train", "hold", "test", "tier3"]
@@ -10,6 +22,7 @@ id = 00000000
 prefix = ["pre", "post"]
 file_type = ["disaster.png", "disaster.json", "disaster_target.png"]
 f"{dataset}/{dataset_subset}/{folder_type}/{zone}-{disaster_type}_{id}_{prefix}_{file_type}"
+"""
 
 class TileFilesDict(dict):
     
@@ -101,7 +114,7 @@ class DisasterDict(dict):
 
     def add(self,folder_path,file_name):
         file_path = join(folder_path, file_name)
-        assert os.path.isfile(file_path), f"{file_path} is not a file."
+        is_file(file_path)
         zone = self._split_file_name(file_name)
         if(zone["id"] not in self.keys()):
             self[zone["id"]] = ZoneDict(zone["id"])
@@ -163,19 +176,37 @@ class RawPathManager:
         """
             Creates a DisasterDict that stores each file path
         """
-        assert os.path.exists(data_path), f"{data_path} path do not exist."
-        assert os.path.isdir(data_path), f"{data_path} path is not a directory."
+        is_dir(data_path)
 
         dataset_subsets = os.listdir(data_path)
         disaster_zone_dict = DisasterDict()
         for subset in dataset_subsets:
             for folder in ["images", "labels", "targets"]:
                 folder_path = join(data_path, subset, folder)
-                assert os.path.isdir(folder_path), f"{folder_path} is not a directory."
+                is_dir(data_path)
                 for file in os.listdir(folder_path):
                     disaster_zone_dict.add(folder_path,file)
         return disaster_zone_dict
-    
+
+class ProcessedPathManager:
+
+    @classmethod
+    def load_dataset(cls,data_path: str) -> DisasterDict:
+        """
+            Creates a DisasterDict that stores each file path
+        """
+        is_dir(data_path)
+
+        dataset_subsets = os.listdir(data_path)
+        disaster_zone_dict = DisasterDict()
+        for subset in dataset_subsets:
+            for folder in ["images", "labels", "targets"]:
+                folder_path = join(data_path, subset, folder)
+                is_dir(data_path)
+                for file in os.listdir(folder_path):
+                    disaster_zone_dict.add(folder_path,file)
+        return disaster_zone_dict
+
 if __name__ == "__main__":
     XBD = RawPathManager.load_dataset("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/raw/")
     XBD.to_dict()

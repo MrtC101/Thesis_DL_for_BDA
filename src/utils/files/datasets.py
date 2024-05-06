@@ -3,33 +3,43 @@
 
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from utils.logger import get_logger
 l = get_logger("delete_extra")
 
-from skimage import transform
-from torch.utils.data import Dataset
-from glob import glob
-
-from PIL import Image
-import cv2
-import numpy as np
+import math
 import torch
-from torch.utils.data import Dataset, DataLoader
+import random
+import cv2
+from os.path import join
 import torchvision.transforms.functional as TF
 from torchvision import transforms
-import random
-from os.path import join
+from torch.utils.data import Dataset, DataLoader
+from utils.files.common import read_json, is_dir
 
-from utils.files.common import read_json
+"""Deletable"""
+import numpy as np
+from PIL import Image
+from glob import glob
+from skimage import transform
+
+
+def same_shape(dis_id,tile_id,img1, img2) -> bool:
+    assert img1.shape[:2] == img2.shape[:2], \
+        f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
+    return True
 
 
 class TilesDataset(Dataset):
+    """
+        Dataset that uses a dictionary to manage files path that's builded with the data structure DisasterDict from path_manager.py
+    """
 
-    def __init__(self,data : dict):
-        self.tile_list = [(dis_id,tile_id,tile) 
+    def __init__(self, data: dict):
+
+        self.tile_list = [(dis_id, tile_id, tile)
                           for dis_id in data.keys()
                           for tile_id, tile in data[dis_id].items()]
 
@@ -40,42 +50,127 @@ class TilesDataset(Dataset):
 
         disaster_id, tile_id, tile = self.tile_list[i]
 
-        pre_img = cv2.imread(tile["pre"]["image"],cv2.COLOR_BGR2RGB)
-        post_img = cv2.imread(tile["post"]["image"],cv2.COLOR_BGR2RGB)
+        pre_img = cv2.imread(tile["pre"]["image"], cv2.COLOR_BGR2RGB)
+        post_img = cv2.imread(tile["post"]["image"], cv2.COLOR_BGR2RGB)
         post_json = read_json(tile["post"]["json"])
         pre_json = read_json(tile["pre"]["json"])
-
-        assert pre_img.shape == post_img.shape, \
-            f'Pre_ & _post disaster Images {disaster_id}_{tile_id} should be the same size, {pre_img.shape} != {post_img.shape}.'
 
         return {
             "dis_id": disaster_id,
             "tile_id": tile_id,
-            "pre_img": pre_img ,
+            "pre_img": pre_img,
             "post_img": post_img,
             "pre_json": pre_json,
             "post_json": post_json
-            }
+        }
 
+class SliceDataset(Dataset):
 
+    def __init__(self, split_name: str,split_dict: dict, augmented_path: str):
+        """
+        Args:
+            split_dict: Dict builded with DisasterDict loaded from json file.
+            augmented_path: Path to the directory were augmented dataset will be created
+        """
+        try:
+            is_dir(augmented_path)
+        except AssertionError as e:
+            l.critical(e)
 
-class DisasterDataset(Dataset):
-    """
-    Abstract class that represents a dataset with a group of DisasterZones.
-    """
-    def __init__(self, data_dir, data_dir_ls, data_mean_stddev, transform: bool, normalize: bool):
-        self.data_dir = data_dir
-        self.dataset_sub_dir = data_dir_ls
-        self.data_mean_stddev = data_mean_stddev
-        self.transform = transform
-        self.normalize = normalize
+        self.out_path = augmented_path
+        self.split_name = split_name
+        self.tile_list = [(dis_id, tile_id, tile)
+                          for dis_id in split_dict.keys()
+                          for tile_id, tile in split_dict[dis_id].items()]
 
     def __len__(self):
-        return len(self.pre_image_chip_shard)
-    def __len__(self):
-        return len(self.dataset_sub_dir)
+        return len(self.tile_list)
 
-class ShardsDataset(DisasterDataset):
+    @classmethod
+    def slice_tile(self, n, pre_img, post_img, pre_mask, post_mask):
+
+        tile_h, tile_w = pre_img.shape[:2]
+
+        assert tile_h % n == 0 and n > 0, f"Can't crop image into {n}x{n} equal parts."
+
+        h_idx = [math.floor(tile_h*p) for p in np.arange(0, 1, 0.25)]
+        w_idx = [math.floor(tile_w*p) for p in np.arange(0, 1, 0.25)]
+        #l.info(f"{h_idx}")
+        
+        patch_h = math.floor(tile_h / n)
+        patch_w = math.floor(tile_w / n)
+
+        imgs = [pre_img, post_img, pre_mask, post_mask]
+        keys = ["pre_img", "post_img", "semantic_mask", "class_mask"]
+
+        def create_crop(i, j):
+            crop = transforms.Compose([
+                lambda img: img[i:i+patch_h, j:j+patch_w],
+                #transforms.ToTensor()
+            ])
+            return crop
+
+        def create_patch(patch_list, crop_transform):
+            patch_dict = {}
+            for key, img in zip(keys, imgs):
+                patch = crop_transform(img)
+                patch_dict[key] = patch
+            patch_list.append(patch_dict)
+            return patch_list
+
+        patch_list = []
+        for i in h_idx:
+            for j in w_idx:
+                crop_transform = create_crop(i, j)
+                create_patch(patch_list, crop_transform)
+
+        # pick 4 random slices from each tile
+        for _ in range(0, 4):
+            i = random.randint(5, h_idx[-1]-5)
+            j = random.randint(5, w_idx[-1]-5)
+            crop_transform = create_crop(i, j)
+            create_patch(patch_list, crop_transform)
+
+        return patch_list
+
+    def __getitem__(self, i):
+
+        disaster_id, tile_id, tile = self.tile_list[i]
+
+        pre_img = cv2.imread(tile["pre"]["image"], cv2.COLOR_BGR2RGB)
+        post_img = cv2.imread(tile["post"]["image"], cv2.COLOR_BGR2RGB)
+        # post_json = read_json(tile["post"]["json"])
+        # pre_json = read_json(tile["pre"]["json"])
+        pre_mask = cv2.imread(tile["pre"]["mask"], cv2.COLOR_BGR2RGB)
+        post_mask = cv2.imread(tile["post"]["mask"], cv2.COLOR_BGR2RGB)
+
+        same_shape(disaster_id,tile_id,pre_img, post_img)
+        same_shape(disaster_id,tile_id,pre_img, pre_mask)
+        same_shape(disaster_id,tile_id,post_img, post_mask)
+
+        patch_list = self.slice_tile(
+            4,pre_img, post_img, pre_mask, post_mask)
+
+        split_folder = join(self.out_path,self.split_name)
+        os.makedirs(split_folder,exist_ok=True)
+
+        for i,patch in enumerate(patch_list):
+            patch_id = f"{disaster_id}_{tile_id}_{i}"
+            patch_folder = join(split_folder,patch_id)
+            os.makedirs(patch_folder, exist_ok=True)
+            for key in patch.keys():
+                img_name = f"{patch_id}_{key}.png"
+                path = join(patch_folder,img_name)
+                cv2.imwrite(path,patch[key])
+
+        return {
+            'pre_image': TF.to_tensor(pre_img),
+            'post_image': TF.to_tensor(post_img),
+            'semantic_mask': TF.to_tensor(pre_mask),
+            'class_mask': TF.to_tensor(post_mask)
+        }
+
+class ShardDataset(DisasterDataset):
 
     shard_names = ["pre_image_chips",
                    "post_image_chips",
@@ -84,9 +179,10 @@ class ShardsDataset(DisasterDataset):
                    "pre_img_tiles",
                    "post_img_tiles"]
 
-    def __init__(self, data_dir, i_shard, set_name, data_mean_stddev, transform: bool, normalize: bool):
+    def __init__(self, sliced_data_dict, i_shard, set_name, data_mean_stddev, transform: bool, normalize: bool):
 
-        self.data_dir = data_dir
+        self.data = sliced_data_dict
+
         self.do_transform: bool = transform
         self.do_normalize: bool = normalize
         self.data_mean_stddev = data_mean_stddev
@@ -147,13 +243,13 @@ class ShardsDataset(DisasterDataset):
 
     def __getitem__(self, i):
 
-        pre_img : np.array = self.shards["pre_image_chips"][i]
+        pre_img: np.array = self.shards["pre_image_chips"][i]
         post_img = self.shards["post_image_chips"][i]
         mask = self.shards["bld_mask_chips"][i]
         damage_class = self.shards["dmg_mask_chips"][i]
 
         # copy original image for viz
-        pre_img_orig = pre_img 
+        pre_img_orig = pre_img
         post_img_orig = post_img
 
         if self.do_transform:
@@ -180,11 +276,18 @@ class ShardsDataset(DisasterDataset):
             'post_image_orig': transforms.ToTensor()(post_img_orig)
         }
 
+class TrainShardsDataset(Dataset):
+    pass
+
+class TestDataset(Dataset):
+    pass
+
+## DELETABLE?
+
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+class TestDataset(Dataset):
 
-class TestDataset(DisasterDataset):
-    
     @classmethod
     def apply_transform(self, mask, pre_img, post_img, damage_class):
         '''
@@ -321,79 +424,3 @@ class TestDataset(DisasterDataset):
         damage_class = np.where(damage_class == 5, 0, damage_class)
 
         return {'pre_image': torch.from_numpy(pre_img).type(torch.FloatTensor), 'post_image': torch.from_numpy(post_img).type(torch.FloatTensor), 'building_mask': torch.from_numpy(mask).type(torch.LongTensor), 'damage_mask': torch.from_numpy(damage_class).type(torch.LongTensor), 'pre_image_orig': transforms.ToTensor()(pre_img_orig), 'post_image_orig': transforms.ToTensor()(post_img_orig), 'img_file_idx': imgs_dir[0:-1*(len(img_suffix))].split('/')[-1] + img_suffix, 'preds_img_dir': preds_dir}
-
-    
-class Tiles2Dataset(DisasterDataset):
-
-    def __init__(self, data_dir, data_mean_stddev, transform: bool, normalize: bool):
-        super.__init__()
-        self.dataset_dir = data_dir
-        self.dataset_subsets_names = os.listdir(data_dir)
-        self.data_mean_stddev = data_mean_stddev
-        self.transform = transform
-        self.normalize = normalize
-
-    def __len__(self):
-        return len(self.dataset_sub_dir)
-
-    def __getitem__(self, i):
-
-        imgs_path = join(self.data_dir,self.dataset_sub_dir[i].replace('labels', 'images'))
-        masks_path = join(self.data_dir,self.dataset_sub_dir[i].replace('labels', 'targets_border2')) 
-
-        imgs_dir = self.data_dir + \
-            self.dataset_sub_dir[i].replace('labels', 'images')
-        masks_dir = self.data_dir + \
-            self.dataset_sub_dir[i].replace('labels', 'targets_border2')
-
-        idx = imgs_dir
-
-        img_suffix = '_' + imgs_dir.split('_')[-1]
-        mask_suffix = '_' + masks_dir.split('_')[-1]
-
-        pre_img_tile_name = imgs_dir[0:-1*(len(img_suffix))] + '_pre_disaster'
-        pre_img_file_name = imgs_dir[0:-1 *
-                                     (len(img_suffix))] + '_pre_disaster' + img_suffix
-        pre_img_file = glob(pre_img_file_name + '.*')
-
-        mask_file_name = masks_dir[0:-1*(len(mask_suffix))] + \
-            '_pre_disaster_b2' + mask_suffix
-        mask_file = glob(mask_file_name + '.*')
-
-        post_img_tile_name = pre_img_tile_name.replace('pre', 'post')
-        post_img_file_name = pre_img_file_name.replace('pre', 'post')
-        post_img_file = glob(post_img_file_name + '.*')
-
-        damage_class_file_name = mask_file_name.replace('pre', 'post')
-        damage_class_file = glob(damage_class_file_name + '.*')
-
-        assert len(mask_file) == 1, \
-            f'Either no mask or multiple masks found for the ID {idx}: {mask_file_name}'
-        assert len(pre_img_file) == 1, \
-            f'Either no image or multiple images found for the ID {idx}: {pre_img_file_name}'
-        assert len(post_img_file) == 1, \
-            f'Either no post disaster image or multiple images found for the ID {idx}: {post_img_file_name}'
-        assert len(damage_class_file) == 1, \
-            f'Either no damage class image or multiple images found for the ID {idx}: {damage_class_file_name}'
-
-        mask = cv2.imread(mask_file[0], cv2.IMREAD_GRAYSCALE)
-        pre_img = cv2.imread(pre_img_file[0])
-        post_img = cv2.imread(post_img_file[0])
-        damage_class = cv2.imread(damage_class_file[0], cv2.IMREAD_GRAYSCALE)
-
-        assert pre_img.shape[0] == mask.shape[0], \
-            f'Image and building mask {idx} should be the same size, but are {pre_img.shape} and {mask.shape}'
-        assert mask.size == damage_class.size, \
-            f'Image and damage classes mask {idx} should be the same size, but are {mask.size} and {damage_class.size}'
-        assert pre_img.size == post_img.size, \
-            f'Pre_ & _post disaster Images {idx} should be the same size, but are {pre_img.size} and {post_img.size}'
-
-        data = {'pre_image': pre_img, 'post_image': post_img, 'building_mask': mask,
-                'damage_mask': damage_class, 'pre_img_tile_name': pre_img_tile_name}
-
-        return data
-    
-class DisasterLoader(DataLoader):
-    """
-    Abstract class that loads a DisasterDataset.
-    """

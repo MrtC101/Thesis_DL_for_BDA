@@ -48,7 +48,7 @@ from os.path import join
 from shapely import wkt
 from shapely.geometry import mapping, Polygon
 from cv2 import fillPoly, imread, imwrite
-from utils.files.common import read_json
+from utils.files.common import read_json, is_dir
 
 path = join(os.environ.get("DATA_PATH"),'constants/class_lists/xBD_label_map.json')
 LABEL_NAME_TO_NUM = read_json(path)['label_name_to_num']
@@ -174,9 +174,9 @@ def create_masks(data_path : str,border_width : int):
         
         images_dir = join(data_path, 'images')
         labels_dir = join(data_path, 'labels')
-        assert os.path.isdir(data_path), f'{data_path} is not a directory'
-        assert os.path.isdir(images_dir), f'{data_path} does not contain the folder `images`'
-        assert os.path.isdir(labels_dir), f'{data_path} does not contain the folder `labels`'       
+        is_dir(data_path)
+        is_dir(images_dir)
+        is_dir(labels_dir)
 
         targets_dir = join(data_path, 'targets')
         os.makedirs(targets_dir, exist_ok=True)
@@ -190,8 +190,7 @@ if __name__ == '__main__':
         description='Create masks for each label json file for disasters specified at the top of the script.')
     parser.add_argument(
         'data_path',
-        help=('Path to the directory that contains both the `images` and `labels` folders. '
-              'The `targets_border{border_width}` folder will be created if it does not already exist.')
+        help=('Path to the directory that contains the content of the raw folder from xBD dataset.')
     )
     parser.add_argument(
         '-b', '--border_width',
