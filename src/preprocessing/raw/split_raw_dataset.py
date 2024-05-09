@@ -3,7 +3,7 @@ import sys
 if(os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.logger import get_logger
+from utils.visualization.logger import get_logger
 l = get_logger("delete_extra")
 
 import os
@@ -11,16 +11,14 @@ import argparse
 import math
 from tqdm import tqdm
 from random import shuffle
-from utils.files.common import dump_json
-from utils.files.path_manager import RawPathManager, DisasterDict
-
-from collections import Counter, defaultdict
+from utils.common.files import dump_json
+from utils.pathManagers.rawManager import RawPathManager, DisasterDict
 import numpy as np
 
 
 def split_dataset(xbd_path : str) -> None:
     """
-        Splits the xbd dataset in train and test sets. (90%,10%)
+        Splits the xbd dataset in train and test sets. (80%,10%,10%)
     """
     # creates splits folder    
     split_path = os.path.join(xbd_path,"splits")

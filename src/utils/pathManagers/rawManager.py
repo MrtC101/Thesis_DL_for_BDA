@@ -3,11 +3,11 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.logger import get_logger
+from utils.visualization.logger import get_logger
 l = get_logger("delete_extra")
 
 from os.path import join
-from utils.files.common import is_dir, is_file
+from utils.common.files import is_dir, is_file
 
 """
 
@@ -172,7 +172,7 @@ class DisasterDict(dict):
 class RawPathManager:
 
     @classmethod
-    def load_dataset(cls,data_path: str) -> DisasterDict:
+    def load_paths(cls,data_path: str) -> DisasterDict:
         """
             Creates a DisasterDict that stores each file path
         """
@@ -187,25 +187,7 @@ class RawPathManager:
                 for file in os.listdir(folder_path):
                     disaster_zone_dict.add(folder_path,file)
         return disaster_zone_dict
-
-class ProcessedPathManager:
-
-    @classmethod
-    def load_dataset(cls,data_path: str) -> DisasterDict:
-        """
-            Creates a DisasterDict that stores each file path
-        """
-        is_dir(data_path)
-
-        dataset_subsets = os.listdir(data_path)
-        disaster_zone_dict = DisasterDict()
-        for subset in dataset_subsets:
-            for folder in ["images", "labels", "targets"]:
-                folder_path = join(data_path, subset, folder)
-                is_dir(data_path)
-                for file in os.listdir(folder_path):
-                    disaster_zone_dict.add(folder_path,file)
-        return disaster_zone_dict
+    
 
 if __name__ == "__main__":
     XBD = RawPathManager.load_dataset("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/raw/")
