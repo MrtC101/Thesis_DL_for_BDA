@@ -19,3 +19,7 @@ def is_file(path) -> bool:
     assert os.path.exists(path), f"{path} do not exist."
     assert os.path.isfile(path), f"{path} is not a file." 
     return True 
+
+def is_json(path) -> bool:
+    assert path.split(".")[1] == "json",f"{path} must be a json file."
+    return True

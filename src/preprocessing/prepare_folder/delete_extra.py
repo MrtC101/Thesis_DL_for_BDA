@@ -3,14 +3,14 @@ import sys
 if(os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.logger import get_logger
+from utils.visualization.logger import get_logger
 l = get_logger("delete_extra")
 
 import random
 import argparse
 from tqdm import tqdm
 from itertools import chain
-from utils.files.path_manager import RawPathManager
+from utils.pathManagers.rawManager import RawPathManager
 
 def leave_only_n(data_path : dict, n : int) -> None:
     """

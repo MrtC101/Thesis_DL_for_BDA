@@ -1,5 +1,5 @@
-from utils.files.common import read_json, dump_json
-from utils.files.datasets import TilesDataset
+from utils.common.files import read_json, dump_json, is_json, is_file
+from utils.datasets.raw_datasets import TilesDataset
 from collections import defaultdict
 from shapely import wkt
 import argparse
@@ -9,9 +9,8 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.logger import get_logger
+from utils.visualization.logger import get_logger
 l = get_logger("Compute data from images")
-
 
 def compute_mean_stddev(pre_img, post_img):
     mean = {}
@@ -48,12 +47,30 @@ def count_buildings(pre_json, post_json):
     return count
 
 
+def count_by_disaster(count : dict):
+    c_by_d = {}
+    for zone_id, zone in tqdm(count.items()):
+        c_by_d[zone_id] = {
+            "pre": {
+                "bld_area": defaultdict(int),
+                "bld_class": defaultdict(int)
+            },
+            "post": {
+                "bld_area": defaultdict(int),
+                "bld_class": defaultdict(int)
+            }
+        }
+        for tile_id, tile in zone.items():
+            for time_id, time in tile.items():
+                for m_id, mesure in time.items():
+                    for val_id, value in mesure.items():
+                        c_by_d[zone_id][time_id][m_id][val_id] += value
+    return c_by_d
+
+
 def create_data_dicts(split_json_path, data_dict_folder):
-
-    assert os.path.isfile(split_json_path), f"{split_json_path} is not a file."
-    assert split_json_path.split(
-        ".")[1] == "json", f"{split_json_path} is not a json file."
-
+    is_file(split_json_path)
+    is_json(split_json_path)
     splits = read_json(split_json_path)
 
     mean = defaultdict(lambda: {})
@@ -77,25 +94,7 @@ def create_data_dicts(split_json_path, data_dict_folder):
     dump_json(count_path, count)
 
     l.info(f'Total counting by each disaster.')
-    count = read_json(count_path)
-    c_by_d = {}
-    for zone_id, zone in tqdm(count.items()):
-        c_by_d[zone_id] = {
-            "pre": {
-                "bld_area": defaultdict(int),
-                "bld_class": defaultdict(int)
-            },
-            "post": {
-                "bld_area": defaultdict(int),
-                "bld_class": defaultdict(int)
-            }
-        }
-        for tile_id, tile in zone.items():
-            for time_id, time in tile.items():
-                for m_id, mesure in time.items():
-                    for val_id, value in mesure.items():
-                        c_by_d[zone_id][time_id][m_id][val_id] += value
-
+    c_by_d = count_by_disaster(count=count)
     mean_disaster_path = os.path.join(
         data_dict_folder, "all_tiles_mean_stdev_by_disaster.json")
     dump_json(mean_disaster_path, c_by_d)

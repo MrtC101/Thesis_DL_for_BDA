@@ -38,7 +38,7 @@ import sys
 if(os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.logger import get_logger
+from utils.visualization.logger import get_logger
 l = get_logger("delete_extra")
 
 import argparse
@@ -48,7 +48,7 @@ from os.path import join
 from shapely import wkt
 from shapely.geometry import mapping, Polygon
 from cv2 import fillPoly, imread, imwrite
-from utils.files.common import read_json, is_dir
+from utils.common.files import read_json, is_dir
 
 path = join(os.environ.get("DATA_PATH"),'constants/class_lists/xBD_label_map.json')
 LABEL_NAME_TO_NUM = read_json(path)['label_name_to_num']

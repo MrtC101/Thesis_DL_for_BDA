@@ -28,7 +28,7 @@ import sys
 if(os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.logger import get_logger
+from utils.visualization.logger import get_logger
 l = get_logger("delete_extra")
 
 import argparse
@@ -38,8 +38,8 @@ import sys
 import math
 import numpy as np
 from torch.utils.data import DataLoader
-from utils.files.common import read_json
-from utils.files.datasets import ShardDataset
+from utils.common.files import read_json
+from utils.datasets.inference_datasets import ShardDataset
 
 def create_shard(dataloader, num_shards):
     """Iterate through the dataset to produce shards of chips as numpy arrays, for imagery input and labels.
