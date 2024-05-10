@@ -1,10 +1,10 @@
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import get_logger
+l = get_logger("split_raw_dataset")
 
-from utils.visualization.logger import get_logger
-l = get_logger("delete_extra")
 
 import os
 import argparse
@@ -16,18 +16,17 @@ from utils.pathManagers.rawManager import RawPathManager, DisasterDict
 import numpy as np
 
 
-def split_dataset(xbd_path : str) -> None:
+def split_dataset(raw_path : str, out_path : str) -> None:
     """
         Splits the xbd dataset in train and test sets. (80%,10%,10%)
     """
     # creates splits folder    
-    split_path = os.path.join(xbd_path,"splits")
+    split_path = os.path.join(out_path,"splits")
     if(not os.path.exists(split_path)):
         os.mkdir(split_path)
 
     # loads raw dataset
-    raw_path = os.path.join(xbd_path,"raw")
-    xbd_raw : DisasterDict = RawPathManager.load_dataset(raw_path)
+    xbd_raw : DisasterDict = RawPathManager.load_paths(raw_path)
     tiles_file = os.path.join(split_path,"all_disaster.json")
     dump_json(tiles_file,xbd_raw)
 
@@ -58,15 +57,20 @@ def split_dataset(xbd_path : str) -> None:
         
         l.info(f"{disaster_name} length {len(tiles_ids)}, train {len(ids['train'])}, val {len(ids['val'])}, test {len(ids['test'])}")
 
-    split_file = os.path.join(split_path,"train_test_all_disaster_splits.json")
+    split_file = os.path.join(split_path,"raw_splits.json")
     dump_json(split_file,splits_dict)
+    return split_file
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
             description='Create masks for each label json file for disasters specified at the top of the script.')
     parser.add_argument(
-        'xbd_path',
+        'raw_path',
         help=('Path to the directory that contains all files related with xBD dataset.')
     )
+    parser.add_argument(
+        'out_path',
+        help=('Path for the output json file.')
+    )
     args = parser.parse_args()
-    split_dataset(args.xbd_path)
+    split_dataset(args.out_path)

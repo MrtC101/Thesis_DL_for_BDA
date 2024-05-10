@@ -3,7 +3,7 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.visualization.logger import get_logger
+from utils.common.logger import get_logger
 l = get_logger("delete_extra")
 
 from os.path import join

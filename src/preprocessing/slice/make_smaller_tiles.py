@@ -2,42 +2,46 @@
 # Licensed under the MIT License.
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import get_logger
+l = get_logger("make_smaller_tiles")
 
-from utils.visualization.logger import get_logger
-l = get_logger("Slice_Dataset")
-
-import cv2
-import math
 import argparse
+import random
+import numpy as np
+import math
+import cv2
+
 from tqdm import tqdm
-from concurrent.futures import ThreadPoolExecutor
+from os.path import join
+from torchvision import transforms
 from torch.utils.data import DataLoader
+from concurrent.futures import ThreadPoolExecutor
+
 from utils.common.files import read_json
-from utils.datasets.inference_datasets import SliceDataset
+from utils.datasets.raw_datasets import RawDataset
 
+def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
 
-def slice_tile(self, n, pre_img, post_img, pre_mask, post_mask):
-
-    tile_h, tile_w = pre_img.shape[:2]
+    tile_h, tile_w = pre_image.shape[:2]
 
     assert tile_h % n == 0 and n > 0, f"Can't crop image into {n}x{n} equal parts."
 
     h_idx = [math.floor(tile_h*p) for p in np.arange(0, 1, 0.25)]
     w_idx = [math.floor(tile_w*p) for p in np.arange(0, 1, 0.25)]
-    #l.info(f"{h_idx}")
-    
+    # l.info(f"{h_idx}")
+
     patch_h = math.floor(tile_h / n)
     patch_w = math.floor(tile_w / n)
 
-    imgs = [pre_img, post_img, pre_mask, post_mask]
-    keys = ["pre-img", "post-img", "semantic-mask", "class-mask"]
+    imgs = [pre_image, post_image, pre_mask, post_mask]
+    keys = ["pre-image", "post-image", "semantic-mask", "class-mask"]
 
     def create_crop(i, j):
         crop = transforms.Compose([
             lambda img: img[i:i+patch_h, j:j+patch_w],
-            #transforms.ToTensor()
+            # transforms.ToTensor()
         ])
         return crop
 
@@ -64,50 +68,41 @@ def slice_tile(self, n, pre_img, post_img, pre_mask, post_mask):
 
     return patch_list
 
-def create_dataset(set_name,splits_json,output_path):   
-    l.info(f'{set_name} dataset length before cropping: {set_length}.')
+def save_patches(disaster_id, tile_id, patch_list, sliced_path, split_name):
+    split_folder = join(sliced_path, split_name)
+    os.makedirs(split_folder, exist_ok=True)
+    for i, patch in enumerate(patch_list):
+        patch_id = f"{disaster_id}_{tile_id}_{i}"
+        patch_folder = join(split_folder, patch_id)
+        os.makedirs(patch_folder, exist_ok=True)
+        for key in patch.keys():
+            img_name = f"{patch_id}_{key}.png"
+            path = join(patch_folder, img_name)
+            cv2.imwrite(path, patch[key])
 
-    dataset = SliceDataset(set_name,split,output_path)
+def slice_dataset(splits_json_path, output_path, batch_size):
 
-    l.info(f'{set_name} dataset length after cropping: {len(dataset)}.')
-    return dataset
-
-def slice_dataset(splits_json, output_path, batch_size):
-    
     def iterate_and_slice(split_name):
-        l.info(f'Starting slicing for {split_name}')      
-        dataset = create_dataset(split_name,splits_json, output_path)
-        dataloader = DataLoader(dataset, batch_size, shuffle=False, num_workers=8)
-        
-        for disaster_id,tile_id,data in tqdm(dataloader):
-            pre_img = data["pre_image"]
-            post_img = data["post_image"]
-            pre_mask = data["semantic_mask"]
-            post_mask = data["class_mask"]
-            patch_list = slice_tile(
-            4,pre_img, post_img, pre_mask, post_mask)
+        l.info(f'Starting slicing for {split_name}')
+        dataset = RawDataset(split_name, splits_json_path)
+        l.info(f'{split_name} dataset length before cropping: {len(dataset)}.')
+        dataloader = DataLoader(dataset, batch_size,
+                                shuffle=False, num_workers=8)
 
-            def save_patches()
-                split_folder = join(self.augmented_path,self.split_name)
-                os.makedirs(split_folder,exist_ok=True)
-                for i,patch in enumerate(patch_list):
-                    patch_id = f"{disaster_id}_{tile_id}_{i}"
-                    patch_folder = join(split_folder,patch_id)
-                    os.makedirs(patch_folder, exist_ok=True)
-                    for key in patch.keys():
-                        img_name = f"{patch_id}_{key}.png"
-                        path = join(patch_folder,img_name)
-                        cv2.imwrite(path,patch[key])
-
-
+        for disaster_id, tile_id, data in tqdm(dataloader):
+            patch_list = slice_tile(4, *data)
+            save_patches(disaster_id, tile_id, patch_list,
+                         output_path, split_name)
+        l.info(f'{split_name} dataset length after cropping: {len(dataset)}.')
         l.info(f'Done slicing for {split_name}')
-    
-    #iterate_and_slice("train")
+
+    # iterate_and_slice("train")
     with ThreadPoolExecutor(max_workers=2) as executor:
-        for split_name in ["train","val"]:
+        for split_name in ["train", "val"]:
             executor.submit(iterate_and_slice, split_name)
 
     l.info(f'Done')
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -123,9 +118,9 @@ if __name__ == "__main__":
         help=('Path to folder for new sliced data.')
     )
     parser.add_argument(
-        '-b','--batch_size',
-        type = int,
-        default = 1,
+        '-b', '--batch_size',
+        type=int,
+        default=1,
         help=('Size of the batch of images for augmentation.')
     )
     args = parser.parse_args()

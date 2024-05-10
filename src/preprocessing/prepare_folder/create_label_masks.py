@@ -35,11 +35,11 @@ Below is their copyright statement:
 
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import get_logger
+l = get_logger("create_label_masks")
 
-from utils.visualization.logger import get_logger
-l = get_logger("delete_extra")
 
 import argparse
 import numpy as np
@@ -50,7 +50,7 @@ from shapely.geometry import mapping, Polygon
 from cv2 import fillPoly, imread, imwrite
 from utils.common.files import read_json, is_dir
 
-path = join(os.environ.get("DATA_PATH"),'constants/class_lists/xBD_label_map.json')
+path = join(os.environ.get("DATA_PATH"),'constants/xBD_label_map.json')
 LABEL_NAME_TO_NUM = read_json(path)['label_name_to_num']
 
 def get_shape(image_path):
@@ -101,7 +101,7 @@ def mask_polygons_together_with_border(size, polys, border):
     """
 
     # For each WKT polygon, read the WKT format and fill the polygon as an image
-    mask_img = np.zeros(size, np.uint8)  # 0 is the background class
+    mask_img = np.zeros(size, np.int8)  # 0 is the background class
     
     for tup in polys.values():
         # poly is a np.ndarray
@@ -128,10 +128,12 @@ def mask_polygons_together_with_border(size, polys, border):
             shrunk_polygon.append([x, y])
 
         # Transforming the polygon back to a np.ndarray
-        ns_poly = np.array(shrunk_polygon, np.int8)
-
+        ns_poly = np.array([shrunk_polygon], np.int32)
+        
+        assert ns_poly.shape == (1,len(shrunk_polygon),2),f"{ns_poly.shape} wrong shape"
+        
         # Filling the shrunken polygon to add a border between close polygons
-        fillPoly(mask_img, [ns_poly], (damage_class_num, damage_class_num, damage_class_num))
+        fillPoly(mask_img, ns_poly, (damage_class_num,)*3 )
 
     mask_img = mask_img[:, :, 0].squeeze()
     #print(f'shape of final mask_img: {mask_img.shape}')
@@ -147,8 +149,11 @@ def mask_tiles(images_dir, labels_dir, targets_dir, border_width):
         
         tile_id = os.path.basename(label_path).split('.json')[0]  # just the file name without extension
         image_path = join(images_dir, f'{tile_id}.png')
-        target_path = join(targets_dir, f'{tile_id}.json')
-
+        target_path = join(targets_dir, f'{tile_id}_target.png')
+        
+        if(os.path.exists(target_path)):
+            continue
+        
         # read the label json
         label_json = read_json(label_path)
 
@@ -162,34 +167,34 @@ def mask_tiles(images_dir, labels_dir, targets_dir, border_width):
         imwrite(target_path, mask_img)
 
 
-def create_masks(data_path : str,border_width : int):
+def create_masks(raw_path : str,border_width : int):
     """
         Creates a new target mask for each image in the dataset folder.
     """
     assert border_width >= 0, 'border_width < 0'
     assert border_width < 5, 'specified border_width is > 4 pixels - are you sure?'
         
-    for subset in tqdm(os.listdir(data_path)):
+    for subset in tqdm(os.listdir(raw_path)):
         l.info(f"Creating masks for {subset}/ folder.")
-        
-        images_dir = join(data_path, 'images')
-        labels_dir = join(data_path, 'labels')
-        is_dir(data_path)
+        subset_path = join(raw_path,subset)
+        images_dir = join(subset_path, 'images')
+        labels_dir = join(subset_path, 'labels')
+        is_dir(subset_path)
         is_dir(images_dir)
         is_dir(labels_dir)
 
-        targets_dir = join(data_path, 'targets')
+        targets_dir = join(subset_path, 'targets')
         os.makedirs(targets_dir, exist_ok=True)
         mask_tiles(images_dir, labels_dir, targets_dir, border_width)
 
-        l.info("Masks for {subset}/ folder created.")
+        l.info(f"Masks for {subset}/ folder created.")
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create masks for each label json file for disasters specified at the top of the script.')
     parser.add_argument(
-        'data_path',
+        'raw_path',
         help=('Path to the directory that contains the content of the raw folder from xBD dataset.')
     )
     parser.add_argument(

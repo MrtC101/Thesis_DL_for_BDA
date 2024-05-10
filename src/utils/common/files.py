@@ -15,11 +15,12 @@ def is_dir(path) -> bool:
     assert os.path.isdir(path), f"{path} is not a directory." 
     return True;
 
-def is_file(path) -> bool:
+def is_file(path : str) -> bool:
     assert os.path.exists(path), f"{path} do not exist."
     assert os.path.isfile(path), f"{path} is not a file." 
     return True 
 
 def is_json(path) -> bool:
+    is_file(path)
     assert path.split(".")[1] == "json",f"{path} must be a json file."
     return True

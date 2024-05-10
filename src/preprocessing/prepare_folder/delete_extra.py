@@ -1,9 +1,8 @@
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-
-from utils.visualization.logger import get_logger
+from utils.common.logger import get_logger
 l = get_logger("delete_extra")
 
 import random
@@ -16,23 +15,22 @@ def leave_only_n(data_path : dict, n : int) -> None:
     """
     Pick n random tiles and deletes all the rest of files from disaster Dataset.
     """
-    data = RawPathManager.load_dataset(data_path)
+    data = RawPathManager.load_paths(data_path)
 
     tiles = list(chain.from_iterable(data))
     total_tiles = len(tiles)
-    
-    l.info(f"Deleting {n} tiles of {total_tiles} total tiles.")
+    if(total_tiles>n):
+        l.info(f"Deleting {n} tiles of {total_tiles} total tiles.")
 
-    ids = [random.randint(0, total_tiles) for _ in range(n)]    
+        ids = [random.randint(0, total_tiles) for _ in range(n)]    
 
-    files_to_remove = list(chain.from_iterable(chain.from_iterable(tiles)))
-    l.info(f"{len(files_to_remove)} files to remove.")
-    for i in tqdm(range(total_tiles)):
-        if(i not in ids):
-            for file in files_to_remove:
-                os.remove(file)
-    l.info("Files removed.")
-
+        files_to_remove = list(chain.from_iterable(chain.from_iterable(tiles)))
+        l.info(f"{len(files_to_remove)} files to remove.")
+        for i in tqdm(range(total_tiles)):
+            if(i not in ids):
+                for file in files_to_remove:
+                    os.remove(file)
+        l.info("Files removed.")
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
