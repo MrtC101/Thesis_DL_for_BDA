@@ -17,7 +17,7 @@ class PatchDataset(Dataset):
     """
     pass
 
-class SliceDataset(Dtaset):
+class SliceDataset(Dataset):
     """
         Access Data using sliced_splits.json file.
     """

@@ -1,10 +1,10 @@
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import get_logger
+l = get_logger("clean_folder")
 
-from utils.visualization.logger import get_logger
-l = get_logger("delete_extra")
 
 import argparse
 from os.path import join
@@ -23,8 +23,9 @@ def delete_not_in(data_path : str) -> None:
     
     for subset in tqdm(os.listdir(data_path)):
         l.info(f"Cleaning {subset}/ folder.")
-        for folder in os.listdir(subset):
-            folder_path = join(data_path,folder)
+        subset_path = join(data_path,subset)
+        for folder in os.listdir(subset_path):
+            folder_path = join(subset_path,folder)
             for file in os.listdir(folder_path):
                 if not file.startswith(DISASTERS_OF_INTEREST):
                     os.remove(join(folder_path,file))
@@ -38,5 +39,4 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     delete_not_in(args.data_path)
-
         

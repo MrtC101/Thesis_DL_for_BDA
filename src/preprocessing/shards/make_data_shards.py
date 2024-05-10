@@ -20,16 +20,16 @@ export AZUREML_DATAREFERENCE_wcsorinoquia=/boto_disk_0/wcs_data/tiles/full_sr_me
 python data/make_chip_shards.py --config_module_path training_wcs/experiments/elevation/elevation_2_config.py --out_dir /boto_disk_0/wcs_data/shards/full_sr_median_2013_2014_elevation
 ```
 """
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.common.logger import get_logger
+l = get_logger("Compute data from images")
 
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
-import os
-import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-
-from utils.visualization.logger import get_logger
-l = get_logger("delete_extra")
 
 import argparse
 from tqdm import tqdm
