@@ -4,34 +4,23 @@ if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from utils.common.logger import get_logger
-l = get_logger("delete_extra")
+l = get_logger("raw_dataset")
 
 import cv2
-import torch
 from torch.utils.data import Dataset
-from utils.pathManagers.rawManager import RawPathManager
-from utils.common.files import read_json, is_dir, is_json
-from typing import Optional
+from utils.common.files import read_json, is_json
     
-class RawDataset(Dataset):
+class TileDataset(Dataset):
     
-    def __init__(self, raw_path : Optional[str] = None,
-                 split_name: Optional[str] = None,
-                 splits_json_path: Optional[str] = None):
-        assert \
-        raw_path is not None and split_name is None and splits_json_path is None \
-        or \
-        raw_path is None and split_name is not None and splits_json_path is not None, \
-        f"Constructor overloading, (raw_path) or (split_name,split_json_path) only allowed."
-
-        if(raw_path is not None):
-            data = RawPathManager.load_paths(raw_path)
-        else:
-            is_json(splits_json_path)
-            splits_all_disasters = read_json(splits_json_path)
-            self.split_name = split_name
-            data = splits_all_disasters[split_name]
-            
+    def __init__(self,split_name: str,splits_json_path: str):
+        self.split_name = split_name
+        self.splits_json_path = splits_json_path
+        
+        is_json(splits_json_path)
+        splits_all_disasters = read_json(splits_json_path)
+        self.split_name = split_name
+        data = splits_all_disasters[split_name]
+        
         self.tile_list = [(dis_id, tile_id, tile)
                           for dis_id in data.keys()
                           for tile_id, tile in data[dis_id].items()]
@@ -44,28 +33,30 @@ class RawDataset(Dataset):
     def __len__(self):
         return len(self.tile_list)
 
-    def __getitem__(self, i):
-
-        disaster_id, tile_id, tile = self.tile_list[i]
-
-        pre_img = cv2.imread(tile["pre"]["image"], cv2.COLOR_BGR2RGB)
-        post_img = cv2.imread(tile["post"]["image"], cv2.COLOR_BGR2RGB)
-        post_json = read_json(tile["post"]["json"])
-        pre_json = read_json(tile["pre"]["json"])
+    def load_images(self, disaster_id, tile_id, tile):
+        data = {}
+        data["pre_image"] = cv2.imread(tile["pre"]["image"], cv2.COLOR_BGR2RGB)
+        data["post_image"] = cv2.imread(tile["post"]["image"], cv2.COLOR_BGR2RGB)        
         pre_mask = cv2.imread(tile["pre"]["mask"], cv2.COLOR_BGR2RGB)
         post_mask = cv2.imread(tile["post"]["mask"], cv2.COLOR_BGR2RGB)
-        pre_mask = cv2.merge([pre_mask] * 3)
-        post_mask = cv2.merge([post_mask] * 3)
+        data["pre_mask"]  = cv2.merge([pre_mask] * 3)
+        data["post_mask"]  = cv2.merge([post_mask] * 3)
 
-        self.same_shape(disaster_id,tile_id,pre_img, post_img)
-        self.same_shape(disaster_id,tile_id,pre_img, pre_mask)
-        self.same_shape(disaster_id,tile_id,post_img, post_mask)
-        
-        return disaster_id, tile_id,{
-                'pre_image': pre_img,
-                'post_image': post_img,
-                'semantic_mask': pre_mask,
-                'class_mask': post_mask,
-                "pre_json": pre_json,
-                "post_json": post_json
-            }
+        self.same_shape(disaster_id,tile_id,data["pre_image"], data["post_image"])
+        self.same_shape(disaster_id,tile_id,data["post_image"], data["pre_mask"])
+        self.same_shape(disaster_id,tile_id,data["post_image"], data["post_mask"])
+        return data
+    
+    def __getitem__(self, i):
+        disaster_id, tile_id, tile = self.tile_list[i]
+        data = self.load_images(disaster_id, tile_id, tile)
+        return disaster_id, tile_id, data
+
+class RawDataset(TileDataset):
+
+    def __getitem__(self, i):
+        disaster_id, tile_id, tile = self.tile_list[i]
+        data = self.load_images(disaster_id, tile_id, tile)
+        data["pre_json"] = read_json(tile["post"]["json"])
+        data["post_json"] = read_json(tile["pre"]["json"])
+        return disaster_id, tile_id, data

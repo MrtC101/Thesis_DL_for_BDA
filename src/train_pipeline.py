@@ -27,8 +27,5 @@ leave_only_n(raw_path,40)
 split_json_path = split_dataset(raw_path,xbd_path)
 data_dicts_path = create_data_dicts(split_json_path,xbd_path)
 # creating patches
-#splits_json = os.path.join(data_dicts_path,"raw_splits.json")
-#sliced_path = os.path.join(os.environ["DATA_PATH"],"sliced")
-#slice_dataset(splits_json,sliced_path,1)
-
-
+sliced_path = os.path.join(xbd_path,"sliced")
+slice_dataset(split_json_path,sliced_path,1)

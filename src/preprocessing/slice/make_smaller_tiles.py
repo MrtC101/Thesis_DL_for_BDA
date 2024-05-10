@@ -20,7 +20,7 @@ from torch.utils.data import DataLoader
 from concurrent.futures import ThreadPoolExecutor
 
 from utils.common.files import read_json
-from utils.datasets.raw_datasets import RawDataset
+from utils.datasets.raw_datasets import TileDataset
 
 def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
 
@@ -84,19 +84,16 @@ def slice_dataset(splits_json_path, output_path, batch_size):
 
     def iterate_and_slice(split_name):
         l.info(f'Starting slicing for {split_name}')
-        dataset = RawDataset(split_name, splits_json_path)
+        dataset = TileDataset(split_name, splits_json_path)
         l.info(f'{split_name} dataset length before cropping: {len(dataset)}.')
-        dataloader = DataLoader(dataset, batch_size,
-                                shuffle=False, num_workers=8)
-
-        for disaster_id, tile_id, data in tqdm(dataloader):
-            patch_list = slice_tile(4, *data)
-            save_patches(disaster_id, tile_id, patch_list,
+        for dis_id, tile_id, data in tqdm(iter(dataset)):
+            patch_list = slice_tile(4, **data)
+            save_patches(dis_id, tile_id, patch_list,
                          output_path, split_name)
         l.info(f'{split_name} dataset length after cropping: {len(dataset)}.')
         l.info(f'Done slicing for {split_name}')
 
-    # iterate_and_slice("train")
+    iterate_and_slice("train")
     with ThreadPoolExecutor(max_workers=2) as executor:
         for split_name in ["train", "val"]:
             executor.submit(iterate_and_slice, split_name)
