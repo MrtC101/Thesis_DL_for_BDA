@@ -19,6 +19,7 @@ from preprocessing.raw.split_raw_dataset import split_dataset
 from preprocessing.sliced.make_smaller_tiles import slice_dataset
 from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from preprocessing.shards.make_data_shards import create_shards
+from preprocessing.shards.split_shard_dataset import split_shard_dataset
 
 xbd_path = os.path.join(os.environ["DATA_PATH"],"xBD")
 raw_path = os.path.join(xbd_path,"raw")
@@ -37,3 +38,8 @@ split_sliced_json_path = split_sliced_dataset(sliced_path,split_json_path,xbd_pa
 mean_stddev_json = os.path.join(data_dicts_path,"all_tiles_mean_stdev.json")
 shards_path = os.path.join(xbd_path,"shards")
 create_shards(split_sliced_json_path,mean_stddev_json,shards_path,4)
+split_shard_json_path = split_shard_dataset(shards_path,xbd_path)
+
+# train
+# evaluate with test
+# inference
