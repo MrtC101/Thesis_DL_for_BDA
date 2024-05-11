@@ -25,6 +25,12 @@ def is_json(path) -> bool:
     assert path.split(".")[1] == "json",f"{path} must be a json file."
     return True
 
+def is_npy(path) -> bool:
+    is_file(path)
+    assert path.split(".")[1] == "npy",f"{path} must be a json file."
+    return True
+
+
 def clean_folder(output_path, split_name):
     """
         Deletes previous data in folder and a new creates folder for new data created

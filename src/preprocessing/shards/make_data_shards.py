@@ -101,19 +101,19 @@ def shard_patches(dataset, split_name, mean_stddev_json, num_shards, out_path, t
         image_patches = defaultdict(lambda :[])
         for j in range(begin_idx,end_idx):
             dis_id, tile_id, patch_id, data = dataset[j]
-            image_patches["pre_orig"].append(deepcopy(data["pre_image"]))
-            image_patches["post_orig"].append(deepcopy(data["post_image"]))
+            image_patches["pre-orig"].append(deepcopy(data["pre_image"]))
+            image_patches["post-orig"].append(deepcopy(data["post_image"]))
             if transform: data = apply_transform(**data)
             pre_img, post_img = apply_norm(data["pre_image"], data["post_image"], dis_id, tile_id, normalize, mean_stddev_json)            
-            image_patches["pre_image"].append(pre_img) 
-            image_patches["post_image"].append(post_img)
-            image_patches["pre_mask"].append(data["pre_mask"])
-            image_patches["post_mask"].append(data["post_mask"]) 
+            image_patches["pre-image"].append(pre_img) 
+            image_patches["post-image"].append(post_img)
+            image_patches["semantic-mask"].append(data["pre_mask"])
+            image_patches["class-mask"].append(data["post_mask"]) 
     
         # save n shards
         for file_id, patch_list in image_patches.items():
             shard = np.stack(patch_list, axis=0)
-            shard_path = os.path.join(out_path, f'{split_name}_{file_id}_{i}.npy')
+            shard_path = os.path.join(out_path, f'{split_name}_{file_id}_{str(i).zfill(3)}.npy')
             np.save(shard_path, shard)
             l.info(f'Shape of last added shard to {f"{split_name}_shard"} list is {shard.shape}, dtype is {shard.dtype}.')
     

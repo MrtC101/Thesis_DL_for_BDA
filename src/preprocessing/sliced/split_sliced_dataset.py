@@ -27,7 +27,7 @@ def split_sliced_dataset(sliced_path : str ,raw_split_json : str, out_path : str
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            description='Creates a json files that shows the splits for patches.')
+            description='Creates a json files that shows the splits for patches..')
     parser.add_argument(
         'sliced_path',
         help=('Path to the sliced dataset.')
