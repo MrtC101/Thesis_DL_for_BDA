@@ -85,7 +85,7 @@ def create_data_dicts(splits_json_path : str,out_path : str):
     for split_name in ["train", "val"]:
         dataset = RawDataset(split_name=split_name,splits_json_path=splits_json_path)
         l.info(f'Counting {split_name} subset with length: {len(dataset)}')
-        for dis_id,tile_id,data in tqdm(iter(dataset)):
+        for dis_id,tile_id,data in tqdm(iter(dataset),total=len(dataset)):
             mean[dis_id][tile_id] = compute_mean_stddev(data["pre_image"], data["post_image"])
             count[dis_id][tile_id] = count_buildings(data["pre_json"], data["post_json"])
     mean_path = os.path.join(dicts_path, "all_tiles_mean_stdev.json")

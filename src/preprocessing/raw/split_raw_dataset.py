@@ -22,8 +22,7 @@ def split_dataset(raw_path : str, out_path : str) -> None:
     """
     # creates splits folder    
     split_path = os.path.join(out_path,"splits")
-    if(not os.path.exists(split_path)):
-        os.mkdir(split_path)
+    os.makedirs(split_path,exist_ok=True)
 
     # loads raw dataset
     xbd_raw : DisasterDict = RawPathManager.load_paths(raw_path)

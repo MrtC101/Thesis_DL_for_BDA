@@ -18,7 +18,7 @@ import torchvision.transforms.functional as TF
 from torchvision import transforms
 from torch.utils.data import Dataset, DataLoader
 from utils.common.files import read_json, is_dir
-from utils.pathManagers.sliceMangar import SlicePathManager
+from utils.pathManagers.slicedManager import SlicePathManager
 
 """Deletable"""
 import numpy as np
