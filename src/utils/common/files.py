@@ -24,3 +24,13 @@ def is_json(path) -> bool:
     is_file(path)
     assert path.split(".")[1] == "json",f"{path} must be a json file."
     return True
+
+def clean_folder(output_path, split_name):
+    """
+        Deletes previous data in folder and a new creates folder for new data created
+        by this pipeline iteration.
+    """
+    split_folder = os.path.join(output_path, split_name)
+    if (os.path.exists(split_folder) and os.path.isdir(split_folder)):
+        os.system(f"rm -rf {split_folder}")
+    os.makedirs(split_folder, exist_ok=True)

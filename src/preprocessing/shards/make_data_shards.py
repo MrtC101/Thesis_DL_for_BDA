@@ -20,13 +20,14 @@ export AZUREML_DATAREFERENCE_wcsorinoquia=/boto_disk_0/wcs_data/tiles/full_sr_me
 python data/make_chip_shards.py --config_module_path training_wcs/experiments/elevation/elevation_2_config.py --out_dir /boto_disk_0/wcs_data/shards/full_sr_median_2013_2014_elevation
 ```
 """
+from copy import deepcopy
 import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from utils.common.logger import get_logger
-l = get_logger("Compute data from images")
+l = get_logger("make_shards")
 
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
@@ -37,94 +38,106 @@ import os
 import sys
 import math
 import numpy as np
-from torch.utils.data import DataLoader
-from utils.common.files import read_json
-from utils.datasets.inference_datasets import ShardDataset
+import random
+import cv2
+from utils.common.files import clean_folder, read_json,is_json
+from utils.datasets.slice_datasets import PatchDataset
+from torchvision.transforms import transforms, RandomVerticalFlip, RandomHorizontalFlip
 
-def create_shard(dataloader, num_shards):
-    """Iterate through the dataset to produce shards of chips as numpy arrays, for imagery input and labels.
+def apply_transform(images):
+    '''
+        apply tranformation functions on cv2 arrays (No aumenta datos)
+    '''
 
-    Args:
-        dataset: an instance of LandsatDataset, which when iterated, each item contains fields
-                    'chip' and 'chip_label'
-        data = {'pre_image': pre_img, 'post_image': post_img, 'building_mask': mask, 'damage_mask': damage_class}
+    def apply_flip(images : dict, flip):
+        if(random.random() > 0.5):
+            for key in images.keys():
+                images[key] = flip(p=1)(images[key])
+        return images
+    iter
+    augment = transforms.Compose([
+        lambda images : apply_flip(images,RandomVerticalFlip),
+        lambda images : apply_flip(images,RandomHorizontalFlip),
+        ])
+    flipped = augment(images)
+    return flipped
 
-        num_shards: number of numpy arrays to store all chips in
+def apply_norm(pre_patch, post_patch, dis_id, tile_id, normalize, mean_stdv_json_path):
+    '''
+        apply transformation functions on cv2 arrays
+    '''
+    chips = {"pre": pre_patch, "post": post_patch}
+    norm_chips = {}
+    for prefix in ["pre", "post"]:
+        curr_chip = np.array(chips[prefix]).astype(dtype='float64') / 255.0
+        if normalize:
+            is_json(mean_stdv_json_path)
+            data_mean_stddev = read_json(mean_stdv_json_path)
+            mean = data_mean_stddev[dis_id][tile_id][prefix]["mean"]
+            mean_rgb = [mean[channel] for channel in ["R", "G", "B"]] 
+            std = data_mean_stddev[dis_id][tile_id][prefix]["stdv"]
+            std_rgb = [std[channel] for channel in ["R", "G", "B"]]
+            norm = transforms.Compose([
+                transforms.ToTensor(),
+                transforms.Normalize(mean=mean_rgb, std=std_rgb)
+            ])
+            norm_chips[prefix] = norm(curr_chip).permute(1,2,0)
+        else:
+            norm_chips[prefix] = curr_chip
+    return norm_chips["pre"], norm_chips["post"]
 
-    Returns:
-        returns a 2-tuple, where
-        - the first item is a list of numpy arrays of dimension (num_chips, channel, height, width) with
-          dtype float for the input imagery chips
-        - the second item is a list of numpy arrays of dimension (num_chips, height, width) with
-          dtype int for the label chips.
+def shard_patches(dataset, split_name, mean_stddev_json, num_shards, out_path, transform = False, normalize = True):
     """
-    image_patches = defaultdict([])
-    for data in tqdm(dataloader):
-        for key,img in data.items():
-            image_patches[key].append(img)
-        # not using chip_id and chip_for_display fields
+        Iterate through the dataset to produce shards of chips as numpy arrays, for imagery input and labels.
+    """
+    os.makedirs(out_path, exist_ok=True)  
+    num_patches = len(dataset)
+    # patch_per_shard
+    pxs = math.ceil(num_patches / num_shards)
+    shard_idx = [((i -1) * pxs, ((i) * pxs)) for i in range(1,num_shards+1)]
+    for i, tpl in tqdm(enumerate(shard_idx),total=num_shards):
+        begin_idx, end_idx = tpl
+        # gets data
+        image_patches = defaultdict(lambda :[])
+        for j in range(begin_idx,end_idx):
+            dis_id, tile_id, patch_id, data = dataset[j]
+            image_patches["pre_orig"].append(deepcopy(data["pre_image"]))
+            image_patches["post_orig"].append(deepcopy(data["post_image"]))
+            if transform: data = apply_transform(**data)
+            pre_img, post_img = apply_norm(data["pre_image"], data["post_image"], dis_id, tile_id, normalize, mean_stddev_json)            
+            image_patches["pre_image"].append(pre_img) 
+            image_patches["post_image"].append(post_img)
+            image_patches["pre_mask"].append(data["pre_mask"])
+            image_patches["post_mask"].append(data["post_mask"]) 
+    
+        # save n shards
+        for file_id, patch_list in image_patches.items():
+            shard = np.stack(patch_list, axis=0)
+            shard_path = os.path.join(out_path, f'{split_name}_{file_id}_{i}.npy')
+            np.save(shard_path, shard)
+            l.info(f'Shape of last added shard to {f"{split_name}_shard"} list is {shard.shape}, dtype is {shard.dtype}.')
+    
+        #freeing memory
+        del image_patches
+        del shard
 
-    num_chips = len(image_patches.values()[0])
-    l.info(f'Created {num_chips} chips.')
-
-    patches_per_shards = math.ceil(num_chips / num_shards)
-    shard_idx = []
-    for i in range(num_shards):
-        shard_idx.append(
-            (i * patches_per_shards, (1 + i) * patches_per_shards)
-        )
-
-    l.info('Stacking imagery and label chips into shards')
-    shard_list = defaultdict()
-    for begin_idx, end_idx in shard_idx:
-        if begin_idx < num_chips:
-            for key,patches in image_patches.items():
-                shard = patches[begin_idx:end_idx]
-                shard = np.stack(shard, axis=0)
-                l.info(f'dim of {key} input patch shard is {shard.shape}, dtype is {shard.dtype}')
-                shard_list[f"{key}_shard"].append(shard)
-    return shard_list
-
-def save_shards(out_dir, set_name, shard_list_dict):
-    os.makedirs(out_dir, exist_ok=True)  
-    for file_id,shard_list in shard_list_dict.items():
-        for i_shard in range(len(shard_list)):
-            shard_path = os.path.join(out_dir, f'{set_name}_{file_id}_{i_shard}.npy')
-            np.save(shard_path, shard_list[i_shard])
-            l.info(f'Saved {shard_path}')
-
-def load_dataset(set_name,sliced_splits_json,data_mean_stddev):
-    splits = read_json(sliced_splits_json)
-    data_mean_stddev = read_json(data_mean_stddev)
-
-    split = splits[set_name]
-    set_length = sum(len(tile) for tile in split.values())
-    #@TODO
-    dataset = ShardDataset(config['data_dir'], set_length, data_mean_stddev, transform=False, normalize=True)
-
-    l.info(f'xBD_disaster_dataset {set_name} length: {len(dataset)}')
-
-    return dataset
-
-def create_shards(sliced_splits_json,out_path,batch_size,num_shards):
-
+def create_shards(sliced_splits_json,mean_stddev_json,output_path,num_shards):
+    
     def iterate_and_shard(split_name):
-        dataset = load_dataset(split_name,sliced_splits_json, out_path)
-        dataloader = DataLoader(dataset, batch_size, shuffle=False, num_workers=8)
+        l.info(f'Creating shards for {split_name} set ...')
 
-        l.info('Iterating through the training set to generate chips...')
-        shard_dict = create_shard(dataloader, num_shards)
-        save_shards(out_path, split_name,shard_dict)
+        dataset = PatchDataset(split_name,sliced_splits_json)
+        l.info(f'xBD_disaster_dataset {split_name} length: {len(dataset)}')
 
-        for k in shard_dict.keys():
-            del shard_dict[k]
+        clean_folder(output_path,split_name)
+        out_dir = os.path.join(output_path,split_name)
+        shard_patches(dataset, split_name, mean_stddev_json, num_shards,out_dir)
 
         l.info(f'Done creating shards for {split_name}')
     
+    #could be parallelized
     iterate_and_shard("train")
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        for split_name in ["train","val"]:
-            executor.submit(iterate_and_shard, split_name)
+    iterate_and_shard("val")
 
     l.info('Done!')
 
@@ -132,19 +145,24 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(
         description='Create shards from a sliced xBD dataset.')
     parser.add_argument(
-        'split_json_path',
+        'sliced_splits_json',
         type=str,
-        help=('Path to the json file with the train/val/test split.')
+        help=('Path to the json file with the train/val/test splits for sliced data.')
+    )
+    parser.add_argument(
+        'mean_stddev_json_path',
+        type=str,
+        help=('Path to the json file with the mean and stdv.')
     )
     parser.add_argument(
         'output_dir',
         type=str,
         help=('Path to folder for new sliced data.')
     )
+    parser.add_argument(
+       '-n','--num_shards',
+        type=int,
+        help=('Number of shards to be created for each file type.')
+    )
     args = parser.parse_args()
-    config = {'num_shards': 1,
-          'out_dir': 'public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
-          'data_dir': 'public_datasets/xBD/final_mdl_all_disaster_splits/',
-          'data_splits_json': 'constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
-          'data_mean_stddev': 'constants/splits/all_disaster_mean_stddev_tiles_0_1.json'}
-    create_shards(args.split_json_path, args.output_dir, args.batch_size)
+    create_shards(args.sliced_splits_json, args.mean_stddev_json_path,args.output_path, args.num_shards)

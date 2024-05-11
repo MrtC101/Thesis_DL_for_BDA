@@ -1,5 +1,17 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+from utils.datasets.raw_datasets import TileDataset
+from utils.common.files import read_json, clean_folder
+from concurrent.futures import ThreadPoolExecutor
+from torch.utils.data import DataLoader
+from torchvision import transforms
+from os.path import join
+from tqdm import tqdm
+import cv2
+import math
+import numpy as np
+import random
+import argparse
 import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
@@ -7,20 +19,6 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.common.logger import get_logger
 l = get_logger("make_smaller_tiles")
 
-import argparse
-import random
-import numpy as np
-import math
-import cv2
-
-from tqdm import tqdm
-from os.path import join
-from torchvision import transforms
-from torch.utils.data import DataLoader
-from concurrent.futures import ThreadPoolExecutor
-
-from utils.common.files import read_json
-from utils.datasets.raw_datasets import TileDataset
 
 def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
 
@@ -68,11 +66,10 @@ def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
 
     return patch_list
 
-def save_patches(disaster_id, tile_id, patch_list, sliced_path, split_name):
-    split_folder = join(sliced_path, split_name)
-    os.makedirs(split_folder, exist_ok=True)
+
+def save_patches(disaster_id, tile_id, patch_list, split_folder, split_name):
     for i, patch in enumerate(patch_list):
-        patch_id = f"{disaster_id}_{tile_id}_{i}"
+        patch_id = f"{disaster_id}_{tile_id}_{str(i).zfill(3)}"
         patch_folder = join(split_folder, patch_id)
         os.makedirs(patch_folder, exist_ok=True)
         for key in patch.keys():
@@ -80,23 +77,28 @@ def save_patches(disaster_id, tile_id, patch_list, sliced_path, split_name):
             path = join(patch_folder, img_name)
             cv2.imwrite(path, patch[key])
 
-def slice_dataset(splits_json_path, output_path, batch_size):
+
+def slice_dataset(splits_json_path, output_path):
 
     def iterate_and_slice(split_name):
         l.info(f'Starting slicing for {split_name}')
+        
         dataset = TileDataset(split_name, splits_json_path)
-        l.info(f'{split_name} dataset length before cropping: {len(dataset)}.')
-        for dis_id, tile_id, data in tqdm(iter(dataset)):
-            patch_list = slice_tile(4, **data)
-            save_patches(dis_id, tile_id, patch_list,
-                         output_path, split_name)
-        l.info(f'{split_name} dataset length after cropping: {len(dataset)}.')
-        l.info(f'Done slicing for {split_name}')
+        num_tile = len(dataset)
+        l.info(f'{split_name} dataset length before cropping: {num_tile}.')
+        
+        clean_folder(output_path,split_name)
+        split_folder = os.path.join(output_path,split_name)
 
+        for dis_id, tile_id, data in tqdm(iter(dataset),total=num_tile):
+            patch_list = slice_tile(4, **data)
+            save_patches(dis_id, tile_id, patch_list, split_folder, split_name)
+        
+        l.info(f'Done slicing for {split_name}, length after cropping: {20*num_tile}.')
+
+    #could be parallelized
     iterate_and_slice("train")
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        for split_name in ["train", "val"]:
-            executor.submit(iterate_and_slice, split_name)
+    iterate_and_slice("val")
 
     l.info(f'Done')
 
@@ -114,11 +116,5 @@ if __name__ == "__main__":
         type=str,
         help=('Path to folder for new sliced data.')
     )
-    parser.add_argument(
-        '-b', '--batch_size',
-        type=int,
-        default=1,
-        help=('Size of the batch of images for augmentation.')
-    )
     args = parser.parse_args()
-    slice_dataset(args.split_json_path, args.output_dir, args.batch_size)
+    slice_dataset(args.split_json_path, args.output_dir)

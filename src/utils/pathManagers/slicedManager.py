@@ -1,5 +1,6 @@
 import os
 import sys
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
@@ -7,17 +8,13 @@ from os.path import join
 from utils.common.files import is_dir, is_file, read_json
 from utils.common.defaultDictFactory import nested_defaultdict
 
-class SlicePathManager:
-
-    def __init__(self,folder_path):
-        is_dir(folder_path)
-        self.folder_path = folder_path
+class SlicedPathManager:
 
     def _add_original_images(self,subset,patch_dict,patch,split_dict):
-        dis_id,tile_id,patch_id = patch.split("_")[0]
+        dis_id,tile_id,patch_id = patch.split("_")
         for time in ["pre","post"]:
-            img_path = split_dict[subset][dis_id][tile_id][time]["img"]
-            patch_dict[subset][dis_id][tile_id][patch_id]["org_pre"] = img_path
+            img_path = split_dict[subset][dis_id][tile_id][time]["image"]
+            patch_dict[subset][dis_id][tile_id][patch_id][f"org_{time}"] = img_path
     
     def _add_patch_files(self,subset,sliced_dict,file,file_path):
         file_name : str = file.split(".")[0]
@@ -31,16 +28,15 @@ class SlicePathManager:
         is_dir(sliced_path)
         is_file(split_json_path)
         split_dict = read_json(split_json_path)
-
-        dataset_subsets = os.listdir(sliced_path)
-        sliced_dict = nested_defaultdict(4,str)
-        for subset in dataset_subsets:
+        
+        sliced_dict = nested_defaultdict(5,str)
+        for subset in ["train","val"]:
             subset_path = join(sliced_path,subset)
-            dataset_patches = os.listdir(subset_path)
+            dataset_patches = sorted(os.listdir(subset_path))
             for patch in dataset_patches:
                 # assert para los datos
                 patch_path = join(subset_path,patch)
-                files = os.listdir(patch_path)
+                files = sorted(os.listdir(patch_path))
                 for file in files:
                     file_path = join(patch_path,file)
                     is_file(file_path)
