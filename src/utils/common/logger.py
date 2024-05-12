@@ -1,6 +1,6 @@
 import logging
 
-def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
+def get_logger(name: str, output_path : str = None, level: int = logging.DEBUG) -> logging.Logger:
         """
         Configura y devuelve un objeto Logger.
 
@@ -18,7 +18,9 @@ def get_logger(name: str, level: int = logging.DEBUG) -> logging.Logger:
         # Define el formato del registro
         formatter = logging.Formatter(
             '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
-            datefmt='%m-%d-%Y %H:%M'
+            datefmt='%m-%d-%Y %H:%M',
+            filename=output_path,
+            filemode='w'
         )
 
         # Configura un manejador de flujo (stream handler) para la salida de registro

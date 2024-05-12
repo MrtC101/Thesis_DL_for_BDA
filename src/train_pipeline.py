@@ -1,8 +1,9 @@
 import os
 import sys
 
-os.environ["SRC_PATH"] = "/home/mrtc101/Desktop/tesina/repo/my_siames/src"
-os.environ["DATA_PATH"] = "/home/mrtc101/Desktop/tesina/repo/my_siames/data"
+os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/my_siames"
+os.environ["SRC_PATH"] = os.path.join(os.environ["PROJ_PATH"],"src")
+os.environ["DATA_PATH"] = os.path.join(os.environ["PROJ_PATH"],"data")
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
@@ -20,26 +21,60 @@ from preprocessing.sliced.make_smaller_tiles import slice_dataset
 from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from preprocessing.shards.make_data_shards import create_shards
 from preprocessing.shards.split_shard_dataset import split_shard_dataset
+from train.training import train_model
 
-xbd_path = os.path.join(os.environ["DATA_PATH"],"xBD")
-raw_path = os.path.join(xbd_path,"raw")
-# folder cleaning
-#delete_not_in(raw_path)
-#create_masks(raw_path,1)
-#leave_only_n(raw_path,40)
-# split json
-split_json_path = split_dataset(raw_path,xbd_path)
-data_dicts_path = create_data_dicts(split_json_path,xbd_path)
-# Sliced
-sliced_path = os.path.join(xbd_path,"sliced")
-slice_dataset(split_json_path,sliced_path)
-split_sliced_json_path = split_sliced_dataset(sliced_path,split_json_path,xbd_path)
-# Sharded
-mean_stddev_json = os.path.join(data_dicts_path,"all_tiles_mean_stdev.json")
-shards_path = os.path.join(xbd_path,"shards")
-create_shards(split_sliced_json_path,mean_stddev_json,shards_path,4)
-split_shard_json_path = split_shard_dataset(shards_path,xbd_path)
+def preprocess():
+    xbd_path = os.path.join(os.environ["DATA_PATH"],"xBD")
+    raw_path = os.path.join(xbd_path,"raw")
+    # folder cleaning
+    delete_not_in(raw_path)
+    create_masks(raw_path,1)
+    leave_only_n(raw_path,40)
+    # split json
+    split_json_path = split_dataset(raw_path,xbd_path)
+    data_dicts_path = create_data_dicts(split_json_path,xbd_path)
+    # Sliced
+    sliced_path = os.path.join(xbd_path,"sliced")
+    slice_dataset(split_json_path,sliced_path)
+    split_sliced_json_path = split_sliced_dataset(sliced_path,split_json_path,xbd_path)
+    # Sharded
+    mean_stddev_json = os.path.join(data_dicts_path,"all_tiles_mean_stdev.json")
+    shards_path = os.path.join(xbd_path,"shards")
+    create_shards(split_sliced_json_path,mean_stddev_json,shards_path,4)
+    split_shard_json_path = split_shard_dataset(shards_path,xbd_path)
+    return mean_stddev_json, split_sliced_json_path, split_shard_json_path
 
 # train
+def train( mean_stddev_json, split_sliced_json_path, split_shard_json_path):
+    train_config = {
+        'labels_dmg': [0, 1, 2, 3, 4],
+        'labels_bld': [0, 1],
+        'weights_seg': [1, 15],
+        'weights_damage': [1, 35, 70, 150, 120],
+        'weights_loss': [0, 0, 1],
+        'mode': 'dmg',
+        'init_learning_rate': 0.0005,#dmg: 0.005, #UNet: 0.01,           
+        'device': 'cpu',
+        'epochs': 1500,
+        'batch_size': 32,
+        'num_chips_to_viz': 1
+    }
+    out_dir = os.path.join(os.environ["PROJ_PATH"],"out")
+    path_config = {
+        'shard_no': 0,
+        'experiment_name': 'train_UNet', #train_dmg
+        'out_dir': out_dir,
+        'data_dir_shards': split_shard_json_path,
+        'disaster_splits_json': split_sliced_json_path,
+        'disaster_mean_stddev': mean_stddev_json,
+        'label_map_json': os.path.join(os.environ["DATA_PATH"],"constants","xBD_label_map.json"),
+        'starting_checkpoint_path': os.path.join(out_dir,'train_UNet',"checkpoints","checkpoint_epoch120_2021-06-30-10-28-49.pth.tar")
+    }
+    train_model(train_config,path_config)
+
 # evaluate with test
 # inference
+
+if __name__ == "__main__":
+    data = preprocess()
+    train(*data)
