@@ -1,86 +1,39 @@
 import pandas as pd
 import torch
 
-def compute_metrics(phase, logger, eval_results_dmg, eval_results_bld, epoch, labels_set_dmg, labels_set_bld, confusion_mtrx_df_dmg, confusion_mtrx_df_bld):
-    # damage level eval validation
-    eval_results_dmg = compute_eval_metrics(epoch, labels_set_dmg, confusion_mtrx_df_dmg, eval_results_dmg)
-    eval_results_dmg_epoch = eval_results_dmg.loc[eval_results_dmg['epoch'] == epoch,:]
-    f1_harmonic_mean = 0
-    for metrics in ['f1']:
-        for index, row in eval_results_dmg_epoch.iterrows():
-            if int(row['class']) in labels_set_dmg[1:]:
-                logger.add_scalar( 'val_dmg_class_' + str(int(row['class'])) + '_' + str(metrics), row[metrics], epoch)
-                if metrics == 'f1':
-                    f1_harmonic_mean += 1.0/(row[metrics]+1e-10)
-    f1_harmonic_mean = 4.0/f1_harmonic_mean
-    logger.add_scalar( 'val_dmg_harmonic_mean_f1', f1_harmonic_mean, epoch)
+class MetricComputer:
 
+    def __init__(self,phase_context,static_context):
+        self.logger = phase_context['logger']
+        self.phase = phase_context['phase']
+        self.loader = phase_context['loader']
+        self.device = static_context['phase']
+        self.crit_seg_1 = static_context['criterion_sef_1'] 
+        self.crit_seg_2 = static_context['criterion_seg_2']
+        self.crit_dmg = static_context['criterion_damage']
 
-    # bld level eval train
-    eval_results_bld = compute_eval_metrics(epoch, labels_set_bld, confusion_mtrx_df_bld, eval_results_bld)
-    eval_results_bld_epoch = eval_results_bld.loc[eval_results_bld['epoch'] == epoch,:]
-    for metrics in ['f1']:
-        for index, row in eval_results_bld_epoch.iterrows():
-            if int(row['class']) in labels_set_dmg[1:]:
-                logger.add_scalar( 'tr_bld_class_' + str(int(row['class'])) + '_' + str(metrics), row[metrics], epoch)
+    ### Compute confusión Matrixes
+    def compute_conf_mtrx(self, y_pred_mask, y_dmg_mask, y_bld_mask, labels_set, conf_mtrx_df, epoch, batch_idx):
+        conf_mtrx_list = []
+        for cls in labels_set[1:]:
 
-    if(phase=="val"):
-        # compute average accuracy across all classes to select the best model
-        val_acc_avg = f1_harmonic_mean
-        is_best = val_acc_avg > best_acc
-        best_acc = max(val_acc_avg, best_acc)
-        return eval_results_dmg, eval_results_bld ,is_best
-    return eval_results_dmg, eval_results_bld
+            if len(labels_set) > 2:
+                conf_mtrx = self.conf_mtrx_for_bld_mask(y_pred_mask, y_bld_mask)
+            else:
+                conf_mtrx = self.conf_mtrx_for_cls_mask(y_pred_mask, y_dmg_mask, y_bld_mask, cls)
 
-def compute_eval_metrics(epoch, labels_set, confusion_mtrx_df, eval_results):
-    eval_results = []
-    for cls in labels_set: 
-        class_idx = (confusion_mtrx_df['class']==cls)
-        precision = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_pos'].sum())
-        recall = confusion_mtrx_df.loc[class_idx,'true_pos'].sum()/(confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'false_neg'].sum())
-        f1 = 2 * (precision * recall)/(precision + recall)
-        accuracy = (confusion_mtrx_df.loc[class_idx,'true_pos'].sum() + confusion_mtrx_df.loc[class_idx,'true_neg'].sum())/(confusion_mtrx_df.loc[class_idx,'total_pixels'].sum())
-        eval_results.append({'epoch':epoch, 'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy})
-    return pd.DataFrame(eval_results,columns=['epoch','class','precision','recall','f1','accuracy'])
+            conf_mtrx["epoch"] = epoch
+            conf_mtrx["batch_idx"] = batch_idx
+            conf_mtrx_list.extend([conf_mtrx])
+        curr_conf_mtrx_df = pd.DataFrame(conf_mtrx_list,columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
+        conf_mtrx_df = pd.concat([conf_mtrx_df,curr_conf_mtrx_df],axis=1)
+        return conf_mtrx_df
 
-def compute_confusion_mtrx(confusion_mtrx_df, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask):
-    all = []
-    for cls in labels_set[1:]:
-        A = compute_confusion_mtrx_class(confusion_mtrx_df, labels_set, y_preds, y_true, y_true_bld_mask, cls)
-        A["epoch"] = epoch
-        A["batch_idx"] = batch_idx
-        all.append(A)
-    res = []
-    for x in all:
-        res.extend(x)
-    confusion_mtrx_df = pd.DataFrame(res,columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
-    return confusion_mtrx_df
+    def conf_mtrx_for_bld_mask(self,y_preds, y_true, cls):
 
-def compute_confusion_mtrx_class(confusion_mtrx_list : list, epoch, batch_idx, labels_set, y_preds, y_true, y_true_bld_mask, cls):
-    # toma la mascara de clase con 4 clases predicha y verdadera y las transforma en una matriz binaría con la clase actual
-
-    y_true_binary = y_true.detach().clone()
-    y_preds_binary = y_preds.detach().clone()
-    
-    if len(labels_set) > 2:
-        # convert to 0/1
-        y_true_binary[y_true_binary != cls] = -1
-        y_true_binary[y_true_binary == cls] = 1
-        y_true_binary[y_true_binary == -1] = 0
-
-        y_preds_binary[y_preds_binary != cls] = -1
-        y_preds_binary[y_preds_binary == cls] = 1                
-        y_preds_binary[y_preds_binary == -1] = 0
-
-        # compute confusion metric
-        true_pos_cls = ((y_true_binary == y_preds_binary) & (y_true_binary == 1) & (y_true_bld_mask == 1)).float().sum().item()
-        false_neg_cls = ((y_true_binary != y_preds_binary) & (y_true_binary == 1) & (y_true_bld_mask == 1)).float().sum().item()
-        true_neg_cls = ((y_true_binary == y_preds_binary) & (y_true_binary == 0) & (y_true_bld_mask == 1)).float().sum().item()
-        false_pos_cls = ((y_true_binary != y_preds_binary) & (y_true_binary == 0) & (y_true_bld_mask == 1)).float().sum().item()
+        y_true_binary = y_true.detach().clone()
+        y_preds_binary = y_preds.detach().clone()
         
-        # compute total pixels
-        total_pixels = y_true_bld_mask.float().sum().item()
-    else:
         # compute confusion metric
         true_pos_cls = ((y_true_binary == y_preds_binary) & (y_true_binary == 1)).float().sum().item()
         false_neg_cls = ((y_true_binary != y_preds_binary) & (y_true_binary == 1)).float().sum().item()
@@ -90,26 +43,65 @@ def compute_confusion_mtrx_class(confusion_mtrx_list : list, epoch, batch_idx, l
         # compute total pixels
         total_pixels = 1
         for item in y_true_binary.size():
-            total_pixels *= item
+                total_pixels *= item
+        return {'class':cls, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels}
     
-    confusion_mtrx_list.append({'epoch':epoch, 'class':cls, 'batch_idx':batch_idx, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels})
-    
-    return confusion_mtrx_list
+    def conf_mtrx_for_cls_mask(y_preds, y_dmg_mask, y_bld_mask, cls):
+        
+        # Convert any other class to 0 
+        y_true_binary = y_dmg_mask.detach().clone()
+        y_true_binary[y_true_binary != cls] = -1
+        y_true_binary[y_true_binary == cls] = 1
+        y_true_binary[y_true_binary == -1] = 0
 
-def confusion_matrix(labels_set, y_preds, y_true, y_true_bld_mask, cls):
-    y_true_binary = y_true.detach().clone()
-    y_preds_binary = y_preds.detach().clone()
-    
-    return {'class':cls,'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels}
+        y_preds_binary = y_preds.detach().clone()
+        y_preds_binary[y_preds_binary != cls] = -1
+        y_preds_binary[y_preds_binary == cls] = 1                
+        y_preds_binary[y_preds_binary == -1] = 0
 
-def confusion_matrix_for_binary(y_pred_mask,y_true_mask):
-    """
-        Computes de confusión matrix for a binary mask.
-        the with the predicted and true mask class.
-    """
-    true_pos_cls = ((y_true_mask == y_pred_mask) & (y_true_mask == 1)).float().sum().item()
-    false_neg_cls = ((y_true_mask != y_pred_mask) & (y_true_mask == 1)).float().sum().item()
-    true_neg_cls = ((y_true_mask == y_pred_mask) & (y_true_mask == 0)).float().sum().item()
-    false_pos_cls = ((y_true_mask != y_pred_mask) & (y_true_mask == 0)).float().sum().item()
+        # compute confusion metric
+        true_pos_cls = ((y_true_binary == y_preds_binary) & (y_true_binary == 1) & (y_bld_mask == 1)).float().sum().item()
+        false_neg_cls = ((y_true_binary != y_preds_binary) & (y_true_binary == 1) & (y_bld_mask == 1)).float().sum().item()
+        true_neg_cls = ((y_true_binary == y_preds_binary) & (y_true_binary == 0) & (y_bld_mask == 1)).float().sum().item()
+        false_pos_cls = ((y_true_binary != y_preds_binary) & (y_true_binary == 0) & (y_bld_mask == 1)).float().sum().item()
+        
+        # compute total pixels
+        total_pixels = y_bld_mask.float().sum().item()
+        return {'class':cls, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels}
 
-# calcular una matriz de confusión por cada elemento en un lugar 
+
+    ### Compute Metrics
+    def compute_metrics_for(self, output, epoch, labels_set, conf_mtrx_df):
+        class_metrics, f1_harmonic_mean = self.compute_eval_metrics(epoch, labels_set, conf_mtrx_df)
+        self.log_metrics(self.phase,output, self.logger, labels_set, class_metrics)
+        if(output == "dmg"):
+            self.logger.add_scalar(f'{self.phase}_dmg_harmonic_mean_f1', f1_harmonic_mean, epoch)
+        return class_metrics, f1_harmonic_mean
+
+    def compute_eval_metrics(self, epoch, labels_set, conf_mtrx_df : pd.DataFrame):
+        eval_results = []
+        f1_harmonic_mean = 0
+        for cls in labels_set: 
+            class_idx = (conf_mtrx_df['class']==cls)
+            tp = conf_mtrx_df.loc[class_idx,'true_pos'].sum()
+            fp = conf_mtrx_df.loc[class_idx,'false_pos'].sum()
+            fn = conf_mtrx_df.loc[class_idx,'false_neg'].sum()
+            tn = conf_mtrx_df.loc[class_idx,'true_neg'].sum()
+            tot = conf_mtrx_df.loc[class_idx,'total_pixels'].sum()
+            
+            precision = tp / (tp + fp)
+            recall = tp / (tp + fn)
+            f1 = 2 * (precision * recall) / (precision + recall)
+            accuracy = (tp + tn) / (tot)
+            
+            eval_results.append({'epoch':epoch, 'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy})
+            f1_harmonic_mean += 1.0 / (f1 + 1e-10)
+        f1_harmonic_mean = len(labels_set) / f1_harmonic_mean
+        df =  pd.DataFrame(eval_results,columns=['epoch','class','precision','recall','f1','accuracy'])
+        return df, f1_harmonic_mean
+
+    def log_metrics(phase, output, logger, metrics_df : pd.DataFrame):
+        for index, row in metrics_df.iterrows():
+            for metric in ["f1"]:
+                msg = f"{phase}_{output}_class_{row['class']}_{metric}"
+                logger.add_scalar(msg,row[metric],row['epoch'])
