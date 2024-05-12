@@ -71,3 +71,28 @@ class ShardDataset(Dataset):
             'pre_image_orig': transforms.ToTensor()(pre_img_orig),
             'post_image_orig': transforms.ToTensor()(post_img_orig)
         }
+
+    def get_sample_images(dataset, num_chips_to_viz):
+
+        """
+        Get a deterministic set of images in the specified set (train or val) by using the dataset and
+        not the dataloader. Only works if the dataset is not IterableDataset.
+
+        Args:
+            which_set: one of 'train' or 'val'
+
+        Returns:
+            samples: a dict with keys 'chip' and 'chip_label', pointing to torch Tensors of
+            dims (num_chips_to_visualize, channels, height, width) and (num_chips_to_visualize, height, width)
+            respectively
+        """
+        num_to_skip = 1  # first few chips might be mostly blank
+        assert len(dataset) > num_to_skip + num_chips_to_viz
+
+        keep_every = math.floor((len(dataset) - num_to_skip) / num_chips_to_viz)
+        samples_idx_list = []
+
+        for sample_idx in range(num_to_skip, len(dataset), keep_every):
+            samples_idx_list.append(sample_idx)
+
+        return samples_idx_list
