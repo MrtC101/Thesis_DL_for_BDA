@@ -1,263 +1,274 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
+from utils.common.files import read_json, dump_json
+from utils.metrics.common import AverageMeter
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from models.siames.end_to_end_Siam_UNet import SiamUnet
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import DataLoader
+from time import localtime, strftime
+from datetime import datetime
+import torch.nn as nn
+from tqdm import tqdm
+import numpy as np
+import pandas as pd
+import torch
 import os
 import sys
-if(os.environ.get("SRC_PATH") not in sys.path):
+if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
+from train.phase import Phase
 from utils.common.logger import get_logger
-l = get_logger("training")
+l = get_logger("training model")
 
-import torch
-import pandas as pd
-import numpy as np
-from tqdm import tqdm
-import torch.nn as nn
-from datetime import datetime
-from time import localtime, strftime
-from torch.utils.data import DataLoader
-from torch.utils.tensorboard import SummaryWriter
 
-from models.siames.end_to_end_Siam_UNet import SiamUnet
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-
-from utils.metrics.common import AverageMeter
-from utils.common.files import read_json, dump_json
-from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
-from utils.metrics.train_metrics import compute_metrics
-        
-def logging_wrapper(logger,phase):
+def logging_wrapper(logger, phase):
     def decorator(func):
         def wrapper(*args, **kwargs):
             optimizer = args[6]
             epochs = args[7]
             epoch = args[8]
 
-            if(phase == "train"):
-                logger.add_scalar( 'learning_rate', optimizer.param_groups[0]["lr"], epoch)
-                
-            l.info(f'Model training for epoch {epoch}/{epochs}')        
+            if (phase == "train"):
+                logger.add_scalar(
+                    'learning_rate', optimizer.param_groups[0]["lr"], epoch)
+
+            l.info(f'Model training for epoch {epoch}/{epochs}')
             start_time = datetime.now()
-            
-            result = func(*args,**kwargs)
-            
+
+            result = func(*args, **kwargs)
+
             duration = datetime.now() - start_time
             logger.add_scalar(f'time_{phase}', duration.total_seconds(), epoch)
 
             return result
         return wrapper
     return decorator
-     
-def bucle(logger ,phase, loader, device, model, epoch, criterion_seg_1, criterion_seg_2, criterion_damage, optimizer = None):
-    losses = AverageMeter()
-    loss_seg_pre = AverageMeter()
-    loss_seg_post = AverageMeter()
-    loss_dmg = AverageMeter()
 
-    for batch_idx, data in enumerate(tqdm(loader)):                         
-        x_pre = data['pre_image'].to(device=device)  # move to device, e.g. GPU
-        x_post = data['post_image'].to(device=device)  
-        y_seg = data['building_mask'].to(device=device)  
-        y_cls = data['damage_mask'].to(device=device)
 
-        if(phase=="train"):
-            model.train()
-            optimizer.zero_grad()
-        elif(phase=="val"):
-            model.eval()  # put model to evaluation mode
-
-        scores = model(x_pre, x_post)
-
-        # modify damage prediction based on UNet arm
-        softmax = torch.nn.Softmax(dim=1)
-        preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
-        for c in range(0,scores[2].shape[1]):
-            scores[2][:,c,:,:] = torch.mul(scores[2][:,c,:,:], preds_seg_pre)
-
-        loss = weights_loss[0]*criterion_seg_1(scores[0], y_seg) + weights_loss[1]*criterion_seg_2(scores[1], y_seg) + weights_loss[2]*criterion_damage(scores[2], y_cls)
-        loss_seg_pre = criterion_seg_1(scores[0], y_seg)
-        loss_seg_post = criterion_seg_2(scores[1], y_seg)
-        loss_dmg = criterion_damage(scores[2], y_cls)
-
-        losses.update(loss.item(), x_pre.size(0))
-        loss_seg_pre.update(loss_seg_pre.item(), x_pre.size(0))
-        loss_seg_post.update(loss_seg_post.item(), x_pre.size(0))
-        loss_dmg.update(loss_dmg.item(), x_pre.size(0))
-
-        if(phase=="train"):
-            loss.backward()  # compute gradients
-            optimizer.step()
-
-        # compute predictions & confusion metrics
-        softmax = torch.nn.Softmax(dim=1)
-        preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
-        preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
-        preds_cls = torch.argmax(softmax(scores[2]), dim=1)
-
-        confusion_mtrx_df_dmg = compute_confusion_mtrx([], epoch, batch_idx, labels_set_dmg, preds_cls, y_cls, y_seg)
-        confusion_mtrx_df_bld = compute_confusion_mtrx([], epoch, batch_idx, labels_set_bld, preds_seg_pre, y_seg, [])
-    
-    logger.add_scalars(f'loss_{phase}', {'_total':losses_tr.avg, '_seg_pre': loss_seg_pre.avg, '_seg_post': loss_seg_post.avg, '_dmg': loss_dmg.avg}, epoch)
-
-    if(phase == "train"):
-        prepare_for_vis(sample_train_ids, logger_train, model, 'train', epoch, device, softmax)
-        prepare_for_vis(sample_val_ids, logger_val, model, 'val', epoch, device, softmax)
-
-    return confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses
-
-@logging_wrapper(logger_train,"training")
-def train(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, optimizer, epochs, epoch, step_tr, logger_train, logger_val, sample_train_ids, sample_val_ids, device):
+@logging_wrapper(logger_train, "training")
+def train(train_phase: Phase, epoch_context):
     """
     Train the model on dataset of the loader
     """
-    confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = bucle(logger_train,"train",loader, device, model, epoch, criterion_seg_1, criterion_seg_2, criterion_damage, optimizer)
-    # logger image viz        
-    step_tr += 1
-    return model, optimizer, step_tr, confusion_mtrx_df_dmg, confusion_mtrx_df_bld
+    confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = train_phase.iteration(
+        epoch_context)
+    return confusion_mtrx_df_dmg, confusion_mtrx_df_bld
 
-@logging_wrapper(logger_val,"validation")
-def validation(loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, epochs, epoch, logger_val, device):
+
+@logging_wrapper(logger_val, "validation")
+def validation(val_phase: Phase, epoch_context):
     with torch.no_grad():
-        confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = bucle(logger_val,"val",loader, device, model, epoch, criterion_seg_1, criterion_seg_2, criterion_damage)
+        confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = val_phase.iteration(
+            epoch_context)
     return confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses.avg
 
-def resume_model(model,starting_checkpoint_path):
+
+def resume_model(model, starting_checkpoint_path):
     if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
         l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
         optimizer, starting_epoch, best_acc = model.resume_from_checkpoint()
-        l.info(f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
+        l.info(
+            f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
     else:
         l.info('No valid checkpoint is provided. Start to train from scratch...')
         optimizer, starting_epoch, best_acc = model.resume_from_scratch()
     return optimizer, starting_epoch, best_acc
 
-def output_directories(out_dir,exp_name):
+
+def output_directories(out_dir, exp_name):
     # set up directories (TrainPathManager?)
-    exp_dir = os.path.join(out_dir,exp_name)  
-    
+    exp_dir = os.path.join(out_dir, exp_name)
+
     checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
     os.makedirs(checkpoint_dir, exist_ok=True)
-    
+
     logger_dir = os.path.join(exp_dir, 'logs')
     os.makedirs(logger_dir, exist_ok=True)
-    
+
     evals_dir = os.path.join(exp_dir, 'evals')
     os.makedirs(evals_dir, exist_ok=True)
 
     config_dir = os.path.join(exp_dir, 'configs')
     os.makedirs(config_dir, exist_ok=True)
-    
+
     return checkpoint_dir, logger_dir, evals_dir, config_dir
 
 
-def train_model(train_config,path_config):
+def train_model(train_config, path_config):
 
     # setup output directories
-    checkpoint_dir,logger_dir,evals_dir,config_dir = output_directories(path_config['out_dir'])
-    dump_json(os.path.join(config_dir,'train_config.txt') , train_config)
-    dump_json(os.path.join(config_dir,'path_config.txt') , path_config)
-    
+    checkpoint_dir, logger_dir, evals_dir, config_dir = \
+        output_directories(path_config['out_dir'],path_config['exp_name'])
+    dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
+    dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
+
     # initialize logger instances
-    global logger_train,logger_val, logger_test
+    global logger_train, logger_val, logger_test
     logger_train = SummaryWriter(log_dir=logger_dir)
     logger_val = SummaryWriter(log_dir=logger_dir)
-    logger_test= SummaryWriter(log_dir=logger_dir)
+    logger_test = SummaryWriter(log_dir=logger_dir)
 
     # Visualize data
-    #global viz, labels_set_dmg, labels_set_bld
+    # global viz, labels_set_dmg, labels_set_bld
     label_map = read_json(path_config['label_map_json'])
     viz = RasterLabelVisualizer(label_map=label_map)
 
     # torch device
     l.info(f'Using PyTorch version {torch.__version__}.')
-    device = torch.device(train_config['device'] if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        train_config['device'] if torch.cuda.is_available() else "cpu")
     l.info(f'Using device: {device}.')
 
-    #data
-    ## Load datasets
+    # data
+    # Load datasets
     dataset = ShardDataset()
     xBD_train = dataset.load_dataset("train")
     xBD_val = dataset.load_dataset("val")
 
-    train_loader = DataLoader(xBD_train, batch_size=train_config['batch_size'], shuffle=True, num_workers=8, pin_memory=False)
-    val_loader = DataLoader(xBD_val, batch_size=train_config['batch_size'], shuffle=False, num_workers=8, pin_memory=False)
+    train_loader = DataLoader(xBD_train,
+                              batch_size=train_config['batch_size'],
+                              shuffle=True,
+                              num_workers=8,
+                              pin_memory=False)
+    val_loader = DataLoader(xBD_val,
+                            batch_size=train_config['batch_size'],
+                            shuffle=False,
+                            num_workers=8,
+                            pin_memory=False)
 
-    ## Labels
+    # Labels
     labels_set_dmg = train_config['labels_dmg']
     labels_set_bld = train_config['labels_bld']
-    
+
     l.info('Log image samples')
     l.info('Get sample chips from train set...')
-    sample_train_ids = xBD_train.get_sample_images(which_set='train')    
+    sample_train_ids = xBD_train.get_sample_images(which_set='train')
     l.info('Get sample chips from val set...')
     sample_val_ids = xBD_val.get_sample_images(which_set='val')
 
     # Training config setup
 
-    ## define model
+    # define model
     model = SiamUnet().to(device=device)
     l.info(model.model_summary())
 
-    ## resume from a checkpoint if provided
+    # resume from a checkpoint if provided
     starting_checkpoint_path = path_config['starting_checkpoint_path']
-    optimizer, starting_epoch, best_acc = resume_model(model,starting_checkpoint_path)
+    optimizer, starting_epoch, best_acc = resume_model(
+        model, starting_checkpoint_path)
 
-    ## define loss functions and weights on classes
+    # define loss functions and weights on classes
     global weights_loss, mode
     mode = train_config['mode']
     weights_seg_tf = torch.FloatTensor(train_config['weights_seg'])
     weights_damage_tf = torch.FloatTensor(train_config['weights_damage'])
     weights_loss = train_config['weights_loss']
 
-    ## loss functions    
-    criterion_seg_1 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_seg_2 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_damage = nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
-    
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=2000, verbose=True)
-    
-    ## epochs
+    # loss functions
+    criterion_seg_1 = \
+        nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
+    criterion_seg_2 = \
+        nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
+    criterion_damage = \
+        nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
+
+    scheduler = ReduceLROnPlateau(
+        optimizer, mode='min', patience=2000, verbose=True)
+
+    static_context = {
+        'crit_seg_pre': criterion_seg_1,
+        'crit_seg_post': criterion_seg_2,
+        'crit_dmg': criterion_damage,
+        'device': device,
+        "labels_set_dmg": labels_set_dmg,
+        "labels_set_bld": labels_set_bld,
+        "weights_loss": weights_loss
+    }
+
+    train_context = {
+        'phase_name': "train",
+        'logger': logger_train,
+        'loader': train_loader,
+        'sample_ids': sample_train_ids
+    }
+
+    val_context = {
+        'phase_name': "val",
+        'logger': logger_val,
+        'loader': val_loader,
+        'sample_ids': sample_val_ids
+    }
+
+    # Metrics
+    cols = ['epoch', 'class', 'precision', 'recall', 'f1', 'accuracy']
+    tr_dmg_metrics = pd.DataFrame(columns=cols)
+    tr_bld_metrics = pd.DataFrame(columns=cols)
+    val_dmg_metrics = pd.DataFrame(columns=cols)
+    val_bld_metrics = pd.DataFrame(columns=cols)
+
+    # epochs
     step_tr = 1
     epoch = starting_epoch
     epochs = train_config['epochs']
 
-    # Metrics 
-    cols = ['epoch', 'class', 'precision', 'recall', 'f1', 'accuracy']
-    eval_results_tr_dmg = pd.DataFrame(columns=cols)
-    eval_results_tr_bld = pd.DataFrame(columns=cols)
-    eval_results_val_dmg = pd.DataFrame(columns=cols)
-    eval_results_val_bld = pd.DataFrame(columns=cols)
+    epoch_context = {
+        'epoch': epoch,
+        'epochs': epochs,
+        'step_tr': step_tr,
+        'model': model,
+        'optimizer': optimizer
+    }
+
+    # Objects for training
+    train_phase = Phase(train_context, static_context)
+    val_phase = Phase(val_context, static_context)
 
     while (epoch <= epochs):
+
         # train phase
-        model, optimizer, step_tr, confusion_mtrx_df_tr_dmg, confusion_mtrx_df_tr_bld = train(train_loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, optimizer, epochs, epoch, step_tr, logger_train, logger_val, sample_train_ids, sample_val_ids, device)
-        l.info(f'Compute actual metrics for model evaluation based on training set ...')        
-        eval_results_tr_dmg, eval_results_tr_bld = compute_metrics("train",logger_train,eval_results_tr_dmg, eval_results_tr_bld,model, epoch, labels_set_dmg, labels_set_bld, confusion_mtrx_df_tr_dmg, confusion_mtrx_df_tr_bld)
+        conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr = train(train_phase, epoch_context)
+        l.info(f'Compute actual metrics for model evaluation based on training set ...')
+        tr_dmg_metrics, tr_bld_metrics, f1_harmonic_mean = \
+            train_phase.compute_metrics(tr_bld_metrics, tr_dmg_metrics,
+                                        conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr,
+                                        epoch_context)
 
         # val phase
-        confusion_mtrx_df_val_dmg, confusion_mtrx_df_val_bld, losses_val = validation(val_loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, epochs, epoch, logger_val)
-        scheduler.step(losses_val) # decay Learning Rate
+        conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val, losses_val = \
+            validation(val_phase, epoch_context)
+        scheduler.step(losses_val)  # decay Learning Rate
         l.info(f'Compute actual metrics for model evaluation based on validation set ...')
-        eval_results_val_dmg, eval_results_val_bld, val_acc_avg, is_best = compute_metrics("val",logger_val,eval_results_val_dmg, eval_results_val_bld,epoch, labels_set_dmg, labels_set_bld,confusion_mtrx_df_val_dmg, confusion_mtrx_df_val_bld)
-        
-        l.info(f'Saved checkpoint for epoch {epoch}. Is it the highest f1 checkpoint so far: {is_best}\n')
+        val_bld_metrics, val_dmg_metrics, f1_harmonic_mean = \
+            val_phase.compute_metrics(val_bld_metrics, val_dmg_metrics,
+                                      conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val,
+                                      epoch_context)
+
+        # compute average accuracy across all classes to select the best model
+        val_acc_avg = f1_harmonic_mean
+        is_best = val_acc_avg > best_acc
+        best_acc = max(val_acc_avg, best_acc)
+
+        l.info(
+            f'Saved checkpoint for epoch {epoch}. Is it the highest f1 checkpoint so far: {is_best}\n')
         model.save_checkpoint({
             'epoch': epoch,
             'state_dict': model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'val_f1_avg': val_acc_avg,
             'best_f1': best_acc
-            }, is_best, checkpoint_dir)  
-              
-        epoch += 1
+        }, is_best, checkpoint_dir)
+
+        epoch_context["epoch"] += 1
 
     logger_train.flush()
     logger_train.close()
     logger_val.flush()
     logger_val.close()
     l.info('Done')
-    model, optimizer, step_tr, confusion_mtrx_df_tr_dmg, confusion_mtrx_df_tr_bld = train(train_loader, model, criterion_seg_1, criterion_seg_2, criterion_damage, optimizer, epochs, epoch, step_tr, logger_train, logger_val, sample_train_ids, sample_val_ids, device)
-        
+
 
 if __name__ == "__main__":
     train_config = {
@@ -267,14 +278,14 @@ if __name__ == "__main__":
         'weights_damage': [1, 35, 70, 150, 120],
         'weights_loss': [0, 0, 1],
         'mode': 'dmg',
-        'init_learning_rate': 0.0005,#dmg: 0.005, #UNet: 0.01,           
+        'init_learning_rate': 0.0005,  # dmg: 0.005, #UNet: 0.01,
         'device': 'cpu',
         'epochs': 1500,
         'batch_size': 32,
         'num_chips_to_viz': 1
     }
     path_config = {
-        'experiment_name': 'train_UNet', #train_dmg
+        'experiment_name': 'train_UNet',  # train_dmg
         'out_dir': '/home/mrtc101/Desktop/tesina/repo/my_siames/out',
         'data_dir_shards': '/original_siames/public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
         'disaster_splits_json': '/original_siames/constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
@@ -283,4 +294,4 @@ if __name__ == "__main__":
         'starting_checkpoint_path': '/original_siames/nlrc_outputs/UNet_all_data_dmg/checkpoints/checkpoint_epoch120_2021-06-30-10-28-49.pth.tar',
         'shard_no': 0
     }
-    train_model(train_config,path_config)
+    train_model(train_config, path_config)
