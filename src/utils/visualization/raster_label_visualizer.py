@@ -9,10 +9,13 @@ import os
 from io import BytesIO
 from typing import Union, Tuple
 import matplotlib
+import torch
 matplotlib.use('Agg')
 import matplotlib.colors as mcolors
 import matplotlib.pyplot as plt
 import numpy as np
+from torchvision.transforms import transforms
+
 from PIL import Image, ImageColor
 
 class RasterLabelVisualizer(object):
@@ -230,45 +233,6 @@ class RasterLabelVisualizer(object):
         fig = RasterLabelVisualizer.plot_colortable(label_map, legend_title, sort_colors=False, emptycols=3)
         return fig
 
-    def show_label_raster(self, label_raster: Union[Image.Image, np.ndarray],
-                          size: Tuple[int, int] = (10, 10)) -> Tuple[Image.Image, BytesIO]:
-        """Visualizes a label mask or hardmax predictions of a model, according to the category color map
-        provided when the class was initialized.
-
-        The label_raster provided needs to contain values in [0, num_classes].
-
-        Args:
-            label_raster: 2D numpy array or PIL Image where each number indicates the pixel's class
-            size: matplotlib size in inches (h, w)
-
-        Returns:
-            (im, buf) - PIL image of the matplotlib figure, and a BytesIO buf containing the matplotlib Figure
-            saved as a PNG
-        """
-        if not isinstance(label_raster, np.ndarray):
-            label_raster = np.asarray(label_raster)
-
-        label_raster = label_raster.squeeze()
-        assert len(label_raster.shape) == 2, 'label_raster provided has more than 2 dimensions after squeezing'
-
-        label_raster.astype(np.uint8)
-
-        # min of 0, which is usually empty / no label
-        assert np.min(label_raster) >= 0, f'Invalid value for class label: {np.min(label_raster)}'
-
-        # non-empty, actual class labels start at 1
-        assert np.max(label_raster) <= self.num_classes, f'Invalid value for class label: {np.max(label_raster)}'
-
-        _ = plt.figure(figsize=size)
-        _ = plt.imshow(label_raster, cmap=self.colormap, norm=self.normalizer, interpolation='none')
-
-        buf = BytesIO()
-        plt.savefig(buf, format='png')
-        plt.close()
-        buf.seek(0)
-        im = Image.open(buf)
-        return im, buf
-
     @staticmethod
     def visualize_matrix(matrix: np.ndarray) -> Image.Image:
         """Shows a 2D matrix of RGB or greyscale values as a PIL Image.
@@ -313,56 +277,86 @@ class RasterLabelVisualizer(object):
         # ((batch_size), H, W, num_classes) @ (num_classes * 3) = ((batch_size), H, W, 3)
         colored_view = softmax_preds_transposed @ self.color_matrix
         return colored_view
+    
+    def show_label_raster(self, label_raster: Union[Image.Image, np.ndarray],
+                        size: Tuple[int, int] = (10, 10)) -> Tuple[Image.Image, BytesIO]:
+        """Visualizes a label mask or hardmax predictions of a model, according to the category color map
+        provided when the class was initialized.
 
+        The label_raster provided needs to contain values in [0, num_classes].
 
-    def prepare_for_vis(sample_train_ids, logger, model, which_set, iteration, device, softmax):
+        Args:
+            label_raster: 2D numpy array or PIL Image where each number indicates the pixel's class
+            size: matplotlib size in inches (h, w)
+
+        Returns:
+            (im, buf) - PIL image of the matplotlib figure, and a BytesIO buf containing the matplotlib Figure
+            saved as a PNG
+        """
+        if not isinstance(label_raster, np.ndarray):
+            label_raster = np.asarray(label_raster)
+
+        label_raster = label_raster.squeeze()
+        assert len(label_raster.shape) == 2, 'label_raster provided has more than 2 dimensions after squeezing'
+
+        label_raster.astype(np.uint8)
+
+        # min of 0, which is usually empty / no label
+        assert np.min(label_raster) >= 0, f'Invalid value for class label: {np.min(label_raster)}'
+
+        # non-empty, actual class labels start at 1
+        assert np.max(label_raster) <= self.num_classes, f'Invalid value for class label: {np.max(label_raster)}'
+
+        _ = plt.figure(figsize=size)
+        _ = plt.imshow(label_raster, cmap=self.colormap, norm=self.normalizer, interpolation='none')
+
+        buf = BytesIO()
+        plt.savefig(buf, format='png')
+        plt.close()
+        buf.seek(0)
+        im = Image.open(buf)
+        return im, buf
         
-        for item in sample_train_ids:
-            data = xBD_train[item] if which_set == 'train' else xBD_val[item]
+    def prepare_for_vis(self, softmax, logger, phase, dataset, sample_ids, model, epoch, device):
+        for item in sample_ids:
+            data = dataset[item]
             
-            c = data['pre_image'].size()[0]
-            h = data['pre_image'].size()[1]
-            w = data['pre_image'].size()[2]
-
+            c, h, w = data['pre_image'].size()
             pre = data['pre_image'].reshape(1, c, h, w)
             post = data['post_image'].reshape(1, c, h, w)
             
-            
             scores = model(pre.to(device=device), post.to(device=device))
-            preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
-            preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
             
             # modify damage prediction based on UNet arm        
+            preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
+            preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
             for c in range(0,scores[2].shape[1]):
                 scores[2][:,c,:,:] = torch.mul(scores[2][:,c,:,:], preds_seg_pre)
-
-            # add to tensorboard
-            tag = 'pr_bld_mask_pre_train_id_' + str(item) if which_set == 'train' else 'pr_bld_mask_pre_val_id_' + str(item)
-            logger.add_image(tag, preds_seg_pre, iteration, dataformats='CHW')
+            preds_dmg_classes = scores[2]
             
-            tag = 'pr_bld_mask_post_train_id_' + str(item) if which_set == 'train' else 'pr_bld_mask_post_val_id_' + str(item)
-            logger.add_image(tag, preds_seg_post, iteration, dataformats='CHW')
+            output = {
+                'bld_mask_pre':preds_seg_pre,
+                'bld_mask_post':preds_seg_post,
+                'damage_mask':preds_dmg_classes
+            }
             
-            tag = 'pr_dmg_mask_train_id_' + str(item) if which_set == 'train' else 'pr_dmg_mask_val_id_' + str(item)
-            im, buf = viz.show_label_raster(torch.argmax(softmax(scores[2]), dim=1).cpu().numpy(), size=(5, 5))
-            preds_cls = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
-            logger.add_image(tag, preds_cls, iteration, dataformats='CHW')
-                        
-            if iteration == 1:
-                pre = data['pre_image']
-                tag = 'gt_img_pre_train_id_' + str(item) if which_set == 'train' else 'gt_img_pre_val_id_' + str(item)
-                logger.add_image(tag, data['pre_image_orig'], iteration, dataformats='CHW')
-                
-                post = data['post_image']
-                tag = 'gt_img_post_train_id_' + str(item) if which_set == 'train' else 'gt_img_post_val_id_' + str(item)
-                logger.add_image(tag, data['post_image_orig'], iteration, dataformats='CHW')
-            
-                gt_seg = data['building_mask'].reshape(1, h, w)
-                tag = 'gt_bld_mask_train_id_' + str(item) if which_set == 'train' else 'gt_bld_mask_val_id_' + str(item)
-                logger.add_image(tag, gt_seg, iteration, dataformats='CHW')
-            
-                im, buf = viz.show_label_raster(np.array(data['damage_mask']), size=(5, 5))
-                gt_cls = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
-                tag = 'gt_dmg_mask_train_id_' + str(item) if which_set == 'train' else 'gt_dmg_mask_val_id_' + str(item)
-                logger.add_image(tag, gt_cls, iteration, dataformats='CHW')    
-        return
+            # pr prediction or gt ground truth
+            # add to tensorboard the output of the model    
+            tp="pr"
+            for key,out in output.items:
+                tag = f'{tp}_{key}_{phase}_id_{item}'
+                if(key == "damage_class"):
+                    im, buf = self.show_label_raster(torch.argmax(softmax(preds_dmg_classes), dim=1).cpu().numpy(), size=(5, 5))
+                    out = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
+                logger.add_image(tag, out, epoch, dataformats='CHW')    
+            if(epoch==1):
+                tp="gt"
+                for img_key in ["pre_image_orig","post_image_orig","building_mask","damage_mask"]:
+                    img = data[img_key]
+                    if(img_key == "building_mask"):
+                        img = img.reshape(1,h,w)
+                    elif(img_key == "damage_mask"):
+                        im, buf = self.show_label_raster(np.array(img), size=(5, 5))
+                        img = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
+                    tag = f'{tp}_{img_key}_{phase}_id_{item}'
+                    logger.add_image(tag, img, epoch, dataformats='CHW')
