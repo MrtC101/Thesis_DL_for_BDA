@@ -19,6 +19,7 @@ class Phase:
         self.logger = phase_context['logger']
         self.phase = phase_context['phase']
         self.loader = phase_context['loader']
+        self.dataset = phase_context['dataset']
         self.sample_ids = phase_context['sample_ids']
         self.device = static_context['device']
         self.crit_seg_1 = static_context['crit_seg_1']
@@ -30,11 +31,13 @@ class Phase:
         self.viz = RasterLabelVisualizer(label_map=static_context['label_map_json'])
 
     def iteration(self, epoch_context):
-
+        cols = ['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels']
+        conf_mtrx_dmg_df = pd.DataFrame(columns=cols)
+        conf_mtrx_bld_df = pd.DataFrame(columns=cols)
         losses = AverageMeter()
-        loss_seg_pre = AverageMeter()
-        loss_seg_post = AverageMeter()
-        loss_dmg = AverageMeter()
+        losses_seg_pre = AverageMeter()
+        losses_seg_post = AverageMeter()
+        losses_dmg = AverageMeter()
 
         for batch_idx, data in enumerate(tqdm(self.loader)):
             # move to device, e.g. GPU
@@ -67,9 +70,9 @@ class Phase:
                 self.weights_loss[2] * loss_dmg
 
             losses.update(loss.item(), x_pre.size(0))
-            loss_seg_pre.update(loss_seg_pre.item(), x_pre.size(0))
-            loss_seg_post.update(loss_seg_post.item(), x_pre.size(0))
-            loss_dmg.update(loss_dmg.item(), x_pre.size(0))
+            losses_seg_pre.update(loss_seg_pre.item(), x_pre.size(0))
+            losses_seg_post.update(loss_seg_post.item(), x_pre.size(0))
+            losses_dmg.update(loss_dmg.item(), x_pre.size(0))
 
             if (self.phase == "train"):
                 loss.backward()  # compute gradients
@@ -81,7 +84,7 @@ class Phase:
             preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
             preds_cls = torch.argmax(softmax(scores[2]), dim=1)
 
-            conf_mtrx_dmg_df = self.metric.compute_conf_mtrx(preds_cls=preds_cls,
+            conf_mtrx_dmg_df = self.metric.compute_conf_mtrx(y_pred_mask=preds_cls,
                                                              y_dmg_mask=y_cls,
                                                              y_bld_mask=y_seg,
                                                              labels_set=self.labels_set_dmg,
@@ -89,7 +92,7 @@ class Phase:
                                                              epoch=epoch_context['epoch'],
                                                              batch_idx=batch_idx)
 
-            conf_mtrx_bld_df = self.metric.compute_conf_mtrx(preds_cls=preds_seg_pre,
+            conf_mtrx_bld_df = self.metric.compute_conf_mtrx(y_pred_mask=preds_seg_pre,
                                                              y_dmg_mask=None,
                                                              y_bld_mask=y_seg,
                                                              labels_set=self.labels_set_bld,
@@ -99,13 +102,13 @@ class Phase:
 
         self.logger.add_scalars(f'loss_{self.phase}', {
             '_total': losses.avg,
-            '_seg_pre': loss_seg_pre.avg,
-            '_seg_post': loss_seg_post.avg,
-            '_dmg': loss_dmg.avg
+            '_seg_pre': losses_seg_pre.avg,
+            '_seg_post': losses_seg_post.avg,
+            '_dmg': losses_dmg.avg
         }, epoch_context['epoch'])
 
-        self.viz.prepare_for_vis(softmax, self.logger, self.phase, self.dataset, self.sample_ids, 
-                                 epoch_context['model'], epoch_context['epoch'], self.device)
+        #self.viz.prepare_for_vis(softmax, self.logger, self.phase, self.dataset, self.sample_ids, 
+        #                        epoch_context['model'], epoch_context['epoch'], self.device)
 
         return conf_mtrx_dmg_df, conf_mtrx_bld_df, losses
 

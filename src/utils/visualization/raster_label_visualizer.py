@@ -343,7 +343,8 @@ class RasterLabelVisualizer(object):
             # pr prediction or gt ground truth
             # add to tensorboard the output of the model    
             tp="pr"
-            for key,out in output.items:
+            for key in output.keys():
+                out = output[key][0,:,:,:]
                 tag = f'{tp}_{key}_{phase}_id_{item}'
                 if(key == "damage_class"):
                     im, buf = self.show_label_raster(torch.argmax(softmax(preds_dmg_classes), dim=1).cpu().numpy(), size=(5, 5))

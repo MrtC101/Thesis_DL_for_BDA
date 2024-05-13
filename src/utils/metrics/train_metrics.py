@@ -17,8 +17,8 @@ class MetricComputer:
         conf_mtrx_list = []
         for cls in labels_set[1:]:
 
-            if len(labels_set) > 2:
-                conf_mtrx = self.conf_mtrx_for_bld_mask(y_pred_mask, y_bld_mask)
+            if len(labels_set) <= 2:
+                conf_mtrx = self.conf_mtrx_for_bld_mask(y_pred_mask, y_bld_mask,cls)
             else:
                 conf_mtrx = self.conf_mtrx_for_cls_mask(y_pred_mask, y_dmg_mask, y_bld_mask, cls)
 
@@ -46,7 +46,7 @@ class MetricComputer:
                 total_pixels *= item
         return {'class':cls, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels}
     
-    def conf_mtrx_for_cls_mask(y_preds, y_dmg_mask, y_bld_mask, cls):
+    def conf_mtrx_for_cls_mask(self,y_preds, y_dmg_mask, y_bld_mask, cls):
         
         # Convert any other class to 0 
         y_true_binary = y_dmg_mask.detach().clone()

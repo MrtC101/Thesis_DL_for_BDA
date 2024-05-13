@@ -83,7 +83,7 @@ def get_feature_info(feature):
         damage_class_num = LABEL_NAME_TO_NUM[damage_class]  # get the numerical label
 
         # maps to (numpy array of coords, numerical category of the building)
-        props[feat['properties']['uid']] = (np.array(coords, np.int8), damage_class_num)
+        props[feat['properties']['uid']] = (np.array(coords, np.uint8), damage_class_num)
     return props
 
 
@@ -101,7 +101,7 @@ def mask_polygons_together_with_border(size, polys, border):
     """
 
     # For each WKT polygon, read the WKT format and fill the polygon as an image
-    mask_img = np.zeros(size, np.int8)  # 0 is the background class
+    mask_img = np.zeros(size, np.int32)  # 0 is the background class
     
     for tup in polys.values():
         # poly is a np.ndarray
@@ -125,6 +125,8 @@ def mask_polygons_together_with_border(size, polys, border):
             elif y > poly_center_y:
                 y -= border
 
+            x = max(min(x,255),0)
+            y = min(min(y,255),0)
             shrunk_polygon.append([x, y])
 
         # Transforming the polygon back to a np.ndarray
@@ -133,7 +135,7 @@ def mask_polygons_together_with_border(size, polys, border):
         assert ns_poly.shape == (1,len(shrunk_polygon),2),f"{ns_poly.shape} wrong shape"
         
         # Filling the shrunken polygon to add a border between close polygons
-        fillPoly(mask_img, ns_poly, (damage_class_num,)*3 )
+        mask_img = fillPoly(mask_img, ns_poly, (damage_class_num,)*3 )
 
     mask_img = mask_img[:, :, 0].squeeze()
     #print(f'shape of final mask_img: {mask_img.shape}')
