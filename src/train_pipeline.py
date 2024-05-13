@@ -12,6 +12,7 @@ from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from utils.common.logger import get_logger
 l = get_logger("Compute data from images")
 
+
 from preprocessing.prepare_folder.clean_folder import delete_not_in
 from preprocessing.prepare_folder.delete_extra import leave_only_n
 from preprocessing.prepare_folder.create_label_masks import create_masks
@@ -42,10 +43,10 @@ def preprocess():
     shards_path = os.path.join(xbd_path,"shards")
     create_shards(split_sliced_json_path,mean_stddev_json,shards_path,4)
     split_shard_json_path = split_shard_dataset(shards_path,xbd_path)
-    return mean_stddev_json, split_sliced_json_path, split_shard_json_path
+    return split_shard_json_path
 
 # train
-def train( mean_stddev_json, split_sliced_json_path, split_shard_json_path):
+def train(split_shard_json_path):
     train_config = {
         'labels_dmg': [0, 1, 2, 3, 4],
         'labels_bld': [0, 1],
@@ -61,14 +62,11 @@ def train( mean_stddev_json, split_sliced_json_path, split_shard_json_path):
     }
     out_dir = os.path.join(os.environ["PROJ_PATH"],"out")
     path_config = {
-        'shard_no': 0,
-        'experiment_name': 'train_UNet', #train_dmg
+        'exp_name': 'train_UNet',  # train_dmg
         'out_dir': out_dir,
-        'data_dir_shards': split_shard_json_path,
-        'disaster_splits_json': split_sliced_json_path,
-        'disaster_mean_stddev': mean_stddev_json,
-        'label_map_json': os.path.join(os.environ["DATA_PATH"],"constants","xBD_label_map.json"),
-        'starting_checkpoint_path': os.path.join(out_dir,'train_UNet',"checkpoints","checkpoint_epoch120_2021-06-30-10-28-49.pth.tar")
+        'shard_splits_json': split_shard_json_path,
+        'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
+        'starting_checkpoint_path': None
     }
     train_model(train_config,path_config)
 
@@ -76,5 +74,5 @@ def train( mean_stddev_json, split_sliced_json_path, split_shard_json_path):
 # inference
 
 if __name__ == "__main__":
-    data = preprocess()
-    #train(*data)
+    #data = preprocess()
+    train("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json")

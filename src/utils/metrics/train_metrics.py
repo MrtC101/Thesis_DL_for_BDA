@@ -7,10 +7,10 @@ class MetricComputer:
         self.logger = phase_context['logger']
         self.phase = phase_context['phase']
         self.loader = phase_context['loader']
-        self.device = static_context['phase']
-        self.crit_seg_1 = static_context['criterion_sef_1'] 
-        self.crit_seg_2 = static_context['criterion_seg_2']
-        self.crit_dmg = static_context['criterion_damage']
+        self.device = static_context['device']
+        self.crit_seg_1 = static_context['crit_seg_1'] 
+        self.crit_seg_2 = static_context['crit_seg_2']
+        self.crit_dmg = static_context['crit_dmg']
 
     ### Compute confusión Matrixes
     def compute_conf_mtrx(self, y_pred_mask, y_dmg_mask, y_bld_mask, labels_set, conf_mtrx_df, epoch, batch_idx):

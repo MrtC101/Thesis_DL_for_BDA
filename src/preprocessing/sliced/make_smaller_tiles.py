@@ -19,6 +19,10 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.common.logger import get_logger
 l = get_logger("make_smaller_tiles")
 
+def same_shape(dis_id,tile_id,img1, img2) -> bool:
+        assert img1.shape == img2.shape, \
+        f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
+        return True
 
 def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
 
@@ -91,6 +95,9 @@ def slice_dataset(splits_json_path, output_path):
         split_folder = os.path.join(output_path,split_name)
 
         for dis_id, tile_id, data in tqdm(iter(dataset),total=num_tile):
+            same_shape(dis_id, tile_id, data["pre_image"], data["pre_mask"])
+            same_shape(dis_id, tile_id, data["post_image"], data["pre_image"])
+            same_shape(dis_id, tile_id, data["post_image"], data["post_mask"])
             patch_list = slice_tile(4, **data)
             save_patches(dis_id, tile_id, patch_list, split_folder, split_name)
         

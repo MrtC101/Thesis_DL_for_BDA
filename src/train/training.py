@@ -28,10 +28,10 @@ logger_val : SummaryWriter = None
 
 def logging_wrapper(logger, phase):
     def decorator(func):
-        def wrapper(*args, **kwargs):
-            optimizer = args[6]
-            epochs = args[7]
-            epoch = args[8]
+        def wrapper(*args):
+            optimizer = args[1]['optimizer']
+            epochs = args[1]['epochs']
+            epoch = args[1]['epoch']
 
             if (phase == "train"):
                 logger.add_scalar(
@@ -40,7 +40,7 @@ def logging_wrapper(logger, phase):
             l.info(f'Model training for epoch {epoch}/{epochs}')
             start_time = datetime.now()
 
-            result = func(*args, **kwargs)
+            result = func(*args)
 
             duration = datetime.now() - start_time
             logger.add_scalar(f'time_{phase}', duration.total_seconds(), epoch)
@@ -68,8 +68,7 @@ def validation(val_phase: Phase, epoch_context):
     return confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses.avg
 
 
-def resume_model(model : SiamUnet, training_config):
-    starting_checkpoint_path = path_config['starting_checkpoint_path']
+def resume_model(model : SiamUnet, training_config, starting_checkpoint_path):
 
     if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
         l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
@@ -108,11 +107,6 @@ def train_model(train_config, path_config):
         output_directories(path_config['out_dir'],path_config['exp_name'])
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
-
-    # Visualize data
-    # global viz, labels_set_dmg, labels_set_bld
-    label_map = read_json(path_config['label_map_json'])
-    viz = RasterLabelVisualizer(label_map=label_map)
 
     logger_train = SummaryWriter(log_dir=logger_dir)
     logger_val = SummaryWriter(log_dir=logger_dir)
@@ -153,7 +147,7 @@ def train_model(train_config, path_config):
     l.info(model.model_summary())
 
     # resume from a checkpoint if provided
-    optimizer, starting_epoch, best_acc = resume_model( model, train_config)
+    optimizer, starting_epoch, best_acc = resume_model( model, train_config, path_config['starting_checkpoint_path'])
 
     # define loss functions and weights on classes
     global weights_loss, mode
@@ -174,27 +168,30 @@ def train_model(train_config, path_config):
         optimizer, mode='min', patience=2000, verbose=True)
 
     static_context = {
-        'crit_seg_pre': criterion_seg_1,
-        'crit_seg_post': criterion_seg_2,
+        'crit_seg_1': criterion_seg_1,
+        'crit_seg_2': criterion_seg_2,
         'crit_dmg': criterion_damage,
         'device': device,
         "labels_set_dmg":  train_config['labels_dmg'],
         "labels_set_bld":  train_config['labels_bld'],
-        "weights_loss": weights_loss
+        "weights_loss": weights_loss,
+        "label_map_json": path_config['label_map_json']
     }
 
     train_context = {
-        'phase_name': "train",
+        'phase': "train",
         'logger': logger_train,
         'loader': train_loader,
-        'sample_ids': sample_train_ids
+        'sample_ids': sample_train_ids,
+        'dataset': xBD_train
     }
 
     val_context = {
-        'phase_name': "val",
+        'phase': "val",
         'logger': logger_val,
         'loader': val_loader,
-        'sample_ids': sample_val_ids
+        'sample_ids': sample_val_ids,
+        'dataset':xBD_val
     }
 
     # Metrics
@@ -280,7 +277,7 @@ if __name__ == "__main__":
         'num_chips_to_viz': 1
     }
     path_config = {
-        'experiment_name': 'train_UNet',  # train_dmg
+        'exp_name': 'train_UNet',  # train_dmg
         'out_dir': '/home/mrtc101/Desktop/tesina/repo/my_siames/out',
         'shard_splits_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json',
         'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',

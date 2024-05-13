@@ -4,7 +4,7 @@ from utils.metrics.common import AverageMeter
 from utils.metrics.train_metrics import MetricComputer
 from tqdm import tqdm
 
-from utils.visualization.raster_label_visualizer import prepare_for_vis
+from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 
 
 class Phase:
@@ -20,13 +20,14 @@ class Phase:
         self.phase = phase_context['phase']
         self.loader = phase_context['loader']
         self.sample_ids = phase_context['sample_ids']
-        self.device = static_context['phase']
-        self.crit_seg_1 = static_context['crit_seg_pre']
-        self.crit_seg_2 = static_context['crit_seg_post']
+        self.device = static_context['device']
+        self.crit_seg_1 = static_context['crit_seg_1']
+        self.crit_seg_2 = static_context['crit_seg_1']
         self.crit_dmg = static_context['crit_dmg']
         self.labels_set_dmg = static_context['labels_set_dmg']
         self.labels_set_bld = static_context['labels_set_bld']
         self.weights_loss = static_context['weights_loss']
+        self.viz = RasterLabelVisualizer(label_map=static_context['label_map_json'])
 
     def iteration(self, epoch_context):
 
@@ -103,8 +104,8 @@ class Phase:
             '_dmg': loss_dmg.avg
         }, epoch_context['epoch'])
 
-        prepare_for_vis(self.sample_ids, self.logger, epoch_context['model'], 
-                        self.phase, epoch_context['epoch'], self.device, softmax)
+        self.viz.prepare_for_vis(softmax, self.logger, self.phase, self.dataset, self.sample_ids, 
+                                 epoch_context['model'], epoch_context['epoch'], self.device)
 
         return conf_mtrx_dmg_df, conf_mtrx_bld_df, losses
 
@@ -116,11 +117,13 @@ class Phase:
             Computes metrics for damage and building classification for current phase in current epoch.
         """
         curr_dmg_metrics, f1_harmonic_mean = \
-            self.metric.compute_metrics_for("dmg", epoch_context,self.labels_set_dmg,conf_mtrx_dmg_df)
+            self.metric.compute_metrics_for(
+                "dmg", epoch_context, self.labels_set_dmg, conf_mtrx_dmg_df)
         dmg_metrics = pd.concat([dmg_metrics, curr_dmg_metrics], axis=0)
 
         curr_bld_metrics = \
-            self.metric.compute_metrics_for("bld", epoch_context,self.labels_set_bld,conf_mtrx_bld_df)
+            self.metric.compute_metrics_for(
+                "bld", epoch_context, self.labels_set_bld, conf_mtrx_bld_df)
         bld_metrics = pd.concat([bld_metrics, curr_bld_metrics], axis=0)
 
         return dmg_metrics, bld_metrics, f1_harmonic_mean

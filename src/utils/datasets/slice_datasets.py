@@ -77,6 +77,6 @@ class PatchDataset(Dataset):
         data = {}
         data["pre_image"] = cv2.imread(patch["pre-image"], cv2.COLOR_BGR2RGB)
         data["post_image"] = cv2.imread(patch["post-image"], cv2.COLOR_BGR2RGB)        
-        data["pre_mask"] = cv2.imread(patch["semantic-mask"], cv2.COLOR_BGR2RGB)
-        data["post_mask"] = cv2.imread(patch["class-mask"], cv2.COLOR_BGR2RGB)
+        data["pre_mask"] = cv2.imread(patch["semantic-mask"], cv2.IMREAD_GRAYSCALE)
+        data["post_mask"] = cv2.imread(patch["class-mask"], cv2.IMREAD_GRAYSCALE)
         return disaster_id, tile_id, patch_id, data
