@@ -19,9 +19,13 @@ def get_logger(name: str, output_path : str = None, level: int = logging.DEBUG) 
         formatter = logging.Formatter(
             '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
             datefmt='%m-%d-%Y %H:%M',
-            filename=output_path,
-            filemode='w'
         )
+
+        if(output_path is not None):
+            file_handler = logging.FileHandler(filename=output_path,filemode='w')
+            file_handler.setLevel(level)
+            file_handler.setFormatter(formatter)
+            logger.addHandler(file_handler)
 
         # Configura un manejador de flujo (stream handler) para la salida de registro
         stream_handler = logging.StreamHandler()

@@ -40,7 +40,7 @@ import math
 import numpy as np
 import random
 import cv2
-from utils.common.files import clean_folder, read_json,is_json
+from utils.common.files import clean_folder, dump_json, read_json,is_json
 from utils.datasets.slice_datasets import PatchDataset
 from torchvision.transforms import transforms, RandomVerticalFlip, RandomHorizontalFlip
 
@@ -94,23 +94,31 @@ def shard_patches(dataset, split_name, mean_stddev_json, num_shards, out_path, t
     num_patches = len(dataset)
     # patch_per_shard
     pxs = math.ceil(num_patches / num_shards)
-    shard_idx = [((i -1) * pxs, ((i) * pxs)) for i in range(1,num_shards+1)]
-    for i, tpl in tqdm(enumerate(shard_idx),total=num_shards):
+    shard_idxs = [((i -1) * pxs, ((i) * pxs)) for i in range(1,num_shards+1)]
+    for i, tpl in tqdm(enumerate(shard_idxs),total=num_shards):
         begin_idx, end_idx = tpl
         # gets data
         image_patches = defaultdict(lambda :[])
-        for j in range(begin_idx,end_idx):
-            dis_id, tile_id, patch_id, data = dataset[j]
+        for idx in range(begin_idx,end_idx):
+            dis_id, tile_id, patch_id, data = dataset[idx]
             image_patches["pre-orig"].append(deepcopy(data["pre_image"]))
             image_patches["post-orig"].append(deepcopy(data["post_image"]))
+        
+            #transformations
             if transform: data = apply_transform(**data)
+       
+            #color normalization
             pre_img, post_img = apply_norm(data["pre_image"], data["post_image"], dis_id, tile_id, normalize, mean_stddev_json)            
+        
+            #replace non-classified pixels with background
+            dmg_mask = np.where(data["post_mask"] == 5, 0, data["post_mask"])
+
             image_patches["pre-image"].append(pre_img) 
             image_patches["post-image"].append(post_img)
             image_patches["semantic-mask"].append(data["pre_mask"])
-            image_patches["class-mask"].append(data["post_mask"]) 
-    
-        # save n shards
+            image_patches["class-mask"].append(dmg_mask) 
+        
+        #save n shards
         for file_id, patch_list in image_patches.items():
             shard = np.stack(patch_list, axis=0)
             shard_path = os.path.join(out_path, f'{split_name}_{file_id}_{str(i).zfill(3)}.npy')
@@ -120,6 +128,8 @@ def shard_patches(dataset, split_name, mean_stddev_json, num_shards, out_path, t
         #freeing memory
         del image_patches
         del shard
+    
+    return shard_idxs
 
 def create_shards(sliced_splits_json,mean_stddev_json,output_path,num_shards):
     
@@ -131,8 +141,11 @@ def create_shards(sliced_splits_json,mean_stddev_json,output_path,num_shards):
 
         clean_folder(output_path,split_name)
         out_dir = os.path.join(output_path,split_name)
-        shard_patches(dataset, split_name, mean_stddev_json, num_shards,out_dir)
-
+        shard_idxs = shard_patches(dataset, split_name, mean_stddev_json, num_shards,out_dir)
+        
+        idx_path = os.path.join(output_path,f"{split_name}_shard_idxs.json")
+        dump_json(idx_path,{"shard_idxs":shard_idxs})
+        
         l.info(f'Done creating shards for {split_name}')
     
     #could be parallelized

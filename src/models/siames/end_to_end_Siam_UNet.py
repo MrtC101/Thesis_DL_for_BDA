@@ -2,8 +2,12 @@
 # Licensed under the MIT License.
 
 from collections import OrderedDict
+import os
+import shutil
+from time import localtime, strftime
 import torch
 import torch.nn as nn
+from torch.utils.tensorboard import SummaryWriter
 
 
 class SiamUnet(nn.Module):
@@ -52,11 +56,11 @@ class SiamUnet(nn.Module):
         self.conv_c = nn.Conv2d(in_channels=features * 2, out_channels=out_channels_c, kernel_size=1)
 
     
-    """def forward(self, x1, x2):
+    def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
         b = nn.Conv2d(3, 5, kernel_size=1)(x2)
-        return a,a,b """
-
+        return a,a,b 
+    """
     def forward(self, x1, x2):
         
         # UNet on x1
@@ -125,6 +129,7 @@ class SiamUnet(nn.Module):
         dec5_c = self.conv1_c(dec5_c)
         
         return self.conv_s(dec1_1), self.conv_s(dec1_2), self.conv_c(dec5_c)
+    """
 
     @staticmethod
     def _block(in_channels, features, name):
@@ -159,6 +164,144 @@ class SiamUnet(nn.Module):
             )
         )
 
+    def freeze_model_param(self):
+        for i in [0, 3]:
+            self.encoder1[i].weight.requires_grad = False 
+            self.encoder2[i].weight.requires_grad = False
+            self.encoder3[i].weight.requires_grad = False
+            self.encoder4[i].weight.requires_grad = False
+
+            self.bottleneck[i].weight.requires_grad = False
+
+            self.decoder4[i].weight.requires_grad = False
+            self.decoder3[i].weight.requires_grad = False
+            self.decoder2[i].weight.requires_grad = False
+            self.decoder1[i].weight.requires_grad = False
+        
+        for i in [1, 4]:
+            self.encoder1[i].weight.requires_grad = False 
+            self.encoder1[i].bias.requires_grad = False 
+
+            self.encoder2[i].weight.requires_grad = False
+            self.encoder2[i].bias.requires_grad = False
+
+            self.encoder3[i].weight.requires_grad = False
+            self.encoder3[i].bias.requires_grad = False
+
+            self.encoder4[i].weight.requires_grad = False
+            self.encoder4[i].bias.requires_grad = False
+
+            self.bottleneck[i].weight.requires_grad = False
+            self.bottleneck[i].bias.requires_grad = False
+
+            self.decoder4[i].weight.requires_grad = False
+            self.decoder4[i].bias.requires_grad = False
+
+            self.decoder3[i].weight.requires_grad = False
+            self.decoder3[i].bias.requires_grad = False
+
+            self.decoder2[i].weight.requires_grad = False
+            self.decoder2[i].bias.requires_grad = False
+
+            self.decoder1[i].weight.requires_grad = False
+            self.decoder1[i].bias.requires_grad = False
+
+
+        self.upconv4.weight.requires_grad = False
+        self.upconv4.bias.requires_grad = False
+
+        self.upconv3.weight.requires_grad = False
+        self.upconv3.bias.requires_grad = False
+
+        self.upconv2.weight.requires_grad = False
+        self.upconv2.bias.requires_grad = False
+
+        self.upconv1.weight.requires_grad = False
+        self.upconv1.bias.requires_grad = False
+
+        self.conv_s.weight.requires_grad = False
+        self.conv_s.bias.requires_grad = False
+
+    def reinitialize_Siamese(self):
+        torch.nn.init.xavier_uniform_(self.upconv4_c.weight)
+        torch.nn.init.xavier_uniform_(self.upconv3_c.weight)
+        torch.nn.init.xavier_uniform_(self.upconv2_c.weight)
+        torch.nn.init.xavier_uniform_(self.upconv1_c.weight)
+        torch.nn.init.xavier_uniform_(self.conv_c.weight)
+
+        self.upconv4_c.bias.data.fill_(0.01)
+        self.upconv3_c.bias.data.fill_(0.01)
+        self.upconv2_c.bias.data.fill_(0.01)
+        self.upconv1_c.bias.data.fill_(0.01)
+        self.conv_c.bias.data.fill_(0.01)
+
+        self.conv4_c.apply(self.init_weights)
+        self.conv3_c.apply(self.init_weights)
+        self.conv2_c.apply(self.init_weights)
+        self.conv1_c.apply(self.init_weights)
+
+    def init_weights(m):
+        if type(m) == nn.Linear:
+            torch.nn.init.xavier_uniform_(m.weight)
+            m.bias.data.fill_(0.01)
+    
+    def resume_from_checkpoint(self,config):
+    
+        checkpoint = torch.load(config['starting_checkpoint_path'],
+                                 map_location=config['device'])
+        self.load_state_dict(checkpoint['state_dict'])
+
+        #don't load the optimizer settings so that a newly specified lr can take effect
+        if config["mode"] == 'dmg':
+            self.print_network()
+            self.freeze_model_param()
+            self.print_network()
+
+            # monitor model
+            logger_model = SummaryWriter(log_dir=config['logger_dir'])
+            for tag, value in self.named_parameters():
+                tag = tag.replace('.', '/')
+                logger_model.add_histogram(tag, value.data.cpu().numpy(), global_step=0)
+            
+            self.reinitialize_Siamese()
+            
+            for tag, value in self.named_parameters():
+                tag = tag.replace('.', '/')
+                logger_model.add_histogram(tag, value.data.cpu().numpy(), global_step=1)
+
+            logger_model.flush()
+            logger_model.close()
+            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=config['init_learning_rate'])
+        else:
+            optimizer = torch.optim.Adam(self.parameters(), lr=config['init_learning_rate'])
+
+        starting_epoch = checkpoint['epoch'] + 1  # we did not increment epoch before saving it, so can just start here
+        best_acc = checkpoint.get('best_f1', 0.0)
+        return optimizer, starting_epoch, best_acc
+
+    def resume_from_scratch(self,config):
+        optimizer = torch.optim.Adam(self.parameters(), lr=config['init_learning_rate'])
+        starting_epoch = 1
+        best_acc = 0.0
+        return optimizer, starting_epoch, best_acc
+
+    def save_checkpoint(state, is_best, checkpoint_dir='../checkpoints'):
+        """
+        checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far
+        """
+        checkpoint_path = os.path.join(checkpoint_dir,
+                                    f"checkpoint_epoch{state['epoch']}_"
+                                    f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
+        torch.save(state, checkpoint_path)
+        if is_best:
+            shutil.copyfile(checkpoint_path, os.path.join(checkpoint_dir, 'model_best.pth.tar'))
+            
+    def print_network(self):
+        print('model summary')
+        for name, p in self.named_parameters():
+            print(name)
+            print(p.requires_grad)
+            
     def model_summary(self) -> str:
         """
             Returns an string that contains a summary of the model total weights
@@ -191,144 +334,3 @@ class SiamUnet(nn.Module):
         t += "="*100
         t += f"Total Params:{total_params}"
         return str(t)
-    
-    def resume_from_checkpoint():
-    
-        checkpoint = torch.load(starting_checkpoint_path, map_location=device)
-        model.load_state_dict(checkpoint['state_dict'])
-
-        #don't load the optimizer settings so that a newly specified lr can take effect
-        if mode == 'dmg':
-            print_network(model)
-            model = freeze_model_param(model)
-            print_network(model)
-
-            # monitor model
-            logger_model = SummaryWriter(log_dir=logger_dir)
-            for tag, value in model.named_parameters():
-                tag = tag.replace('.', '/')
-                logger_model.add_histogram(tag, value.data.cpu().numpy(), global_step=0)
-            
-            reinitialize_Siamese(model)
-            
-            for tag, value in model.named_parameters():
-                tag = tag.replace('.', '/')
-                logger_model.add_histogram(tag, value.data.cpu().numpy(), global_step=1)
-
-            logger_model.flush()
-            logger_model.close()
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, model.parameters()), lr=config['init_learning_rate'])
-        else:
-            optimizer = torch.optim.Adam(model.parameters(), lr=config['init_learning_rate'])
-
-        starting_epoch = checkpoint['epoch'] + 1  # we did not increment epoch before saving it, so can just start here
-        best_acc = checkpoint.get('best_f1', 0.0)
-        return optimizer, starting_epoch, best_acc
-
-    def resume_from_scratch():
-        optimizer = torch.optim.Adam(model.parameters(), lr=config['init_learning_rate'])
-        starting_epoch = 1
-        best_acc = 0.0
-        return optimizer, starting_epoch, best_acc
-
-    def save_checkpoint(state, is_best, checkpoint_dir='../checkpoints'):
-        """
-        checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far
-        """
-        checkpoint_path = os.path.join(checkpoint_dir,
-                                    f"checkpoint_epoch{state['epoch']}_"
-                                    f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
-        torch.save(state, checkpoint_path)
-        if is_best:
-            shutil.copyfile(checkpoint_path, os.path.join(checkpoint_dir, 'model_best.pth.tar'))
-            
-    def freeze_model_param(model):
-        for i in [0, 3]:
-            model.encoder1[i].weight.requires_grad = False 
-            model.encoder2[i].weight.requires_grad = False
-            model.encoder3[i].weight.requires_grad = False
-            model.encoder4[i].weight.requires_grad = False
-
-            model.bottleneck[i].weight.requires_grad = False
-
-            model.decoder4[i].weight.requires_grad = False
-            model.decoder3[i].weight.requires_grad = False
-            model.decoder2[i].weight.requires_grad = False
-            model.decoder1[i].weight.requires_grad = False
-        
-        for i in [1, 4]:
-            model.encoder1[i].weight.requires_grad = False 
-            model.encoder1[i].bias.requires_grad = False 
-
-            model.encoder2[i].weight.requires_grad = False
-            model.encoder2[i].bias.requires_grad = False
-
-            model.encoder3[i].weight.requires_grad = False
-            model.encoder3[i].bias.requires_grad = False
-
-            model.encoder4[i].weight.requires_grad = False
-            model.encoder4[i].bias.requires_grad = False
-
-            model.bottleneck[i].weight.requires_grad = False
-            model.bottleneck[i].bias.requires_grad = False
-
-            model.decoder4[i].weight.requires_grad = False
-            model.decoder4[i].bias.requires_grad = False
-
-            model.decoder3[i].weight.requires_grad = False
-            model.decoder3[i].bias.requires_grad = False
-
-            model.decoder2[i].weight.requires_grad = False
-            model.decoder2[i].bias.requires_grad = False
-
-            model.decoder1[i].weight.requires_grad = False
-            model.decoder1[i].bias.requires_grad = False
-
-
-        model.upconv4.weight.requires_grad = False
-        model.upconv4.bias.requires_grad = False
-
-        model.upconv3.weight.requires_grad = False
-        model.upconv3.bias.requires_grad = False
-
-        model.upconv2.weight.requires_grad = False
-        model.upconv2.bias.requires_grad = False
-
-        model.upconv1.weight.requires_grad = False
-        model.upconv1.bias.requires_grad = False
-
-        model.conv_s.weight.requires_grad = False
-        model.conv_s.bias.requires_grad = False
-
-        return model
-
-    def print_network(model):
-        print('model summary')
-        for name, p in model.named_parameters():
-            print(name)
-            print(p.requires_grad)
-
-    def reinitialize_Siamese(model):
-        torch.nn.init.xavier_uniform_(model.upconv4_c.weight)
-        torch.nn.init.xavier_uniform_(model.upconv3_c.weight)
-        torch.nn.init.xavier_uniform_(model.upconv2_c.weight)
-        torch.nn.init.xavier_uniform_(model.upconv1_c.weight)
-        torch.nn.init.xavier_uniform_(model.conv_c.weight)
-
-        model.upconv4_c.bias.data.fill_(0.01)
-        model.upconv3_c.bias.data.fill_(0.01)
-        model.upconv2_c.bias.data.fill_(0.01)
-        model.upconv1_c.bias.data.fill_(0.01)
-        model.conv_c.bias.data.fill_(0.01)
-
-        model.conv4_c.apply(init_weights)
-        model.conv3_c.apply(init_weights)
-        model.conv2_c.apply(init_weights)
-        model.conv1_c.apply(init_weights)
-
-        return model
-
-    def init_weights(m):
-        if type(m) == nn.Linear:
-            torch.nn.init.xavier_uniform_(m.weight)
-            m.bias.data.fill_(0.01)

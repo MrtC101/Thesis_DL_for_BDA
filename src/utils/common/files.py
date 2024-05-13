@@ -27,7 +27,7 @@ def is_json(path) -> bool:
 
 def is_npy(path) -> bool:
     is_file(path)
-    assert path.split(".")[1] == "npy",f"{path} must be a json file."
+    assert path.split(".")[1] == "npy",f"{path} must be a npy file."
     return True
 
 
