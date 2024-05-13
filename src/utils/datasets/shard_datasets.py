@@ -1,3 +1,9 @@
+import math
+from numpy import memmap
+from utils.common.files import read_json
+from torchvision.transforms import transforms
+from torch.utils.data import Dataset
+import torch
 import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
@@ -6,93 +12,92 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.common.logger import get_logger
 l = get_logger("delete_extra")
 
-import cv2
-from torch.utils.data import Dataset
-from utils.pathManagers.rawManager import RawPathManager
-from utils.common.files import read_json, is_dir, is_json
 
 class ShardDataset(Dataset):
     """
         Access Data using shard_splits.json file.
     """
-    
-    shard_names = ["pre_image_chips",
-                   "post_image_chips",
-                   "bld_mask_chips",
-                   "dmg_mask_chips",
-                   "pre_img_tiles",
-                   "post_img_tiles"]
 
-    def __init__(self, sliced_data_dict, i_shard, set_name, data_mean_stddev, transform: bool, normalize: bool):
-
-        self.data = sliced_data_dict
-
-        self.do_transform: bool = transform
-        self.do_normalize: bool = normalize
-        self.data_mean_stddev = data_mean_stddev
-        self.shards = {}
-
-        path_list = [
-            join(data_dir, f'{set_name}_{shard_name}_{i_shard}.npy')
-            for shard_name in self.shard_names
-        ]
-        for i, shard_path in enumerate(path_list):
-            self.shards[self.shard_names[i]] = np.load(shard_path)
-            l.info(f'{path_list[i]} loaded {self.shard.shape}')
+    def __init__(self, split_name, split_json_name):
+        self.paths = read_json(split_json_name)[split_name]
+        self.shard_i = "000"
+        self.shard_size = self.paths["idx"][0][1] - self.paths["idx"][0][0]
+        self.refer_to_shard("000")
 
     def __len__(self):
         return len(self.pre_image_chip_shard)
 
-    def __getitem__(self, i):
-
-        pre_img = self.shards["pre_image_chips"][i]
-        post_img = self.shards["post_image_chips"][i]
-        mask = self.shards["bld_mask_chips"][i]
-        damage_class = self.shards["dmg_mask_chips"][i]
-
-        # copy original image for viz
-        pre_img_orig = pre_img
-        post_img_orig = post_img
-
-        # convert eveything to arrays
-        pre_img = np.array(pre_img)
-        post_img = np.array(post_img)
-        mask = np.array(mask)
-        damage_class = np.array(damage_class)
-
-        # replace non-classified pixels with background
-        damage_class = np.where(damage_class == 5, 0, damage_class)
-
-        return {
-            'pre_image': torch.from_numpy(pre_img).type(torch.FloatTensor),
-            'post_image': torch.from_numpy(post_img).type(torch.FloatTensor),
-            'building_mask': torch.from_numpy(mask).type(torch.LongTensor),
-            'damage_mask': torch.from_numpy(damage_class).type(torch.LongTensor),
-            'pre_image_orig': transforms.ToTensor()(pre_img_orig),
-            'post_image_orig': transforms.ToTensor()(post_img_orig)
+    def refer_to_shard(self, shard_n):
+        shard_i = str(shard_n).zfill(3)
+        shape = (self.shard_size, 256, 256, 3)
+        mode = "r"
+        self.shard = {
+            "pre_image_patches": memmap(self.paths["pre-image"][shard_i], dtype='float64', mode=mode, shape=shape),
+            "post_image_patches": memmap(self.paths["post-image"][shard_i], dtype='float64', mode=mode, shape=shape),
+            "bld_mask_patches": memmap(self.paths["semantic-mask"][shard_i], dtype='unit8', mode=mode, shape=shape),
+            "dmg_mask_patches": memmap(self.paths["class-mask"][shard_i], dtype='unit8', mode=mode, shape=shape),
+            "pre_img_orig": memmap(self.paths["pre-orig"][shard_i], dtype='unit8', mode=mode, shape=shape),
+            "post_img_orig": memmap(self.paths["post-orig"][shard_i], dtype='unit8', mode=mode, shape=shape),
         }
 
-    def get_sample_images(dataset, num_chips_to_viz):
+    def get_shard(self, i):
+        req_shard = 0
+        j = 0
+        size = 0
+        for shard_i, segment in enumerate(self.paths["idx"]):
+            start, end = segment
+            if (start <= i and i < end):
+                req_shard = shard_i
+                j -= start
+                size = end-start
+                break
+        if (req_shard != self.curr_shard):
+            self.curr_shard = req_shard
+            self.shard_size = size
+            self.refer_to_shard(req_shard)
+        return self.shard, j
 
+    def __getitem__(self, i):
+
+        shard, j = self.get_shard(i)
+        pre_img = shard["pre_image_chips"][j, :, :, :]
+        post_img = shard["post_image_chips"][j, :, :, :]
+        bld_mask = shard["bld_mask_chips"][j, :, :, :]
+        dmg_class = shard["dmg_mask_chips"][j, :, :, :]
+        pre_image_orig = shard["pre_img_orig"][j, :, :, :]
+        post_image_orig = shard["post_img_orig"][j, :, :, :]
+
+        pre_img = torch.from_numpy(pre_img).type(torch.FloatTensor)
+        post_img = torch.from_numpy(post_img).type(torch.FloatTensor)
+        bld_mask = torch.from_numpy(bld_mask).type(torch.FloatTensor)
+        dmg_class = torch.from_numpy(dmg_class).type(torch.FloatTensor)
+        pre_image_orig = transforms.ToTensor()(pre_image_orig)
+        post_image_orig = transforms.ToTensor()(post_image_orig)
+
+        return {
+            'pre_image': pre_img,
+            'post_image': post_img,
+            'building_mask': bld_mask,
+            'damage_mask': dmg_class,
+            'pre_image_orig': pre_image_orig,
+            'post_image_orig': post_image_orig
+        }
+
+    def get_sample_images(self, num_chips_to_viz):
         """
         Get a deterministic set of images in the specified set (train or val) by using the dataset and
         not the dataloader. Only works if the dataset is not IterableDataset.
 
-        Args:
-            which_set: one of 'train' or 'val'
-
         Returns:
-            samples: a dict with keys 'chip' and 'chip_label', pointing to torch Tensors of
-            dims (num_chips_to_visualize, channels, height, width) and (num_chips_to_visualize, height, width)
-            respectively
+            samples: a list with `num_chips_to_viz` to visualize
         """
         num_to_skip = 1  # first few chips might be mostly blank
-        assert len(dataset) > num_to_skip + num_chips_to_viz
+        assert len(self) > num_to_skip + num_chips_to_viz
 
-        keep_every = math.floor((len(dataset) - num_to_skip) / num_chips_to_viz)
+        keep_every = math.floor((len(self) - num_to_skip) / num_chips_to_viz)
         samples_idx_list = []
 
-        for sample_idx in range(num_to_skip, len(dataset), keep_every):
+        for sample_idx in range(num_to_skip, len(self), keep_every):
             samples_idx_list.append(sample_idx)
 
         return samples_idx_list

@@ -77,4 +77,4 @@ def train( mean_stddev_json, split_sliced_json_path, split_shard_json_path):
 
 if __name__ == "__main__":
     data = preprocess()
-    train(*data)
+    #train(*data)

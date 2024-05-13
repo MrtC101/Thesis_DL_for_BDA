@@ -1,8 +1,8 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+from utils.datasets.shard_datasets import ShardDataset
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 from utils.common.files import read_json, dump_json
-from utils.metrics.common import AverageMeter
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from models.siames.end_to_end_Siam_UNet import SiamUnet
 from torch.utils.tensorboard import SummaryWriter
@@ -23,6 +23,8 @@ from train.phase import Phase
 from utils.common.logger import get_logger
 l = get_logger("training model")
 
+logger_train : SummaryWriter = None
+logger_val : SummaryWriter = None
 
 def logging_wrapper(logger, phase):
     def decorator(func):
@@ -66,15 +68,17 @@ def validation(val_phase: Phase, epoch_context):
     return confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses.avg
 
 
-def resume_model(model, starting_checkpoint_path):
+def resume_model(model : SiamUnet, training_config):
+    starting_checkpoint_path = path_config['starting_checkpoint_path']
+
     if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
         l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
-        optimizer, starting_epoch, best_acc = model.resume_from_checkpoint()
+        optimizer, starting_epoch, best_acc = model.resume_from_checkpoint(training_config)
         l.info(
             f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
     else:
         l.info('No valid checkpoint is provided. Start to train from scratch...')
-        optimizer, starting_epoch, best_acc = model.resume_from_scratch()
+        optimizer, starting_epoch, best_acc = model.resume_from_scratch(training_config)
     return optimizer, starting_epoch, best_acc
 
 
@@ -105,16 +109,13 @@ def train_model(train_config, path_config):
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
 
-    # initialize logger instances
-    global logger_train, logger_val, logger_test
-    logger_train = SummaryWriter(log_dir=logger_dir)
-    logger_val = SummaryWriter(log_dir=logger_dir)
-    logger_test = SummaryWriter(log_dir=logger_dir)
-
     # Visualize data
     # global viz, labels_set_dmg, labels_set_bld
     label_map = read_json(path_config['label_map_json'])
     viz = RasterLabelVisualizer(label_map=label_map)
+
+    logger_train = SummaryWriter(log_dir=logger_dir)
+    logger_val = SummaryWriter(log_dir=logger_dir)
 
     # torch device
     l.info(f'Using PyTorch version {torch.__version__}.')
@@ -122,11 +123,12 @@ def train_model(train_config, path_config):
         train_config['device'] if torch.cuda.is_available() else "cpu")
     l.info(f'Using device: {device}.')
 
-    # data
+    # DATA
     # Load datasets
-    dataset = ShardDataset()
-    xBD_train = dataset.load_dataset("train")
-    xBD_val = dataset.load_dataset("val")
+    xBD_train = ShardDataset('train', path_config['shard_splits_json'])
+    print('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
+    xBD_val = ShardDataset('val', path_config['shard_splits_json'])
+    print('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
 
     train_loader = DataLoader(xBD_train,
                               batch_size=train_config['batch_size'],
@@ -139,26 +141,19 @@ def train_model(train_config, path_config):
                             num_workers=8,
                             pin_memory=False)
 
-    # Labels
-    labels_set_dmg = train_config['labels_dmg']
-    labels_set_bld = train_config['labels_bld']
-
-    l.info('Log image samples')
     l.info('Get sample chips from train set...')
-    sample_train_ids = xBD_train.get_sample_images(which_set='train')
+    sample_train_ids = xBD_train.get_sample_images(train_config['num_chips_to_viz'])
     l.info('Get sample chips from val set...')
-    sample_val_ids = xBD_val.get_sample_images(which_set='val')
+    sample_val_ids = xBD_val.get_sample_images(train_config['num_chips_to_viz'])
 
-    # Training config setup
+    # TRAINING CONFIG
 
     # define model
     model = SiamUnet().to(device=device)
     l.info(model.model_summary())
 
     # resume from a checkpoint if provided
-    starting_checkpoint_path = path_config['starting_checkpoint_path']
-    optimizer, starting_epoch, best_acc = resume_model(
-        model, starting_checkpoint_path)
+    optimizer, starting_epoch, best_acc = resume_model( model, train_config)
 
     # define loss functions and weights on classes
     global weights_loss, mode
@@ -183,8 +178,8 @@ def train_model(train_config, path_config):
         'crit_seg_post': criterion_seg_2,
         'crit_dmg': criterion_damage,
         'device': device,
-        "labels_set_dmg": labels_set_dmg,
-        "labels_set_bld": labels_set_bld,
+        "labels_set_dmg":  train_config['labels_dmg'],
+        "labels_set_bld":  train_config['labels_bld'],
         "weights_loss": weights_loss
     }
 
@@ -287,11 +282,8 @@ if __name__ == "__main__":
     path_config = {
         'experiment_name': 'train_UNet',  # train_dmg
         'out_dir': '/home/mrtc101/Desktop/tesina/repo/my_siames/out',
-        'data_dir_shards': '/original_siames/public_datasets/xBD/xBD_sliced_augmented_20_alldisasters_final_mdl_npy/',
-        'disaster_splits_json': '/original_siames/constants/splits/final_mdl_all_disaster_splits_sliced_img_augmented_20.json',
-        'disaster_mean_stddev': '/original_siames/constants/splits/all_disaster_mean_stddev_tiles_0_1.json',
-        'label_map_json': '/original_siames/constants/class_lists/xBD_label_map.json',
-        'starting_checkpoint_path': '/original_siames/nlrc_outputs/UNet_all_data_dmg/checkpoints/checkpoint_epoch120_2021-06-30-10-28-49.pth.tar',
-        'shard_no': 0
+        'shard_splits_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json',
+        'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
+        'starting_checkpoint_path': None
     }
     train_model(train_config, path_config)

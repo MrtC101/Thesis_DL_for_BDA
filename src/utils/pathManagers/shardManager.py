@@ -1,11 +1,13 @@
 import os
 import sys
 
+from pandas import read_json
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from os.path import join
-from utils.common.files import is_dir, is_npy
+from utils.common.files import is_dir, is_json, is_npy
 from utils.common.defaultDictFactory import nested_defaultdict
 
 class ShardPathManager:
@@ -37,21 +39,9 @@ class ShardPathManager:
                 shard_name = shard.split(".")[0]
                 split_id, type_id, shard_id = shard_name.split("_")
                 shards_dict[split_id][type_id][shard_id] = shard_path
+            
+            idx_json = join(shard_dir_path,f"{subset}_shard_idxs.json")
+            is_json(idx_json)
+            idx_json = read_json(idx_json)
+            shards_dict[subset]["idx"] = list(idx_json["shard_idxs"])
         return shards_dict
-    
-    def load_dataset(disaster_splits_json,disaster_mean_stddev,shards_dir,shard_num):
-        splits = read_json(disaster_splits_json)
-        data_mean_stddev = read_json(disaster_mean_stddev)
-
-        train_ls = [] 
-        val_ls = []
-        for item, val in splits.items():
-            train_ls += val['train'] 
-            val_ls += val['val']
-        xBD_train = ShardDataset(shards_dir, shard_num, 'train', data_mean_stddev, transform=True, normalize=True)
-        xBD_val = DisasterDataset(shards_dir, shard_num, 'val', data_mean_stddev, transform=False, normalize=True)
-
-        print('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
-        print('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
-
-        return xBD_train, xBD_val
