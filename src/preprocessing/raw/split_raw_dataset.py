@@ -5,7 +5,6 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.common.logger import get_logger
 l = get_logger("split_raw_dataset")
 
-
 import os
 import argparse
 import math
@@ -13,7 +12,6 @@ from tqdm import tqdm
 from random import shuffle
 from utils.common.files import dump_json
 from utils.pathManagers.rawManager import RawPathManager, DisasterDict
-import numpy as np
 
 
 def split_dataset(raw_path : str, out_path : str) -> None:
@@ -34,7 +32,7 @@ def split_dataset(raw_path : str, out_path : str) -> None:
         "val": {},
         "test": {}
     }
-    for disaster_name,tiles_dict in xbd_raw.items():
+    for disaster_name,tiles_dict in tqdm(xbd_raw.items()):
         
         tiles_ids = list(tiles_dict.keys())
         shuffle(tiles_ids)

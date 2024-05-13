@@ -42,6 +42,7 @@ import random
 import cv2
 from utils.common.files import clean_folder, dump_json, read_json,is_json
 from utils.datasets.slice_datasets import PatchDataset
+from utils.datasets.shard_datasets import ShardDataset
 from torchvision.transforms import transforms, RandomVerticalFlip, RandomHorizontalFlip
 
 def apply_transform(images):
@@ -62,11 +63,11 @@ def apply_transform(images):
     flipped = augment(images)
     return flipped
 
-def apply_norm(pre_patch, post_patch, dis_id, tile_id, normalize, mean_stdv_json_path):
+def apply_norm(pre_image, post_image, dis_id, tile_id, normalize, mean_stdv_json_path):
     '''
         apply transformation functions on cv2 arrays
     '''
-    chips = {"pre": pre_patch, "post": post_patch}
+    chips = {"pre": pre_image, "post": post_image}
     norm_chips = {}
     for prefix in ["pre", "post"]:
         curr_chip = np.array(chips[prefix]).astype(dtype='float64') / 255.0
@@ -105,7 +106,7 @@ def shard_patches(dataset, split_name, mean_stddev_json, num_shards, out_path, t
             image_patches["post-orig"].append(deepcopy(data["post_image"]))
         
             #transformations
-            if transform: data = apply_transform(**data)
+            if transform: data = apply_transform(data)
        
             #color normalization
             pre_img, post_img = apply_norm(data["pre_image"], data["post_image"], dis_id, tile_id, normalize, mean_stddev_json)            
@@ -119,15 +120,10 @@ def shard_patches(dataset, split_name, mean_stddev_json, num_shards, out_path, t
             image_patches["class-mask"].append(dmg_mask) 
         
         #save n shards
-        for file_id, patch_list in image_patches.items():
-            shard = np.stack(patch_list, axis=0)
-            shard_path = os.path.join(out_path, f'{split_name}_{file_id}_{str(i).zfill(3)}.npy')
-            np.save(shard_path, shard)
-            l.info(f'Shape of last added shard to {f"{split_name}_shard"} list is {shard.shape}, dtype is {shard.dtype}.')
+        ShardDataset.save_shard(image_patches,out_path,l,split_name,i)
     
         #freeing memory
         del image_patches
-        del shard
     
     return shard_idxs
 

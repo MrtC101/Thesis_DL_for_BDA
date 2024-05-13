@@ -108,6 +108,7 @@ def train_model(train_config, path_config):
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
 
+    global logger_train, logger_val
     logger_train = SummaryWriter(log_dir=logger_dir)
     logger_val = SummaryWriter(log_dir=logger_dir)
 

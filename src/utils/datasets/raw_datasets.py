@@ -9,7 +9,7 @@ l = get_logger("raw_dataset")
 import cv2
 from torch.utils.data import Dataset
 from utils.common.files import read_json, is_json
-    
+
 class TileDataset(Dataset):
     
     def __init__(self,split_name: str,splits_json_path: str):
@@ -26,21 +26,25 @@ class TileDataset(Dataset):
                           for tile_id, tile in data[dis_id].items()]
 
     def same_shape(self,dis_id,tile_id,img1, img2) -> bool:
-        assert img1.shape == img2.shape, \
+        assert img1.shape[:2] == img2.shape[:2], \
         f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
         return True
     
     def __len__(self):
         return len(self.tile_list)
 
+    def same_shape(self,dis_id,tile_id,img1, img2) -> bool:
+        assert img1.shape[:2] == img2.shape[:2], \
+        f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
+        return True
+
     def load_images(self, disaster_id, tile_id, tile):
         data = {}
-        data["pre_image"] = cv2.imread(tile["pre"]["image"], cv2.COLOR_BGR2RGB)
-        data["post_image"] = cv2.imread(tile["post"]["image"], cv2.COLOR_BGR2RGB)        
-        pre_mask = cv2.imread(tile["pre"]["mask"], cv2.COLOR_BGR2RGB)
-        post_mask = cv2.imread(tile["post"]["mask"], cv2.COLOR_BGR2RGB)
-        data["pre_mask"]  = cv2.merge([pre_mask] * 3)
-        data["post_mask"]  = cv2.merge([post_mask] * 3)
+        data["pre_image"] = cv2.cvtColor(cv2.imread(tile["pre"]["image"]), cv2.COLOR_BGR2RGB)
+        data["post_image"] = cv2.cvtColor(cv2.imread(tile["post"]["image"]), cv2.COLOR_BGR2RGB)        
+        data["pre_mask"] = cv2.imread(tile["pre"]["mask"])[:,:,0]
+        data["post_mask"]  = cv2.imread(tile["post"]["mask"])[:,:,0]
+
 
         self.same_shape(disaster_id,tile_id,data["pre_image"], data["post_image"])
         self.same_shape(disaster_id,tile_id,data["post_image"], data["pre_mask"])

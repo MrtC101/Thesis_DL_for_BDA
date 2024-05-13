@@ -1,4 +1,5 @@
 import math
+import numpy as np
 from numpy import memmap
 from utils.common.files import read_json
 from torchvision.transforms import transforms
@@ -33,12 +34,12 @@ class ShardDataset(Dataset):
         mode = "r+"
         sh_i = self.shard_i
         self.shard = {
-            "pre_img": memmap(self.paths["pre-image"][sh_i], dtype='float64', mode=mode, shape=shape_rgb),
-            "post_img": memmap(self.paths["post-image"][sh_i], dtype='float64', mode=mode, shape=shape_rgb),
-            "bld_mask": memmap(self.paths["semantic-mask"][sh_i], dtype='uint8', mode=mode, shape=shape_gray),
-            "dmg_mask": memmap(self.paths["class-mask"][sh_i], dtype='uint8', mode=mode, shape=shape_gray),
-            "pre_org": memmap(self.paths["pre-orig"][sh_i], dtype='uint8', mode=mode, shape=shape_rgb),
-            "post_org": memmap(self.paths["post-orig"][sh_i], dtype='uint8', mode=mode, shape=shape_rgb),
+            "pre_img": memmap(self.paths["pre-image"][sh_i], dtype='float64', mode=mode, shape=shape_rgb , offset=128),
+            "post_img": memmap(self.paths["post-image"][sh_i], dtype='float64', mode=mode, shape=shape_rgb, offset=128),
+            "bld_mask": memmap(self.paths["semantic-mask"][sh_i], dtype='uint8', mode=mode, shape=shape_gray, offset=128),
+            "dmg_mask": memmap(self.paths["class-mask"][sh_i], dtype='uint8', mode=mode, shape=shape_gray, offset=128),
+            "pre_org": memmap(self.paths["pre-orig"][sh_i], dtype='uint8', mode=mode, shape=shape_rgb, offset=128),
+            "post_org": memmap(self.paths["post-orig"][sh_i], dtype='uint8', mode=mode, shape=shape_rgb, offset=128),
         }
 
     def get_shard(self, i):
@@ -71,8 +72,8 @@ class ShardDataset(Dataset):
 
         pre_img = torch.from_numpy(pre_img).permute(dims=(2,0,1)).type(torch.FloatTensor)
         post_img = torch.from_numpy(post_img).permute(dims=(2,0,1)).type(torch.FloatTensor)
-        bld_mask = torch.from_numpy(bld_mask).permute(dims=(2,0,1)).type(torch.FloatTensor)
-        dmg_mask = torch.from_numpy(dmg_mask).permute(dims=(2,0,1)).type(torch.FloatTensor)
+        bld_mask = torch.from_numpy(bld_mask).type(torch.LongTensor)
+        dmg_mask = torch.from_numpy(dmg_mask).type(torch.LongTensor)
         pre_org = transforms.ToTensor()(pre_org)
         post_org = transforms.ToTensor()(post_org)
 
@@ -103,3 +104,12 @@ class ShardDataset(Dataset):
             samples_idx_list.append(sample_idx)
 
         return samples_idx_list
+    
+    @staticmethod
+    def save_shard(image_patches,out_path,log,split_name,shard_i):
+        for file_id, patch_list in image_patches.items():
+            shard = np.stack(patch_list, axis=0)
+            shard_path = os.path.join(out_path, f'{split_name}_{file_id}_{str(shard_i).zfill(3)}.npy')
+            np.save(shard_path, shard, allow_pickle=False)
+            log.info(f'Shape of last added shard {file_id} to {f"{split_name}_shard"} list is {shard.shape}, dtype is {shard.dtype}.')
+        del shard
