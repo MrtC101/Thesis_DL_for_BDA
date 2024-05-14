@@ -21,96 +21,94 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 
 from train.phase import Phase
 from utils.common.logger import get_logger
-l = get_logger("training model")
-
-logger_train : SummaryWriter = None
-logger_val : SummaryWriter = None
-
-def logging_wrapper(logger, phase):
-    def decorator(func):
-        def wrapper(*args):
-            optimizer = args[1]['optimizer']
-            epochs = args[1]['epochs']
-            epoch = args[1]['epoch']
-
-            if (phase == "train"):
-                logger.add_scalar(
-                    'learning_rate', optimizer.param_groups[0]["lr"], epoch)
-
-            l.info(f'Model training for epoch {epoch}/{epochs}')
-            start_time = datetime.now()
-
-            result = func(*args)
-
-            duration = datetime.now() - start_time
-            logger.add_scalar(f'time_{phase}', duration.total_seconds(), epoch)
-
-            return result
-        return wrapper
-    return decorator
-
-
-@logging_wrapper(logger_train, "training")
-def train(train_phase: Phase, epoch_context):
-    """
-    Train the model on dataset of the loader
-    """
-    confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = train_phase.iteration(
-        epoch_context)
-    return confusion_mtrx_df_dmg, confusion_mtrx_df_bld
-
-
-@logging_wrapper(logger_val, "validation")
-def validation(val_phase: Phase, epoch_context):
-    with torch.no_grad():
-        confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = val_phase.iteration(
-            epoch_context)
-    return confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses.avg
-
-
-def resume_model(model : SiamUnet, training_config, starting_checkpoint_path):
-
-    if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
-        l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
-        optimizer, starting_epoch, best_acc = model.resume_from_checkpoint(training_config)
-        l.info(
-            f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
-    else:
-        l.info('No valid checkpoint is provided. Start to train from scratch...')
-        optimizer, starting_epoch, best_acc = model.resume_from_scratch(training_config)
-    return optimizer, starting_epoch, best_acc
-
-
-def output_directories(out_dir, exp_name):
-    # set up directories (TrainPathManager?)
-    exp_dir = os.path.join(out_dir, exp_name)
-
-    checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
-    os.makedirs(checkpoint_dir, exist_ok=True)
-
-    logger_dir = os.path.join(exp_dir, 'logs')
-    os.makedirs(logger_dir, exist_ok=True)
-
-    evals_dir = os.path.join(exp_dir, 'evals')
-    os.makedirs(evals_dir, exist_ok=True)
-
-    config_dir = os.path.join(exp_dir, 'configs')
-    os.makedirs(config_dir, exist_ok=True)
-
-    return checkpoint_dir, logger_dir, evals_dir, config_dir
 
 
 def train_model(train_config, path_config):
+
+    l = get_logger("training model",path_config['log_dir'])
+    logger_train = SummaryWriter(log_dir=path_config['tensorlog_dir'])
+    logger_val = SummaryWriter(log_dir=path_config['tensorlog_dir'])
+    
+    def logging_wrapper(logger, phase):
+        def decorator(func):
+            def wrapper(*args):
+                optimizer = args[1]['optimizer']
+                epochs = args[1]['epochs']
+                epoch = args[1]['epoch']
+
+                if (phase == "train"):
+                    logger.add_scalar(
+                        'learning_rate', optimizer.param_groups[0]["lr"], epoch)
+
+                l.info(f'Model training for epoch {epoch}/{epochs}')
+                start_time = datetime.now()
+
+                result = func(*args)
+
+                duration = datetime.now() - start_time
+                logger.add_scalar(f'time_{phase}', duration.total_seconds(), epoch)
+
+                return result
+            return wrapper
+        return decorator
+
+
+    @logging_wrapper(logger_train, "training")
+    def train(train_phase: Phase, epoch_context):
+        """
+        Train the model on dataset of the loader
+        """
+        confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = train_phase.iteration(
+            epoch_context)
+        return confusion_mtrx_df_dmg, confusion_mtrx_df_bld
+
+
+    @logging_wrapper(logger_val, "validation")
+    def validation(val_phase: Phase, epoch_context):
+        with torch.no_grad():
+            confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses = val_phase.iteration(
+                epoch_context)
+        return confusion_mtrx_df_dmg, confusion_mtrx_df_bld, losses.avg
+
+
+    def resume_model(model : SiamUnet, training_config, starting_checkpoint_path):
+
+        if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
+            l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
+            optimizer, starting_epoch, best_acc = model.resume_from_checkpoint(training_config)
+            l.info(
+                f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
+        else:
+            l.info('No valid checkpoint is provided. Start to train from scratch...')
+            optimizer, starting_epoch, best_acc = model.resume_from_scratch(training_config)
+        return optimizer, starting_epoch, best_acc
+
+
+    def output_directories(out_dir, exp_name):
+        # set up directories (TrainPathManager?)
+        exp_dir = os.path.join(out_dir, exp_name)
+
+        checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
+        os.makedirs(checkpoint_dir, exist_ok=True)
+
+        logger_dir = os.path.join(exp_dir, 'logs')
+        os.makedirs(logger_dir, exist_ok=True)
+
+        evals_dir = os.path.join(exp_dir, 'evals')
+        os.makedirs(evals_dir, exist_ok=True)
+
+        config_dir = os.path.join(exp_dir, 'configs')
+        os.makedirs(config_dir, exist_ok=True)
+
+        return checkpoint_dir, logger_dir, evals_dir, config_dir
+
+
 
     # setup output directories
     checkpoint_dir, logger_dir, evals_dir, config_dir = \
         output_directories(path_config['out_dir'],path_config['exp_name'])
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
-
-    global logger_train, logger_val
-    logger_train = SummaryWriter(log_dir=logger_dir)
-    logger_val = SummaryWriter(log_dir=logger_dir)
 
     # torch device
     l.info(f'Using PyTorch version {torch.__version__}.')
@@ -203,14 +201,10 @@ def train_model(train_config, path_config):
     val_bld_metrics = pd.DataFrame(columns=cols)
 
     # epochs
-    step_tr = 1
-    epoch = starting_epoch
-    epochs = train_config['epochs']
-
     epoch_context = {
-        'epoch': epoch,
-        'epochs': epochs,
-        'step_tr': step_tr,
+        'epoch': starting_epoch,
+        'epochs': train_config['epochs'],
+        'step_tr': 1,
         'model': model,
         'optimizer': optimizer
     }
@@ -219,7 +213,7 @@ def train_model(train_config, path_config):
     train_phase = Phase(train_context, static_context)
     val_phase = Phase(val_context, static_context)
 
-    while (epoch <= epochs):
+    while (epoch_context["epoch"] <= epoch_context["epochs"]):
 
         # train phase
         conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr = train(train_phase, epoch_context)
@@ -245,9 +239,9 @@ def train_model(train_config, path_config):
         best_acc = max(val_acc_avg, best_acc)
 
         l.info(
-            f'Saved checkpoint for epoch {epoch}. Is it the highest f1 checkpoint so far: {is_best}\n')
+            f'Saved checkpoint for epoch {epoch_context["epoch"]}. Is it the highest f1 checkpoint so far: {is_best}\n')
         model.save_checkpoint({
-            'epoch': epoch,
+            'epoch': epoch_context["epoch"],
             'state_dict': model.state_dict(),
             'optimizer': optimizer.state_dict(),
             'val_f1_avg': val_acc_avg,

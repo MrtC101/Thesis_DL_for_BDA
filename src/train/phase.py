@@ -121,12 +121,16 @@ class Phase:
         """
         curr_dmg_metrics, f1_harmonic_mean = \
             self.metric.compute_metrics_for(
-                "dmg", epoch_context, self.labels_set_dmg, conf_mtrx_dmg_df)
-        dmg_metrics = pd.concat([dmg_metrics, curr_dmg_metrics], axis=0)
-
-        curr_bld_metrics = \
+                "dmg", epoch_context['epoch'], self.labels_set_dmg, conf_mtrx_dmg_df)
+        if(len(dmg_metrics)>0):
+             dmg_metrics = pd.concat([dmg_metrics, curr_dmg_metrics], axis=0)
+        else:
+            dmg_metrics = curr_dmg_metrics
+        curr_bld_metrics, _ = \
             self.metric.compute_metrics_for(
-                "bld", epoch_context, self.labels_set_bld, conf_mtrx_bld_df)
-        bld_metrics = pd.concat([bld_metrics, curr_bld_metrics], axis=0)
-
+                "bld", epoch_context['epoch'], self.labels_set_bld, conf_mtrx_bld_df)
+        if(len(dmg_metrics)>0):
+             bld_metrics = pd.concat([bld_metrics, curr_bld_metrics])
+        else:
+            dmg_metrics = curr_bld_metrics
         return dmg_metrics, bld_metrics, f1_harmonic_mean
