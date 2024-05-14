@@ -22,7 +22,7 @@ def get_logger(name: str, output_path : str = None, level: int = logging.DEBUG) 
         )
 
         if(output_path is not None):
-            file_handler = logging.FileHandler(filename=output_path,filemode='w')
+            file_handler = logging.FileHandler(filename=output_path,mode='w')
             file_handler.setLevel(level)
             file_handler.setFormatter(formatter)
             logger.addHandler(file_handler)

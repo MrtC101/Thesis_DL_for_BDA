@@ -285,7 +285,7 @@ class SiamUnet(nn.Module):
         best_acc = 0.0
         return optimizer, starting_epoch, best_acc
 
-    def save_checkpoint(state, is_best, checkpoint_dir='../checkpoints'):
+    def save_checkpoint(self, state, is_best, checkpoint_dir='../checkpoints'):
         """
         checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far
         """

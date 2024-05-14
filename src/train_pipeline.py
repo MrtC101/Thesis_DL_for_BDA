@@ -12,7 +12,6 @@ from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from utils.common.logger import get_logger
 l = get_logger("Compute data from images")
 
-
 from preprocessing.prepare_folder.clean_folder import delete_not_in
 from preprocessing.prepare_folder.delete_extra import leave_only_n
 from preprocessing.prepare_folder.create_label_masks import create_masks
@@ -56,7 +55,7 @@ def train(split_shard_json_path):
         'mode': 'dmg',
         'init_learning_rate': 0.0005,#dmg: 0.005, #UNet: 0.01,           
         'device': 'cpu',
-        'epochs': 1500,
+        'epochs': 2,#1500,
         'batch_size': 32,
         'num_chips_to_viz': 1
     }
@@ -64,6 +63,8 @@ def train(split_shard_json_path):
     path_config = {
         'exp_name': 'train_UNet',  # train_dmg
         'out_dir': out_dir,
+        'tensorlog_dir': os.path.join(out_dir,"train_UNet","tensor_log"),
+        'log_dir': os.path.join(out_dir,"train_UNet","logs","log.txt"),
         'shard_splits_json': split_shard_json_path,
         'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
         'starting_checkpoint_path': None
