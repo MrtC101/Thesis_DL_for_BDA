@@ -3,21 +3,18 @@ import torch
 
 class MetricComputer:
 
-    def __init__(self,phase_context,static_context):
+    def __init__(self, label_set, phase_context,static_context):
+        self.label_set = label_set
+        phase_context, static_context
         self.logger = phase_context['logger']
         self.phase = phase_context['phase']
-        self.loader = phase_context['loader']
-        self.device = static_context['device']
-        self.crit_seg_1 = static_context['crit_seg_1'] 
-        self.crit_seg_2 = static_context['crit_seg_2']
-        self.crit_dmg = static_context['crit_dmg']
-
+        
     ### Compute confusión Matrixes
-    def compute_conf_mtrx(self, y_pred_mask, y_dmg_mask, y_bld_mask, labels_set, conf_mtrx_df, epoch, batch_idx):
+    def compute_conf_mtrx(self, y_pred_mask, y_dmg_mask, y_bld_mask, epoch, batch_idx):
         conf_mtrx_list = []
-        for cls in labels_set:
+        for cls in self.labels_set:
 
-            if len(labels_set) <= 2:
+            if len(self.labels_set) <= 2:
                 conf_mtrx = self.conf_mtrx_for_bld_mask(y_pred_mask, y_bld_mask,cls)
             else:
                 conf_mtrx = self.conf_mtrx_for_cls_mask(y_pred_mask, y_dmg_mask, y_bld_mask, cls)
@@ -26,11 +23,7 @@ class MetricComputer:
             conf_mtrx["batch_idx"] = batch_idx
             conf_mtrx_list.extend([conf_mtrx])
         curr_conf_mtrx_df = pd.DataFrame(conf_mtrx_list,columns=['epoch', 'batch_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total_pixels'])
-        if(len(conf_mtrx_df)>0):
-            conf_mtrx_df = pd.concat([conf_mtrx_df,curr_conf_mtrx_df],ignore_index=True)
-        else:
-            conf_mtrx_df = curr_conf_mtrx_df
-        return conf_mtrx_df
+        return curr_conf_mtrx_df
 
     def conf_mtrx_for_bld_mask(self,y_preds, y_true, cls):
 
@@ -74,17 +67,17 @@ class MetricComputer:
 
 
     ### Compute Metrics
-    def compute_metrics_for(self, output, epoch, labels_set, conf_mtrx_df):
-        class_metrics, f1_harmonic_mean = self.compute_eval_metrics(epoch, labels_set, conf_mtrx_df)
+    def compute_metrics_for(self, output, epoch, conf_mtrx_df):
+        class_metrics, f1_harmonic_mean = self.compute_eval_metrics(epoch, self.labels_set, conf_mtrx_df)
         self.log_metrics(self.phase,output, self.logger, class_metrics)
         if(output == "dmg"):
             self.logger.add_scalar(f'{self.phase}_dmg_harmonic_mean_f1', f1_harmonic_mean, epoch)
         return class_metrics, f1_harmonic_mean
 
-    def compute_eval_metrics(self, epoch, labels_set, conf_mtrx_df : pd.DataFrame):
+    def compute_eval_metrics(self, epoch, conf_mtrx_df : pd.DataFrame):
         eval_results = []
         f1_harmonic_mean = 0
-        for cls in labels_set: 
+        for cls in self.labels_set: 
             class_idx = (conf_mtrx_df['class']==cls)
             tp = conf_mtrx_df.loc[class_idx,'true_pos'].sum()
             fp = conf_mtrx_df.loc[class_idx,'false_pos'].sum()
@@ -93,19 +86,13 @@ class MetricComputer:
             tot = conf_mtrx_df.loc[class_idx,'total_pixels'].sum()
             
             precision = tp / (tp + fp)
-            if(tp > 0 and fn > 0):
-               recall = tp / (tp + fn)
-            else:
-                recall = 0 
-            if(precision > 0 and recall > 0):
-                f1 = 2 * (precision * recall) / (precision + recall)
-            else:
-                f1 = 0
+            recall = tp / (tp + fn) if(tp > 0 and fn > 0) else 0 
+            f1 = 2 * (precision * recall) / (precision + recall) if (precision > 0 and recall > 0) else 0
             accuracy = (tp + tn) / (tot)
-
             eval_results.append({'epoch':epoch, 'class':cls, 'precision':precision, 'recall':recall, 'f1':f1, 'accuracy':accuracy})
             f1_harmonic_mean += 1.0 / (f1 + 1e-10)
-        f1_harmonic_mean = len(labels_set) / f1_harmonic_mean
+
+        f1_harmonic_mean = len(self.labels_set) / f1_harmonic_mean
         df =  pd.DataFrame(eval_results,columns=['epoch','class','precision','recall','f1','accuracy'])
         return df, f1_harmonic_mean
 
