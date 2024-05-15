@@ -30,7 +30,7 @@ def preprocess():
     delete_not_in(raw_path)
     create_masks(raw_path,1)
     leave_only_n(raw_path,40)
-    # split json
+    # Raw data
     split_json_path = split_dataset(raw_path,xbd_path)
     data_dicts_path = create_data_dicts(split_json_path,xbd_path)
     # Sliced
@@ -70,8 +70,9 @@ def train(split_shard_json_path):
     train_model(train_config,path_config)
 
 # evaluate with test
+# test_model()
 # inference
 
 if __name__ == "__main__":
-    #data = preprocess()
+    data = preprocess()
     train("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json")

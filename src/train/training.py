@@ -1,5 +1,11 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import get_logger
+
 from utils.datasets.shard_datasets import ShardDataset
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 from utils.common.files import is_dir, read_json, dump_json
@@ -14,11 +20,7 @@ from tqdm import tqdm
 import numpy as np
 import pandas as pd
 import torch
-import os
-import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import get_logger
+
 
 from train.phase import Phase
 
@@ -169,7 +171,7 @@ def train_model(train_config, path_config):
         }
 
         # TRAINING STEP
-        conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, _ = training.epoch_iteration(epoch_context)
+        conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, _, _ = training.epoch_iteration(epoch_context)
 
         l.info(f'Compute actual metrics for model evaluation based on training set ...')
         curr_tr_dmg_metrics, curr_tr_bld_metrics, _ = training.compute_metrics(conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, epoch_context)
@@ -180,7 +182,7 @@ def train_model(train_config, path_config):
         
         # VALIDATION STEP
         with torch.no_grad():
-            conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val, losses_val = validation.epoch_iteration(epoch_context)
+            conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val, losses_val, _ = validation.epoch_iteration(epoch_context)
             scheduler.step(losses_val)  # decay Learning Rate
         
         l.info(f'Compute actual metrics for model evaluation based on validation set ...')
