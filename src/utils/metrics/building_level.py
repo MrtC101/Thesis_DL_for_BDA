@@ -9,6 +9,15 @@ TODO: we need the outer loop to iterate over tiles, and to draw confusion matric
 
 """
 
+import os
+import sys
+
+from preprocessing.prepare_folder.create_label_masks import get_feature_info
+from utils.common.files import read_json
+
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from collections import defaultdict
 import cv2
 import rasterio.features
@@ -17,7 +26,6 @@ import shapely.geometry
 from shapely.geometry import mapping, Polygon
 from PIL import Image
 
-from data.create_label_masks import get_feature_info, read_json
 
 all_classes = set([1, 2, 3, 4, 5])
 allowed_classes = set([1, 2, 3, 4])  # 5 is Unclassified, not used during evaluation

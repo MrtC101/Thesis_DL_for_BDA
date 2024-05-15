@@ -2,6 +2,7 @@ import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+    
 from utils.metrics.building_level import _evaluate_tile, get_label_and_pred_polygons_for_tile_mask_input, allowed_classes
 import pandas as pd
 import torch
