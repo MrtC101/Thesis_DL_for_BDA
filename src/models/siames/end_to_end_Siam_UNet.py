@@ -54,12 +54,20 @@ class SiamUnet(nn.Module):
         self.conv1_c = SiamUnet._block(features * 2, features * 2, name="conv1")
 
         self.conv_c = nn.Conv2d(in_channels=features * 2, out_channels=out_channels_c, kernel_size=1)
-
-    
+        
+        self.softmax = torch.nn.Softmax(dim=1)
+        
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
         b = nn.Conv2d(3, 5, kernel_size=1)(x2)
-        return a,a,b 
+        
+        # modify damage prediction based on UNet arm
+        preds_seg_pre = torch.argmax(self.softmax(a), dim=1)
+        for c in range(0,b.shape[1]):
+            b[:,c,:,:] = torch.mul(b[:,c,:,:], preds_seg_pre)
+            
+        return a, a, b
+
     """
     def forward(self, x1, x2):
         
@@ -128,7 +136,16 @@ class SiamUnet(nn.Module):
         dec5_c = torch.cat((diff_5, dec4_c), dim=1)
         dec5_c = self.conv1_c(dec5_c)
         
-        return self.conv_s(dec1_1), self.conv_s(dec1_2), self.conv_c(dec5_c)
+        out_seg_1 = self.conv_s(dec1_1)
+        out_seg_2 = self.conv_s(dec1_2)
+        out_class = self.conv_c(dec5_c)
+        
+        # modify damage prediction based on UNet arm
+        preds_seg_pre = torch.argmax(self.softmax(out_seg_1), dim=1)
+        for c in range(0,out_class.shape[1]):
+            out_class[:,c,:,:] = torch.mul(out_class[:,c,:,:], preds_seg_pre)
+        
+        return out_seg_1, out_seg_2, preds_cls
     """
 
     @staticmethod

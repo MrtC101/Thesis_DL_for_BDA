@@ -63,8 +63,6 @@ def train(split_shard_json_path):
     path_config = {
         'exp_name': 'train_UNet',  # train_dmg
         'out_dir': out_dir,
-        'tensorlog_dir': os.path.join(out_dir,"train_UNet","tensor_log"),
-        'log_dir': os.path.join(out_dir,"train_UNet","logs","log.txt"),
         'shard_splits_json': split_shard_json_path,
         'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
         'starting_checkpoint_path': None

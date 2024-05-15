@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 from utils.datasets.shard_datasets import ShardDataset
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
-from utils.common.files import read_json, dump_json
+from utils.common.files import is_dir, read_json, dump_json
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from models.siames.end_to_end_Siam_UNet import SiamUnet
 from torch.utils.tensorboard import SummaryWriter
@@ -18,12 +18,11 @@ import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-
-from train.phase import Phase
 from utils.common.logger import get_logger
 
-def resume_model(l,model : SiamUnet, training_config, starting_checkpoint_path):
+from train.phase import Phase
 
+def resume_model(l,model : SiamUnet, training_config, starting_checkpoint_path):
         if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
             l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
             optimizer, starting_epoch, best_acc = model.resume_from_checkpoint(training_config)
@@ -36,45 +35,46 @@ def resume_model(l,model : SiamUnet, training_config, starting_checkpoint_path):
 
 def output_directories(out_dir, exp_name):
     # set up directories (TrainPathManager?)
+    is_dir(out_dir)
     exp_dir = os.path.join(out_dir, exp_name)
+    os.makedirs(exp_dir, exist_ok=True)
 
     checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
     os.makedirs(checkpoint_dir, exist_ok=True)
 
-    logger_dir = os.path.join(exp_dir, 'logs')
-    os.makedirs(logger_dir, exist_ok=True)
+    c_logger_dir = os.path.join(exp_dir, 'console_logs')
+    os.makedirs(c_logger_dir, exist_ok=True)
 
-    evals_dir = os.path.join(exp_dir, 'evals')
-    os.makedirs(evals_dir, exist_ok=True)
+    tb_logger_dir = os.path.join(exp_dir, 'tb_logs')
+    os.makedirs(tb_logger_dir, exist_ok=True)
 
     config_dir = os.path.join(exp_dir, 'configs')
     os.makedirs(config_dir, exist_ok=True)
 
-    return checkpoint_dir, logger_dir, evals_dir, config_dir
+    return checkpoint_dir, c_logger_dir, tb_logger_dir, config_dir
 
 def train_model(train_config, path_config):
 
-    logger_train = SummaryWriter(log_dir=path_config['tensorlog_dir'])
-    logger_val = SummaryWriter(log_dir=path_config['tensorlog_dir'])
-    l = get_logger("training model",path_config['log_dir'])
-   
-   # setup output directories
-    checkpoint_dir, logger_dir, evals_dir, config_dir = output_directories(path_config['out_dir'],path_config['exp_name'])
+    # setup output directories
+    checkpoint_dir, c_logger_dir, tb_logger_dir, config_dir = output_directories(path_config['out_dir'],path_config['exp_name'])
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
-
+    
+    logger_train = SummaryWriter(log_dir=tb_logger_dir)
+    logger_val = SummaryWriter(log_dir=tb_logger_dir)
+    l = get_logger("training model", c_logger_dir)
+   
     # torch device
     l.info(f'Using PyTorch version {torch.__version__}.')
-    device = torch.device(
-        train_config['device'] if torch.cuda.is_available() else "cpu")
+    device = torch.device(train_config['device'] if torch.cuda.is_available() else "cpu")
     l.info(f'Using device: {device}.')
 
     # DATA
     # Load datasets
     xBD_train = ShardDataset('train', path_config['shard_splits_json'])
-    print('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
+    l.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
     xBD_val = ShardDataset('val', path_config['shard_splits_json'])
-    print('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
+    l.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
 
     train_loader = DataLoader(xBD_train,
                               batch_size=train_config['batch_size'],
@@ -102,7 +102,6 @@ def train_model(train_config, path_config):
     optimizer, starting_epoch, best_acc = resume_model(l,model, train_config, path_config['starting_checkpoint_path'])
 
     # define loss functions and weights on classes
-    global weights_loss, mode
     mode = train_config['mode']
     weights_seg_tf = torch.FloatTensor(train_config['weights_seg'])
     weights_damage_tf = torch.FloatTensor(train_config['weights_damage'])
@@ -116,8 +115,7 @@ def train_model(train_config, path_config):
     criterion_damage = \
         nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
 
-    scheduler = ReduceLROnPlateau(
-        optimizer, mode='min', patience=2000, verbose=True)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=2000, verbose=True)
 
     static_context = {
         'crit_seg_1': criterion_seg_1,
@@ -159,7 +157,8 @@ def train_model(train_config, path_config):
     epoch = starting_epoch
     epochs = train_config['epochs']
     step_tr = 1
-    while (epoch <= epochs):
+
+    for epoch in tqdm(range(epoch,epochs,1)):
         # epochs
         epoch_context = {
             'epoch': epoch,
@@ -204,8 +203,6 @@ def train_model(train_config, path_config):
             'val_f1_avg': val_acc_avg,
             'best_f1': best_acc
         }, is_best, checkpoint_dir)
-
-        epoch += 1
 
     logger_train.flush()
     logger_train.close()
