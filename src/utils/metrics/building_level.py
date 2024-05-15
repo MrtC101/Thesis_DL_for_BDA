@@ -9,10 +9,6 @@ TODO: we need the outer loop to iterate over tiles, and to draw confusion matric
 
 """
 
-import json
-import os
-from typing import List, Tuple
-from collections.abc import Iterable
 from collections import defaultdict
 import cv2
 import rasterio.features
@@ -314,7 +310,7 @@ def get_label_and_pred_polygons_for_tile_mask_input(label_mask, path_pred_mask):
     polygons_max_overlap = [0.0] * len(polygons)  # indexed by polygon_i
     polygons_max_overlap_class = [None] * len(polygons)
 
-    assert isinstance(polygons, list)  # need the order constant
+    assert isinstance(polygons, list)  # need"): the order constant
 
     for polygon_i, polygon in enumerate(polygons):
         for shape, shape_class in polygons_by_class:

@@ -1,10 +1,23 @@
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+from utils.metrics.building_level import _evaluate_tile, get_label_and_pred_polygons_for_tile_mask_input, allowed_classes
 import pandas as pd
 import torch
+import enum
+
+class Level(enum.Enum):
+    DMG = 0
+    BLD = 1
+    DMG_BLD = 2
+
 
 class MetricComputer:
 
-    def __init__(self, label_set, phase_context,static_context):
-        self.label_set = label_set
+    def __init__(self, type : Level, labels_set, phase_context,static_context):
+        self.type : Level = type
+        self.labels_set = labels_set
         phase_context, static_context
         self.logger = phase_context['logger']
         self.phase = phase_context['phase']
@@ -13,12 +26,12 @@ class MetricComputer:
     def compute_conf_mtrx(self, y_pred_mask, y_dmg_mask, y_bld_mask, epoch, batch_idx):
         conf_mtrx_list = []
         for cls in self.labels_set:
-
-            if len(self.labels_set) <= 2:
+            if self.type == Level.BLD:
                 conf_mtrx = self.conf_mtrx_for_bld_mask(y_pred_mask, y_bld_mask,cls)
-            else:
+            elif(self.type == Level.DMG):
                 conf_mtrx = self.conf_mtrx_for_cls_mask(y_pred_mask, y_dmg_mask, y_bld_mask, cls)
-
+            elif(self.type == Level.DMG_BLD):
+                return self.conf_mtrx_for_dmg_bld()
             conf_mtrx["epoch"] = epoch
             conf_mtrx["batch_idx"] = batch_idx
             conf_mtrx_list.extend([conf_mtrx])
@@ -64,13 +77,28 @@ class MetricComputer:
         # compute total pixels
         total_pixels = y_bld_mask.float().sum().item()
         return {'class':cls, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total_pixels':total_pixels}
+    
+    def conf_mtrx_for_dmg_bld(self, y_pred_mask, y_dmg_mask, y_bld_mask, epoch, batch_idx):
+        # compute building-level confusion metrics
+        pred_polygons_and_class, label_polygons_and_class = get_label_and_pred_polygons_for_tile_mask_input(y_cls.cpu().numpy().astype(np.uint8), path_pred_mask)
+        results, list_preds, list_labels = _evaluate_tile(pred_polygons_and_class, label_polygons_and_class, allowed_classes, 0.1)
+        total_objects = results[-1]
+        val_dmg_building_level = [] 
+        for label_class in results:
+            if label_class != -1:
+                true_pos_cls = results[label_class]['tp'] if 'tp' in results[label_class].keys() else 0
+                true_neg_cls = results[label_class]['tn'] if 'tn' in results[label_class].keys() else 0
+                false_pos_cls = results[label_class]['fp'] if 'fp' in results[label_class].keys() else 0
+                false_neg_cls = results[label_class]['fn'] if 'fn' in results[label_class].keys() else 0
+                val_dmg_building_level.append({'img_idx':img_idx, 'class':label_class, 'true_pos':true_pos_cls, 'true_neg':true_neg_cls, 'false_pos':false_pos_cls, 'false_neg':false_neg_cls, 'total':total_objects})
+        confusion_mtrx_df_val_dmg_building_level = pd.DataFrame(val_dmg_building_level,columns=['img_idx', 'class', 'true_pos', 'true_neg', 'false_pos', 'false_neg', 'total'])
 
 
     ### Compute Metrics
-    def compute_metrics_for(self, output, epoch, conf_mtrx_df):
-        class_metrics, f1_harmonic_mean = self.compute_eval_metrics(epoch, self.labels_set, conf_mtrx_df)
-        self.log_metrics(self.phase,output, self.logger, class_metrics)
-        if(output == "dmg"):
+    def compute_metrics_for(self, epoch, conf_mtrx_df):
+        class_metrics, f1_harmonic_mean = self.compute_eval_metrics(epoch, conf_mtrx_df)
+        self.log_metrics(self.phase,self.type, self.logger, class_metrics)
+        if(self.type == "dmg"):
             self.logger.add_scalar(f'{self.phase}_dmg_harmonic_mean_f1', f1_harmonic_mean, epoch)
         return class_metrics, f1_harmonic_mean
 

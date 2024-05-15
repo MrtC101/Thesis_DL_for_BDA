@@ -1,8 +1,13 @@
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from datetime import datetime
 import pandas as pd
 import torch
 from utils.metrics.common import AverageMeter
-from utils.metrics.train_metrics import MetricComputer
+from utils.metrics.train_metrics import Level, MetricComputer
 from tqdm import tqdm
 
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
@@ -10,18 +15,19 @@ from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 
 class Phase:
     """
-        Class that implementes an iteration from a phase "train" or val
+        Class that implementes an iteration from a phase "train" or "val"
     """
 
     def __init__(self, phase_context, static_context):
         self.__init_phase_context__(**phase_context)
         self.__init_static_context__(**static_context)
-        self.dmg_metric = MetricComputer(
-            static_context['labels_set_dmg'], phase_context, static_context)
-        self.bld_metric = MetricComputer(
-            static_context['labels_set_bld'], phase_context, static_context)
-        self.viz = RasterLabelVisualizer(
-            label_map=static_context['label_map_json'])
+        self.dmg_metric = MetricComputer( Level.DMG,static_context['labels_set_dmg'],
+                                          phase_context, static_context)
+        self.bld_metric = MetricComputer( Level.BLD, static_context['labels_set_bld'],
+                                          phase_context, static_context) 
+        self.dmg_bld_metric = MetricComputer( Level.DMG_BLD, static_context['labels_set_bld'],
+                                          phase_context, static_context) 
+        self.viz = RasterLabelVisualizer(label_map=static_context['label_map_json'])
 
     def __init_phase_context__(self, logger, phase, loader, dataset, sample_ids,**kwargs):
         self.logger = logger
@@ -38,19 +44,19 @@ class Phase:
         self.weights_loss = weights_loss
 
     def logging_wrapper(func):
-        def decorator(self, *args, **kwargs):
-            optimizer = args[0]['optimizer']
-            epochs = args[0]['epochs']
-            epoch = args[0]['epoch']
+        def decorator(self, args, **kwargs):
+            optimizer = args['optimizer']
+            epochs = args['epochs']
+            epoch = args['epoch']
 
             if (self.phase == "train"):
                 self.logger.add_scalar(
                     'learning_rate', optimizer.param_groups[0]["lr"], epoch)
 
-            self.logger.info(f'Model training for epoch {epoch}/{epochs}')
+            l.info(f'Model training for epoch {epoch}/{epochs}')
             start_time = datetime.now()
 
-            result = func(*args)
+            result = func(self,**args)
 
             duration = datetime.now() - start_time
             self.logger.add_scalar(
@@ -60,13 +66,6 @@ class Phase:
         return decorator
 
     def update_losses(self, scores, x_pre, y_seg, y_cls, losses, losses_seg_pre, losses_seg_post, losses_dmg):
-        # modify damage prediction based on UNet arm
-        softmax = torch.nn.Softmax(dim=1)
-        preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
-        for c in range(0, scores[2].shape[1]):
-            scores[2][:, c, :, :] = torch.mul(
-                scores[2][:, c, :, :], preds_seg_pre)
-
         loss_seg_pre = self.crit_seg_1(scores[0], y_seg)
         loss_seg_post = self.crit_seg_2(scores[1], y_seg)
         loss_dmg = self.crit_dmg(scores[2], y_cls)
@@ -81,10 +80,11 @@ class Phase:
         return loss
 
     @logging_wrapper
-    def epoch_iteration(self, model, optimizer, epoch):
+    def epoch_iteration(self, model, optimizer, epoch,**kwargs):
 
         conf_mtrx_dmg_df = pd.DataFrame()
         conf_mtrx_bld_df = pd.DataFrame()
+        conf_mtrx_dmg_bld_df = pd.DataFrame()
 
         losses = AverageMeter()
         losses_seg_pre = AverageMeter()
@@ -92,7 +92,7 @@ class Phase:
         losses_dmg = AverageMeter()
 
         losses_dict = {
-            'lossses': losses,
+            'losses': losses,
             'losses_seg_pre': losses_seg_pre,
             'losses_seg_post': losses_seg_post,
             'losses_dmg': losses_dmg
@@ -108,13 +108,12 @@ class Phase:
             if (self.phase == "train"):
                 model.train()
                 optimizer.zero_grad()
-            elif (self.phase == "val"):
+            elif (self.phase == "val" or self.phase == "test"):
                 model.eval()
 
             scores = model(x_pre, x_post)
-
-            loss = self.update_losses(
-                scores, x_pre, y_seg, y_cls, **losses_dict)
+        
+            loss = self.update_losses(scores, x_pre, y_seg, y_cls, **losses_dict)
 
             if (self.phase == "train"):
                 loss.backward()  # compute gradients
@@ -126,6 +125,26 @@ class Phase:
             preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
             preds_cls = torch.argmax(softmax(scores[2]), dim=1)
 
+
+            if(self.phase == "test"):
+                """
+                    path_pred_mask = data['preds_img_dir'] +'.png'
+                    logging.info('save png image for damage level predictions: ' + path_pred_mask)
+                    im = Image.fromarray(preds_cls.cpu().numpy()[0,:,:].astype(np.uint8))
+                    if not os.path.exists(os.path.split(data['preds_img_dir'])[0]):
+                        os.makedirs(os.path.split(data['preds_img_dir'])[0])
+                    im.save(path_pred_mask)
+                    logging.info(f'saved image size: {preds_cls.size()}')
+                """
+                # Confusion matrix for damage classification mask at building-level (object-level) 
+                curr_conf_mtrx_dmg_bld_df = self.dmg_bld_metric.compute_conf_mtrx(
+                    y_pred_mask=preds_cls, y_dmg_mask=y_cls, y_bld_mask=y_seg,
+                    epoch=epoch, batch_idx=batch_idx)
+                
+                conf_mtrx_dmg_bld_df = pd.concat([conf_mtrx_dmg_bld_df, curr_conf_mtrx_dmg_bld_df], axis=0, ignore_index=True) \
+                    if len(conf_mtrx_dmg_bld_df) > 0 else curr_conf_mtrx_dmg_bld_df
+
+            # Confusion matrix for damage classification mask
             curr_conf_mtrx_dmg_df = self.dmg_metric.compute_conf_mtrx(
                 y_pred_mask=preds_cls, y_dmg_mask=y_cls, y_bld_mask=y_seg,
                 epoch=epoch, batch_idx=batch_idx)
@@ -133,6 +152,7 @@ class Phase:
             conf_mtrx_dmg_df = pd.concat([conf_mtrx_dmg_df, curr_conf_mtrx_dmg_df], axis=0, ignore_index=True) \
                 if len(conf_mtrx_dmg_df) > 0 else curr_conf_mtrx_dmg_df
 
+            # Confusion matrix for building semantic segmentation mask
             curr_conf_mtrx_bld_df = self.bld_metric.compute_conf_mtrx(
                 y_pred_mask=preds_seg_pre, y_dmg_mask=None, y_bld_mask=y_seg,
                 epoch=epoch, batch_idx=batch_idx)
@@ -147,10 +167,10 @@ class Phase:
             '_dmg': losses_dmg.avg
         }, epoch)
 
-        self.viz.prepare_for_vis(softmax, self.logger, self.phase, self.dataset, 
+        self.viz.prepare_for_vis(self.logger, self.phase, self.dataset, 
                                     self.sample_ids, model, epoch, self.device)
 
-        return conf_mtrx_dmg_df, conf_mtrx_bld_df, losses
+        return conf_mtrx_dmg_df, conf_mtrx_bld_df, losses.avg , conf_mtrx_dmg_bld_df
 
     def compute_metrics(self,
                         conf_mtrx_dmg_df: pd.DataFrame,

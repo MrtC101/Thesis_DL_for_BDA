@@ -4,6 +4,11 @@
 Class to visualize raster mask labels and hardmax or softmax model predictions, for semantic segmentation tasks.
 """
 
+from PIL import Image, ImageColor
+from torchvision.transforms import transforms
+import numpy as np
+import matplotlib.pyplot as plt
+import matplotlib.colors as mcolors
 import json
 import os
 from io import BytesIO
@@ -11,12 +16,6 @@ from typing import Union, Tuple
 import matplotlib
 import torch
 matplotlib.use('Agg')
-import matplotlib.colors as mcolors
-import matplotlib.pyplot as plt
-import numpy as np
-from torchvision.transforms import transforms
-
-from PIL import Image, ImageColor
 
 class RasterLabelVisualizer(object):
     """Visualizes raster mask labels and predictions."""
@@ -46,14 +45,17 @@ class RasterLabelVisualizer(object):
         assert 'num_to_color' in label_map
         assert isinstance(label_map['num_to_color'], dict)
 
-        self.num_to_name = RasterLabelVisualizer._dict_key_to_int(label_map['num_to_name'])
-        self.num_to_color = RasterLabelVisualizer._dict_key_to_int(label_map['num_to_color'])
+        self.num_to_name = RasterLabelVisualizer._dict_key_to_int(
+            label_map['num_to_name'])
+        self.num_to_color = RasterLabelVisualizer._dict_key_to_int(
+            label_map['num_to_color'])
 
         assert len(self.num_to_color) == len(self.num_to_name)
         self.num_classes = len(self.num_to_name)
 
         # check for duplicate names or colors
-        assert len(set(self.num_to_color.values())) == self.num_classes, 'There are duplicate colors in the colormap'
+        assert len(set(self.num_to_color.values())
+                   ) == self.num_classes, 'There are duplicate colors in the colormap'
         assert len(set(self.num_to_name.values())) == self.num_classes, \
             'There are duplicate class names in the colormap'
 
@@ -62,7 +64,8 @@ class RasterLabelVisualizer(object):
         # create the custom colormap according to colors defined in label_map
         required_colors = []
         # key is originally a string
-        for num, color_name in sorted(self.num_to_color.items(), key=lambda x: x[0]):  # num already cast to int
+        # num already cast to int
+        for num, color_name in sorted(self.num_to_color.items(), key=lambda x: x[0]):
             rgb = mcolors.to_rgb(mcolors.CSS4_COLORS[color_name])
             # mcolors.to_rgb is to [0, 1] values; ImageColor.getrgb gets [1, 255] values
             required_colors.append(rgb)
@@ -104,9 +107,11 @@ class RasterLabelVisualizer(object):
                 assert len(color) == 3 or len(
                     color) == 4, f'Color {color} is specified as a tuple or list but is not of length 3 or 4'
                 for c in color:
-                    assert isinstance(c, int) and 0 < c < 256, f'RGB value {c} is out of range'
+                    assert isinstance(
+                        c, int) and 0 < c < 256, f'RGB value {c} is out of range'
 
-                new[num] = RasterLabelVisualizer.uint8_rgb_to_hex(color[0], color[1], color[3])  # drop any alpha values
+                new[num] = RasterLabelVisualizer.uint8_rgb_to_hex(
+                    color[0], color[1], color[3])  # drop any alpha values
         assert len(new) == len(num_to_color)
         return new
 
@@ -127,159 +132,13 @@ class RasterLabelVisualizer(object):
         then use PIL to convert to uint8 RGB. matplotlib does not support the uint8 RGB format
         """
         color_hex = mcolors.to_hex(color)
-        color_rgb = ImageColor.getcolor(color_hex, 'RGB')  # '#DDA0DD' to (221, 160, 221); alpha silently dropped
+        # '#DDA0DD' to (221, 160, 221); alpha silently dropped
+        color_rgb = ImageColor.getcolor(color_hex, 'RGB')
         return color_rgb
 
-    def get_tiff_colormap(self) -> dict:
-        """Returns the object to pass to rasterio dataset object's write_colormap() function,
-        which is a dict mapping int values to a tuple of (R, G, B)
 
-        See https://rasterio.readthedocs.io/en/latest/topics/color.html for writing the TIFF colormap
-        """
-        colormap = {}
-        for num, color in self.num_to_color.items():
-            # uint8 RGB required by TIFF
-            colormap[num] = RasterLabelVisualizer.matplotlib_color_to_uint8_rgb(color)
-        return colormap
-
-    def get_tool_colormap(self) -> str:
-        """Returns a string that is a JSON of a list of items specifying the name and color
-        of classes. Example:
-        "[
-            {"name": "Water", "color": "#0000FF"},
-            {"name": "Tree Canopy", "color": "#008000"},
-            {"name": "Field", "color": "#80FF80"},
-            {"name": "Built", "color": "#806060"}
-        ]"
-        """
-        classes = []
-        for num, name in sorted(self.num_to_name.items(), key=lambda x: int(x[0])):
-            color = self.num_to_color[num]
-            color_hex = mcolors.to_hex(color)
-            classes.append({
-                'name': name,
-                'color': color_hex
-            })
-        classes = json.dumps(classes, indent=4)
-        return classes
-
-    @staticmethod
-    def plot_colortable(name_to_color: dict, title: str, sort_colors: bool = False, emptycols: int = 0) -> plt.Figure:
-        """
-        function taken from https://matplotlib.org/3.1.0/gallery/color/named_colors.html
-        """
-
-        cell_width = 212
-        cell_height = 22
-        swatch_width = 70
-        margin = 12
-        topmargin = 40
-
-        # Sort name_to_color by hue, saturation, value and name.
-        if sort_colors is True:
-            by_hsv = sorted((tuple(mcolors.rgb_to_hsv(mcolors.to_rgb(color))),
-                             name)
-                            for name, color in name_to_color.items())
-            names = [name for hsv, name in by_hsv]
-        else:
-            names = list(name_to_color)
-
-        n = len(names)
-        ncols = 4 - emptycols
-        nrows = n // ncols + int(n % ncols > 0)
-
-        width = cell_width * 4 + 2 * margin
-        height = cell_height * nrows + margin + topmargin
-        dpi = 80  # other numbers don't seem to work well
-
-        fig, ax = plt.subplots(figsize=(width / dpi, height / dpi), dpi=dpi)
-        fig.subplots_adjust(margin / width, margin / height,
-                            (width - margin) / width, (height - topmargin) / height)
-        ax.set_xlim(0, cell_width * 4)
-        ax.set_ylim(cell_height * (nrows - 0.5), -cell_height / 2.)
-        ax.yaxis.set_visible(False)
-        ax.xaxis.set_visible(False)
-        ax.set_axis_off()
-        ax.set_title(title, fontsize=24, loc='left', pad=10)
-
-        for i, name in enumerate(names):
-            row = i % nrows
-            col = i // nrows
-            y = row * cell_height
-
-            swatch_start_x = cell_width * col
-            swatch_end_x = cell_width * col + swatch_width
-            text_pos_x = cell_width * col + swatch_width + 7
-
-            ax.text(text_pos_x, y, name, fontsize=14,
-                    horizontalalignment='left',
-                    verticalalignment='center')
-
-            ax.hlines(y, swatch_start_x, swatch_end_x,
-                      color=name_to_color[name], linewidth=18)
-
-        return fig
-
-    def plot_color_legend(self, legend_title: str = 'Categories') -> plt.Figure:
-        """Builds a legend of color block, numerical categories and names of the categories.
-
-        Returns:
-            a matplotlib.pyplot Figure
-        """
-        label_map = {}
-        for num, color in self.num_to_color.items():
-            label_map['{} {}'.format(num, self.num_to_name[num])] = color
-
-        fig = RasterLabelVisualizer.plot_colortable(label_map, legend_title, sort_colors=False, emptycols=3)
-        return fig
-
-    @staticmethod
-    def visualize_matrix(matrix: np.ndarray) -> Image.Image:
-        """Shows a 2D matrix of RGB or greyscale values as a PIL Image.
-
-        Args:
-            matrix: a (H, W, 3) or (H, W) numpy array, representing a colored or greyscale image
-
-        Returns:
-            a PIL Image object
-        """
-        assert len(matrix.shape) in [2, 3]
-
-        image = Image.fromarray(matrix)
-        return image
-
-    def visualize_softmax_predictions(self, softmax_preds: np.ndarray) -> np.ndarray:
-        """Visualizes softmax probabilities in RGB according to the class label's assigned colors
-
-        Args:
-            softmax_preds: numpy array of dimensions (batch_size, num_classes, H, W) or (num_classes, H, W)
-
-        Returns:
-            numpy array of size ((batch_size), H, W, 3). You may need to roll the last axis to in-front before
-            writing to TIFF
-
-        Raises:
-            ValueError when the dimension of softmax_preds is not compliant
-        """
-
-        assert len(softmax_preds.shape) == 4 or len(softmax_preds.shape) == 3
-
-        # row the num_classes dimension to the end
-        if len(softmax_preds.shape) == 4:
-            assert softmax_preds.shape[1] == self.num_classes
-            softmax_preds_transposed = np.transpose(softmax_preds, axes=(0, 2, 3, 1))
-        elif len(softmax_preds.shape) == 3:
-            assert softmax_preds.shape[0] == self.num_classes
-            softmax_preds_transposed = np.transpose(softmax_preds, axes=(1, 2, 0))
-        else:
-            raise ValueError('softmax_preds does not have the required length in the dimension of the classes')
-
-        # ((batch_size), H, W, num_classes) @ (num_classes * 3) = ((batch_size), H, W, 3)
-        colored_view = softmax_preds_transposed @ self.color_matrix
-        return colored_view
-    
     def show_label_raster(self, label_raster: Union[Image.Image, np.ndarray],
-                        size: Tuple[int, int] = (10, 10)) -> Tuple[Image.Image, BytesIO]:
+                          size: Tuple[int, int] = (10, 10)) -> Tuple[Image.Image, BytesIO]:
         """Visualizes a label mask or hardmax predictions of a model, according to the category color map
         provided when the class was initialized.
 
@@ -297,18 +156,22 @@ class RasterLabelVisualizer(object):
             label_raster = np.asarray(label_raster)
 
         label_raster = label_raster.squeeze()
-        assert len(label_raster.shape) == 2, 'label_raster provided has more than 2 dimensions after squeezing'
+        assert len(label_raster.shape) == 2, \
+                'label_raster provided has more than 2 dimensions after squeezing'
 
         label_raster.astype(np.uint8)
 
         # min of 0, which is usually empty / no label
-        assert np.min(label_raster) >= 0, f'Invalid value for class label: {np.min(label_raster)}'
+        assert np.min(label_raster) >= 0, \
+            f'Invalid value for class label: {np.min(label_raster)}'
 
         # non-empty, actual class labels start at 1
-        assert np.max(label_raster) <= self.num_classes, f'Invalid value for class label: {np.max(label_raster)}'
+        assert np.max(label_raster) <= self.num_classes, \
+            f'Invalid value for class label: {np.max(label_raster)}'
 
         _ = plt.figure(figsize=size)
-        _ = plt.imshow(label_raster, cmap=self.colormap, norm=self.normalizer, interpolation='none')
+        _ = plt.imshow(label_raster, cmap=self.colormap,
+                       norm=self.normalizer, interpolation='none')
 
         buf = BytesIO()
         plt.savefig(buf, format='png')
@@ -316,48 +179,38 @@ class RasterLabelVisualizer(object):
         buf.seek(0)
         im = Image.open(buf)
         return im, buf
-        
-    def prepare_for_vis(self, softmax, logger, phase, dataset, sample_ids, model, epoch, device):
+
+    def prepare_for_vis(self, logger, phase, dataset, sample_ids, model, epoch, device):
         for item in sample_ids:
             data = dataset[item]
-            
+
             c, h, w = data['pre_image'].size()
             pre = data['pre_image'].reshape(1, c, h, w)
             post = data['post_image'].reshape(1, c, h, w)
-            
+
             scores = model(pre.to(device=device), post.to(device=device))
-            
-            # modify damage prediction based on UNet arm        
-            preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
-            preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
-            for c in range(0,scores[2].shape[1]):
-                scores[2][:,c,:,:] = torch.mul(scores[2][:,c,:,:], preds_seg_pre)
-            preds_dmg_classes = scores[2]
-            
-            output = {
-                'bld_mask_pre':preds_seg_pre,
-                'bld_mask_post':preds_seg_post,
-                'damage_mask':preds_dmg_classes
-            }
-            
-            # pr prediction or gt ground truth
-            # add to tensorboard the output of the model    
-            tp="pr"
-            for key in output.keys():
-                out = output[key][0,:,:,:]
-                tag = f'{tp}_{key}_{phase}_id_{item}'
-                if(key == "damage_class"):
-                    im, buf = self.show_label_raster(torch.argmax(softmax(preds_dmg_classes), dim=1).cpu().numpy(), size=(5, 5))
-                    out = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
-                logger.add_image(tag, out, epoch, dataformats='CHW')    
-            if(epoch==1):
-                tp="gt"
-                for img_key in ["pre_image_orig","post_image_orig","building_mask","damage_mask"]:
-                    img = data[img_key]
-                    if(img_key == "building_mask"):
-                        img = img.reshape(1,h,w)
-                    elif(img_key == "damage_mask"):
-                        im, buf = self.show_label_raster(np.array(img), size=(5, 5))
-                        img = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
-                    tag = f'{tp}_{img_key}_{phase}_id_{item}'
+
+            if(epoch == 1):
+                gt = {}
+                gt['pre_img'] = data["pre_image_orig"]
+                gt['post_img'] = data["post_image_orig"]
+                gt['bld_mask'] = data["building_mask"].reshape(1, h, w)
+                true_dmg_mask = data["damage_mask"]
+                im, _ = self.show_label_raster(np.array(true_dmg_mask), size=(5, 5))
+                gt['dmg_mask'] = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
+                for key,img in gt.items():
+                    tag = f'{"gt"}_{key}_{phase}_id_{item}'
                     logger.add_image(tag, img, epoch, dataformats='CHW')
+            
+            tp = {}
+            # compute predictions & confusion metrics
+            softmax = torch.nn.Softmax(dim=1)
+            tp['pred_seg_pre'] = torch.argmax(softmax(scores[0]), dim=1)
+            tp['pred_seg_post'] = torch.argmax(softmax(scores[1]), dim=1)
+            preds_cls = torch.argmax(softmax(scores[2]), dim=1)
+            im, _ = self.show_label_raster(preds_cls.cpu().numpy(), size=(5, 5))
+            tp['pred_dmg_cls'] = transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
+            for key,img in tp.items():
+                tag = f'{"tp"}_{key}_{phase}_id_{item}'
+                logger.add_image(tag, img, epoch, dataformats='CHW')
+                
