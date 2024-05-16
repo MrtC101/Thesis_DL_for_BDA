@@ -5,10 +5,10 @@ import argparse
 from tqdm import tqdm
 from itertools import chain
 from utils.pathManagers.rawManager import RawPathManager
+from utils.common.logger import LoggerSingleton, TqdmToLog
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import LoggerSingleton, TqdmToLog
 log = LoggerSingleton()
 
 
@@ -18,7 +18,7 @@ def leave_only_n(data_path: dict, n: int) -> None:
 
     Args:
         data_path: Path to the directory to the xBD dataset that contains
-        subsets of xBD dataset. 
+        subsets of xBD dataset.
         n: number of disasters that will be left in the folder.
 
     Example:
