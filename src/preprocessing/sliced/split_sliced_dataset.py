@@ -1,33 +1,40 @@
+from utils.pathManagers.slicedManager import SlicedPathManager
+from utils.common.files import dump_json
+import argparse
 import os
 import sys
+from utils.common.logger import LoggerSingleton
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+log = LoggerSingleton()
 
-from utils.common.logger import get_logger
-l = get_logger("Split_sliced")
 
-import argparse
-from utils.common.files import dump_json
-from utils.pathManagers.slicedManager import SlicedPathManager
-
-def split_sliced_dataset(sliced_path : str ,raw_split_json : str, out_path : str) -> None:
+def split_sliced_dataset(sliced_path: str, raw_split_json: str,
+                         out_path: str) -> None:
+    """Uses the raw_split JSON file to split the raw dataset to create a new
+    sliced_splits.json file.
+    Args:
+        sliced_path: Path to the sliced data folder.
+        raw_split_json: Path to the `raw_split.json` file.
+        out_path: Path to the folder where the new json file will be stored.
+        if the folder "splits" do not exist it will be created.
     """
-        Splits the xbd dataset in train and test sets. (80%,10%,10%)
-    """
-    # creates splits folder    
-    split_path = os.path.join(out_path,"splits")
-    os.makedirs(split_path,exist_ok=True)
+    # creates splits folder
+    split_path = os.path.join(out_path, "splits")
+    os.makedirs(split_path, exist_ok=True)
 
     # loads sliced dataset
-    sliced_dict = SlicedPathManager().load_paths(sliced_path,raw_split_json)
-    
-    split_file = os.path.join(split_path,"sliced_splits.json")
-    dump_json(split_file,sliced_dict)
+    sliced_dict = SlicedPathManager().load_paths(sliced_path, raw_split_json)
+
+    split_file = os.path.join(split_path, "sliced_splits.json")
+    dump_json(split_file, sliced_dict)
     return split_file
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-            description='Creates a json files that shows the splits for patches..')
+        description='Creates a json files that shows the splits for patches.')
     parser.add_argument(
         'sliced_path',
         help=('Path to the sliced dataset.')

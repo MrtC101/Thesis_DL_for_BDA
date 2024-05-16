@@ -15,11 +15,6 @@
 # [DISTRIBUTION STATEMENT A] This material has been approved for public release #
 # and unlimited distribution. Please see Copyright notice for non-US Government #
 # use and distribution.                                                         #
-# This Software includes and/or makes use of the following Third-Party Software #
-# subject to its own license:                                                   #
-# 1. SpaceNet                                                                   #
-#(https://github.com/motokimura/spacenet_building_detection/blob/master/LICENSE)#
-# Copyright 2017 Motoki Kimura.                                                 #
 # DM19-0988                                                                     #
 #################################################################################
 
