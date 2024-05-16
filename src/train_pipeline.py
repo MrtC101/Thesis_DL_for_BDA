@@ -7,11 +7,9 @@ os.environ["DATA_PATH"] = os.path.join(os.environ["PROJ_PATH"],"data")
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import LoggerSingleton    
 
 from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
-from utils.common.logger import get_logger
-l = get_logger("Compute data from images")
-
 from preprocessing.prepare_folder.clean_folder import delete_not_in
 from preprocessing.prepare_folder.delete_extra import leave_only_n
 from preprocessing.prepare_folder.create_label_masks import create_masks
@@ -22,6 +20,7 @@ from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from preprocessing.shards.make_data_shards import create_shards
 from preprocessing.shards.split_shard_dataset import split_shard_dataset
 from train.training import train_model
+
 
 def preprocess():
     xbd_path = os.path.join(os.environ["DATA_PATH"],"xBD")
@@ -74,5 +73,6 @@ def train(split_shard_json_path):
 # inference
 
 if __name__ == "__main__":
+    l = LoggerSingleton("Training Pipeline","/home/mrtc101/Desktop/tesina/repo/my_siames/out/console_logs") # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     data = preprocess()
     train("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json")
