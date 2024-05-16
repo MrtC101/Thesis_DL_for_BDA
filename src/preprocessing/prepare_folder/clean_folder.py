@@ -1,12 +1,13 @@
+import os
+import sys
+import argparse
 from tqdm import tqdm
 from utils.common.files import is_dir
 from os.path import join
-import argparse
-import os
-import sys
+from utils.common.logger import LoggerSingleton
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import LoggerSingleton
 log = LoggerSingleton()
 
 """

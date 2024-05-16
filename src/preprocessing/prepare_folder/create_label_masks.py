@@ -33,10 +33,10 @@ from shapely import wkt
 from shapely.geometry import mapping, Polygon
 from cv2 import fillPoly, imread, imwrite
 from utils.common.files import read_json, is_dir
+from utils.common.logger import LoggerSingleton, TqdmToLog
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import LoggerSingleton, TqdmToLog
 log = LoggerSingleton()
 
 path = join(os.environ.get("DATA_PATH"), 'constants/xBD_label_map.json')
@@ -89,12 +89,10 @@ def polygons_list_to_mask(size: tuple, polys: list, border: int) -> np.ndarray:
 
     Args:
         size: A tuple of (width, height, channels) that represents the output
-        image shape.
-
-        polys: A dict of feature uid:
+        image shape. 
+        polys: A dict of feature uid:\
             (numpy array of coords, numerical category of the building),
             from get_feature_info()
-
         border: Pixel width to shrink each shape by to create some space
         between adjacent shapes
 
