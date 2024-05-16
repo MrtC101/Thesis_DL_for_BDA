@@ -1,35 +1,47 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
+from typing import Dict, List
 from utils.datasets.raw_datasets import TileDataset
 from utils.datasets.slice_datasets import PatchDataset
-from utils.common.files import read_json, clean_folder
-from concurrent.futures import ThreadPoolExecutor
-from torch.utils.data import DataLoader
+from utils.common.files import clean_folder
+# from concurrent.futures import ThreadPoolExecutor
 from torchvision import transforms
-from os.path import join
 from tqdm import tqdm
-import cv2
 import math
 import numpy as np
 import random
 import argparse
 import os
 import sys
+from utils.common.logger import LoggerSingleton
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import get_logger
-l = get_logger("make_smaller_tiles")
+log = LoggerSingleton()
 
-def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
 
+def slice_tile(n: int, pre_image: np.ndarray, post_image: np.ndarray,
+               pre_mask: np.ndarray, post_mask: np.ndarray
+               ) -> List[Dict[str, np.ndarray]]:
+    """Slices each tile into `n` equal parts and creates patches.
+
+    Args:
+        n: Number of equal parts to slice the tile into.
+        pre_image: Pre-disaster image.
+        post_image: Post-disaster image.
+        pre_mask: Pre-disaster semantic mask.
+        post_mask: Post-disaster class mask.
+
+    Returns:
+        List[Dict[str, np.ndarray]]: List of dictionaries containing patches
+          for each image.
+    """
     tile_h, tile_w = pre_image.shape[:2]
 
-    assert tile_h % n == 0 and n > 0, f"Can't crop image into {n}x{n} equal parts."
+    assert tile_h % n == 0 and n > 0, \
+        f"Can't crop image into {n}x{n} equal parts."
 
     h_idx = [math.floor(tile_h*p) for p in np.arange(0, 1, 0.25)]
     w_idx = [math.floor(tile_w*p) for p in np.arange(0, 1, 0.25)]
-    # l.info(f"{h_idx}")
+    # log.info(f"{h_idx}")
 
     patch_h = math.floor(tile_h / n)
     patch_w = math.floor(tile_w / n)
@@ -68,30 +80,42 @@ def slice_tile(n, pre_image, post_image, pre_mask, post_mask):
     return patch_list
 
 
+def slice_dataset(splits_json_path: str, output_path: str) -> None:
+    """Slices each tile into 20 patches of the same size.
 
-def slice_dataset(splits_json_path, output_path):
+    Args:
+        splits_json_path: Path to the JSON file that contains the dictionary
+        that represents the dataset split.
+        out_path: Path to the folder where the new patches will be stored.
+    Example:
+        >>> slice_dataset("data/xBD/splits/raw_splits.json","data/xBD/sliced")
+    """
+
+    log.name = "Create data patches (chips)"
 
     def iterate_and_slice(split_name):
-        l.info(f'Starting slicing for {split_name}')
-        
+        log.info(f'Starting slicing for {split_name}')
+
         dataset = TileDataset(split_name, splits_json_path)
         num_tile = len(dataset)
-        l.info(f'{split_name} dataset length before cropping: {num_tile}.')
-        
-        clean_folder(output_path,split_name)
-        split_folder = os.path.join(output_path,split_name)
+        log.info(f'{split_name} dataset length before cropping: {num_tile}.')
 
-        for dis_id, tile_id, data in tqdm(iter(dataset),total=num_tile):
+        clean_folder(output_path, split_name)
+        split_folder = os.path.join(output_path, split_name)
+
+        for dis_id, tile_id, data in tqdm(iter(dataset), total=num_tile):
             patch_list = slice_tile(4, **data)
-            PatchDataset.save_patches(dis_id, tile_id, patch_list, split_folder)
-        
-        l.info(f'Done slicing for {split_name}, length after cropping: {20*num_tile}.')
+            PatchDataset.save_patches(
+                dis_id, tile_id, patch_list, split_folder)
 
-    #could be parallelized
+        log.info(f'Done slicing for {split_name},\
+                 length after cropping: {20*num_tile}.')
+
+    # could be parallelized
     iterate_and_slice("train")
     iterate_and_slice("val")
 
-    l.info(f'Done')
+    log.info('Done')
 
 
 if __name__ == "__main__":
