@@ -11,7 +11,25 @@ from torch.utils.data import Dataset
 from utils.common.files import read_json, is_json
     
 class PatchDataset(Dataset):
-   
+    """
+    Dataset class for loading patches from a JSON file.
+
+    Args:
+        split_name (str): The name of the split to load patches from.
+        splits_json_path (str): The file path to the JSON file containing split information.
+
+    Attributes:
+        split_name (str): The name of the split to load patches from.
+        splits_json_path (str): The file path to the JSON file containing split information.
+        tile_list (list): A list of tuples containing patch information.
+
+    Methods:
+        __len__(): Returns the total number of patches in the dataset.
+        __getitem__(i): Retrieves a specific patch from the dataset.
+        load_patches(disaster_id, tile_id, patch_id, patch): Loads patch data from disk.
+        save_patches(disaster_id, tile_id, patch_list, split_folder): Saves a list of patches to disk.
+    """
+    
     def __init__(self,split_name: str,splits_json_path: str):
         self.split_name = split_name
         self.splits_json_path = splits_json_path
@@ -35,6 +53,18 @@ class PatchDataset(Dataset):
         return disaster_id, tile_id, patch_id, data
     
     def load_patches(self,disaster_id, tile_id, patch_id, patch):
+        """
+        Loads patch data from disk.
+
+        Args:
+            disaster_id (str): The ID of the disaster.
+            tile_id (str): The ID of the tile.
+            patch_id (str): The ID of the patch.
+            patch (dict): A dictionary containing file paths to patch images.
+
+        Returns:
+            dict: A dictionary containing loaded patch data.
+        """
         data = {}
         data["pre_image"] = cv2.cvtColor(cv2.imread(patch["pre-image"]),cv2.COLOR_BGR2RGB)
         data["post_image"] = cv2.cvtColor(cv2.imread(patch["post-image"]),cv2.COLOR_BGR2RGB)
@@ -44,6 +74,15 @@ class PatchDataset(Dataset):
     
     @staticmethod
     def save_patches(disaster_id, tile_id, patch_list, split_folder):
+        """
+        Saves a list of patches to disk.
+
+        Args:
+            disaster_id (str): The ID of the disaster.
+            tile_id (str): The ID of the tile.
+            patch_list (list): A list of patches to save.
+            split_folder (str): The directory to save the patches to.
+        """
         for i, patch in enumerate(patch_list):
             patch_id = f"{disaster_id}_{tile_id}_{str(i).zfill(3)}"
             patch_folder = os.path.join(split_folder, patch_id)

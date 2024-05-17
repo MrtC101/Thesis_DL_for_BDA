@@ -1,4 +1,4 @@
- def get_tiff_colormap(self) -> dict:
+def get_tiff_colormap(self) -> dict:
     """Returns the object to pass to rasterio dataset object's write_colormap() function,
     which is a dict mapping int values to a tuple of (R, G, B)
 
