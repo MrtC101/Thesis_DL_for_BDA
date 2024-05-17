@@ -1,9 +1,0 @@
-__pycache__/
-*/__pycache__/
-.vscode/
-images/
-notebooks/
-out/*
-submit/
-data/data_splits/*
-data/xBD/*
