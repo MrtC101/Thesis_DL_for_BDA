@@ -1,3 +1,4 @@
+from PIL import Image
 from utils.common.files import clean_folder, dump_json, read_json, is_json
 from torchvision.transforms import transforms, RandomVerticalFlip, \
     RandomHorizontalFlip
@@ -26,7 +27,7 @@ def apply_transform(images: dict) -> dict:
     def apply_flip(images: dict, flip):
         if (random.random() > 0.5):
             for key in images.keys():
-                images[key] = flip(p=1)(images[key])
+                images[key] = np.array(flip(p=1)(Image.fromarray(images[key])))
         return images
     augment = transforms.Compose([
         lambda images: apply_flip(images, RandomVerticalFlip),
@@ -147,7 +148,10 @@ def create_shards(sliced_splits_json: str, mean_stddev_json: str,
         clean_folder(output_path, split_name)
         out_dir = os.path.join(output_path, split_name)
         shard_idxs = shard_patches(
-            dataset, split_name, mean_stddev_json, num_shards, out_dir)
+            dataset, split_name, mean_stddev_json,
+            num_shards, out_dir,
+            transform=False if split_name == "test" else True,
+            normalize=False if split_name == "test" else True)
 
         idx_path = os.path.join(output_path, f"{split_name}_shard_idxs.json")
         dump_json(idx_path, {"shard_idxs": shard_idxs})
@@ -157,6 +161,7 @@ def create_shards(sliced_splits_json: str, mean_stddev_json: str,
     # could be parallelized
     iterate_and_shard("train")
     iterate_and_shard("val")
+    iterate_and_shard("test")
 
     log.info('Done!')
 

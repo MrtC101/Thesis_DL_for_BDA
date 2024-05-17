@@ -115,7 +115,7 @@ def create_data_dicts(splits_json_path: str, out_path: str) -> str:
         dataset = RawDataset(split_name=split_name,
                              splits_json_path=splits_json_path)
         log.info(f'Counting {split_name} subset with length: {len(dataset)}')
-        psb = tqdm(iter(dataset), TqdmToLog(log), total=len(dataset))
+        psb = tqdm(iter(dataset), total=len(dataset))
         for dis_id, tile_id, data in psb:
             mean[dis_id][tile_id] = \
                 compute_mean_stddev(data["pre_image"], data["post_image"])
