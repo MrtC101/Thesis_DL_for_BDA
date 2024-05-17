@@ -86,6 +86,6 @@ if __name__ == "__main__":
     # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     log = LoggerSingleton("Training Pipeline",
                           join(os.environ["OUT_PATH"], "console_logs"))
-    # split_shard_json_path = preprocess()
-    split_shard_json_path = join(os.environ["DATA_PATH"], "xBD", "shards")
+    split_shard_json_path = preprocess()
+    #split_shard_json_path = join(os.environ["DATA_PATH"], "xBD", "shards")
     train(split_shard_json_path)

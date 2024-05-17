@@ -10,13 +10,12 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.common.logger import get_logger
-l = get_logger("delete_extra")
-
-
 class ShardDataset(Dataset):
     """
-        Access Data using shard_splits.json file.
+    Accesses data using shard_splits.json file.
+
+    This dataset class provides access to data stored in shards, as defined by a shard_splits.json file. 
+    It enables loading and retrieval of images and corresponding masks from shard files efficiently. 
     """
 
     def __init__(self, split_name, split_json_name):
@@ -29,6 +28,9 @@ class ShardDataset(Dataset):
         return self.shard_size
 
     def refer_to_shard(self):
+        """
+        Load shard data and set up memory-mapped arrays.
+        """
         shape_rgb = (self.shard_size, 256, 256, 3)
         shape_gray = (self.shard_size, 256, 256)
         mode = "r+"

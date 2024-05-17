@@ -1,6 +1,6 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
-name: siames_venv
+name: develop
 channels:
   - defaults
   - conda-forge
@@ -30,3 +30,4 @@ dependencies:
     - pandas==2.2.2
     - matplotlib==3.8.4
     - scikit-image==0.23.2
+    - flake8

@@ -1,6 +1,4 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
-name: docker_venv
+name: production
 channels:
   - defaults
   - conda-forge
