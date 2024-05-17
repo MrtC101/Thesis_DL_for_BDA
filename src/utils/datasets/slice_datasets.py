@@ -3,9 +3,6 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.common.logger import get_logger
-l = get_logger("delete_extra")
-
 import cv2
 from torch.utils.data import Dataset
 from utils.common.files import read_json, is_json

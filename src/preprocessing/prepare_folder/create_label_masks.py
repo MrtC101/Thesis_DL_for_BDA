@@ -156,7 +156,7 @@ def mask_tiles(images_dir: str, labels_dir: str, targets_dir: str,
                   for file in os.listdir(labels_dir) if file.endswith('.json')]
     log.info(f'{len(json_paths)} json files found in labels directory.')
 
-    for label_path in tqdm(json_paths, file=TqdmToLog(log)):
+    for label_path in tqdm(json_paths):
 
         # just the file name without extension
         tile_id = os.path.basename(label_path).split('.json')[0]

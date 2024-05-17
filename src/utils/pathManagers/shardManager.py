@@ -31,7 +31,7 @@ class ShardPathManager:
         """
         is_dir(shard_dir_path)
         shards_dict = nested_defaultdict(5, str)
-        for subset in ["train", "val"]:
+        for subset in ["train", "val","test"]:
             subset_path = join(shard_dir_path, subset)
             dataset_shards = sorted(os.listdir(subset_path))
             for shard in dataset_shards:

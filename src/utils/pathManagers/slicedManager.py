@@ -32,7 +32,7 @@ class SlicedPathManager:
         split_dict = read_json(split_json_path)
 
         sliced_dict = nested_defaultdict(5, str)
-        for subset in ["train", "val"]:
+        for subset in ["train", "val" , "test"]:
             subset_path = join(sliced_path, subset)
             dataset_patches = sorted(os.listdir(subset_path))
             for patch in dataset_patches:
