@@ -2,40 +2,43 @@
 # Licensed under the MIT License.
 import os
 import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import get_logger
-
 from utils.datasets.shard_datasets import ShardDataset
-from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
-from utils.common.files import is_dir, read_json, dump_json
+from utils.common.files import is_dir, dump_json
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from models.siames.end_to_end_Siam_UNet import SiamUnet
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
-from time import localtime, strftime
-from datetime import datetime
 import torch.nn as nn
 from tqdm import tqdm
-import numpy as np
 import pandas as pd
 import torch
-
-
 from train.phase import Phase
+from utils.common.logger import LoggerSingleton
 
-def resume_model(l,model : SiamUnet, training_config, starting_checkpoint_path):
-        if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
-            l.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
-            optimizer, starting_epoch, best_acc = model.resume_from_checkpoint(training_config)
-            l.info(
-                f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
-        else:
-            l.info('No valid checkpoint is provided. Start to train from scratch...')
-            optimizer, starting_epoch, best_acc = model.resume_from_scratch(training_config)
-        return optimizer, starting_epoch, best_acc
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+log = LoggerSingleton()
+
+
+def resume_model(model: SiamUnet, training_config, starting_checkpoint_path):
+    """Calls the corresponding model resume method"""
+    if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
+        log.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
+        optimizer, starting_epoch, best_acc = \
+            model.resume_from_checkpoint(training_config)
+        log.info(
+            f'Loaded checkpoint, starting epoch is {starting_epoch},\
+                  best f1 is {best_acc}')
+    else:
+        log.info('No valid checkpoint is provided. \
+            Start to train from scratch...')
+        optimizer, starting_epoch, best_acc = \
+            model.resume_from_scratch(training_config)
+    return optimizer, starting_epoch, best_acc
+
 
 def output_directories(out_dir, exp_name):
+    """Create directories for the current experiment"""
     # set up directories (TrainPathManager?)
     is_dir(out_dir)
     exp_dir = os.path.join(out_dir, exp_name)
@@ -44,39 +47,53 @@ def output_directories(out_dir, exp_name):
     checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
     os.makedirs(checkpoint_dir, exist_ok=True)
 
-    c_logger_dir = os.path.join(exp_dir, 'console_logs')
-    os.makedirs(c_logger_dir, exist_ok=True)
-
     tb_logger_dir = os.path.join(exp_dir, 'tb_logs')
     os.makedirs(tb_logger_dir, exist_ok=True)
 
     config_dir = os.path.join(exp_dir, 'configs')
     os.makedirs(config_dir, exist_ok=True)
 
-    return checkpoint_dir, c_logger_dir, tb_logger_dir, config_dir
+    return checkpoint_dir, tb_logger_dir, config_dir
 
-def train_model(train_config, path_config):
+
+def train_model(train_config: dict, path_config: dict) -> None:
+    """Trains the model using the specified configurations.
+
+    Args:
+        train_config (dict): Configuration parameters for training.
+        path_config (dict): Configuration parameters for file paths.
+
+    Returns:
+        None
+
+    Example:
+        >>> train_model(train_config, path_config)
+    """
+
+    log.name = "Training Model"
 
     # setup output directories
-    checkpoint_dir, c_logger_dir, tb_logger_dir, config_dir = output_directories(path_config['out_dir'],path_config['exp_name'])
+    checkpoint_dir, tb_logger_dir, config_dir = \
+        output_directories(path_config['out_dir'], path_config['exp_name'])
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
-    
+
+    # tensorboard loggers
     logger_train = SummaryWriter(log_dir=tb_logger_dir)
     logger_val = SummaryWriter(log_dir=tb_logger_dir)
-    l = get_logger("training model", c_logger_dir)
-   
+
     # torch device
-    l.info(f'Using PyTorch version {torch.__version__}.')
-    device = torch.device(train_config['device'] if torch.cuda.is_available() else "cpu")
-    l.info(f'Using device: {device}.')
+    log.info(f'Using PyTorch version {torch.__version__}.')
+    device = torch.device(
+        train_config['device'] if torch.cuda.is_available() else "cpu")
+    log.info(f'Using device: {device}.')
 
     # DATA
     # Load datasets
     xBD_train = ShardDataset('train', path_config['shard_splits_json'])
-    l.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
+    log.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
     xBD_val = ShardDataset('val', path_config['shard_splits_json'])
-    l.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
+    log.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
 
     train_loader = DataLoader(xBD_train,
                               batch_size=train_config['batch_size'],
@@ -89,27 +106,28 @@ def train_model(train_config, path_config):
                             num_workers=8,
                             pin_memory=False)
 
-    l.info('Get sample chips from train set...')
-    sample_train_ids = xBD_train.get_sample_images(train_config['num_chips_to_viz'])
-    l.info('Get sample chips from val set...')
-    sample_val_ids = xBD_val.get_sample_images(train_config['num_chips_to_viz'])
+    log.info('Get sample chips from train set...')
+    sample_train_ids = xBD_train.get_sample_images(
+        train_config['num_chips_to_viz'])
+    log.info('Get sample chips from val set...')
+    sample_val_ids = xBD_val.get_sample_images(
+        train_config['num_chips_to_viz'])
 
     # TRAINING CONFIG
 
     # define model
     model = SiamUnet().to(device=device)
-    l.info(model.model_summary())
+    log.info(model.model_summary())
 
     # resume from a checkpoint if provided
-    optimizer, starting_epoch, best_acc = resume_model(l,model, train_config, path_config['starting_checkpoint_path'])
+    optimizer, starting_epoch, best_acc = resume_model(
+        model, train_config, path_config['starting_checkpoint_path'])
 
-    # define loss functions and weights on classes
-    mode = train_config['mode']
+    # loss functions
     weights_seg_tf = torch.FloatTensor(train_config['weights_seg'])
     weights_damage_tf = torch.FloatTensor(train_config['weights_damage'])
     weights_loss = train_config['weights_loss']
 
-    # loss functions
     criterion_seg_1 = \
         nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
     criterion_seg_2 = \
@@ -117,7 +135,9 @@ def train_model(train_config, path_config):
     criterion_damage = \
         nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
 
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=2000, verbose=True)
+    # scheduler
+    scheduler = ReduceLROnPlateau(
+        optimizer, mode='min', patience=2000, verbose=True)
 
     static_context = {
         'crit_seg_1': criterion_seg_1,
@@ -143,7 +163,7 @@ def train_model(train_config, path_config):
         'logger': logger_val,
         'loader': val_loader,
         'sample_ids': sample_val_ids,
-        'dataset':xBD_val
+        'dataset': xBD_val
     }
 
     # Metrics
@@ -160,7 +180,7 @@ def train_model(train_config, path_config):
     epochs = train_config['epochs']
     step_tr = 1
 
-    for epoch in tqdm(range(epoch,epochs,1)):
+    for epoch in tqdm(range(epoch, epochs, 1)):
         # epochs
         epoch_context = {
             'epoch': epoch,
@@ -171,33 +191,49 @@ def train_model(train_config, path_config):
         }
 
         # TRAINING STEP
-        conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, _, _ = training.epoch_iteration(epoch_context)
+        conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, _, _ = \
+            training.epoch_iteration(epoch_context)
 
-        l.info(f'Compute actual metrics for model evaluation based on training set ...')
-        curr_tr_dmg_metrics, curr_tr_bld_metrics, _ = training.compute_metrics(conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, epoch_context)
+        log.info('Compute actual metrics for model evaluation based on \
+               training set ...')
+        curr_tr_dmg_metrics, curr_tr_bld_metrics, _ = training.compute_metrics(
+            conf_mtrx_dmg_df_tr, conf_mtrx_bld_df_tr, epoch_context)
 
-        tr_dmg_metrics = pd.concat([tr_dmg_metrics, curr_tr_dmg_metrics], axis=0, ignore_index=True) if len(tr_dmg_metrics) > 0 else curr_tr_dmg_metrics
+        tr_dmg_metrics = pd.concat([tr_dmg_metrics, curr_tr_dmg_metrics],
+                                   axis=0, ignore_index=True) \
+            if len(tr_dmg_metrics) > 0 else curr_tr_dmg_metrics
 
-        tr_bld_metrics = pd.concat([tr_bld_metrics, curr_tr_bld_metrics], axis=0, ignore_index=True) if len(tr_bld_metrics) > 0 else curr_tr_bld_metrics
-        
+        tr_bld_metrics = pd.concat([tr_bld_metrics, curr_tr_bld_metrics],
+                                   axis=0, ignore_index=True) \
+            if len(tr_bld_metrics) > 0 else curr_tr_bld_metrics
+
         # VALIDATION STEP
         with torch.no_grad():
-            conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val, losses_val, _ = validation.epoch_iteration(epoch_context)
+            conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val, losses_val, _ = \
+                validation.epoch_iteration(epoch_context)
             scheduler.step(losses_val)  # decay Learning Rate
-        
-        l.info(f'Compute actual metrics for model evaluation based on validation set ...')
-        curr_val_dmg_metrics, curr_val_bld_metrics, f1_harmonic_mean = validation.compute_metrics(conf_mtrx_dmg_df_val, conf_mtrx_bld_df_val, epoch_context)
 
-        val_dmg_metrics = pd.concat([val_dmg_metrics, curr_val_dmg_metrics], axis=0, ignore_index=True) if len(val_dmg_metrics) > 0 else curr_val_dmg_metrics
+        log.info('Compute actual metrics for model evaluation based on \
+                 validation set ...')
+        curr_val_dmg_metrics, curr_val_bld_metrics, f1_harmonic_mean = \
+            validation.compute_metrics(conf_mtrx_dmg_df_val,
+                                       conf_mtrx_bld_df_val, epoch_context)
 
-        val_bld_metrics = pd.concat([val_bld_metrics, curr_val_bld_metrics], axis=0, ignore_index=True) if len(val_bld_metrics) > 0 else curr_val_bld_metrics
+        val_dmg_metrics = pd.concat([val_dmg_metrics, curr_val_dmg_metrics],
+                                    axis=0, ignore_index=True) \
+            if len(val_dmg_metrics) > 0 else curr_val_dmg_metrics
+
+        val_bld_metrics = pd.concat([val_bld_metrics, curr_val_bld_metrics],
+                                    axis=0, ignore_index=True) \
+            if len(val_bld_metrics) > 0 else curr_val_bld_metrics
 
         # compute average accuracy across all classes to select the best model
         val_acc_avg = f1_harmonic_mean
         is_best = val_acc_avg > best_acc
         best_acc = max(val_acc_avg, best_acc)
 
-        l.info(f'Saved checkpoint for epoch {epoch}. Is it the highest f1 checkpoint so far: {is_best}\n')
+        log.info(f'Saved checkpoint for epoch {epoch}.\
+                Is it the highest f1 checkpoint so far: {is_best}\n')
         model.save_checkpoint({
             'epoch': epoch,
             'state_dict': model.state_dict(),
@@ -210,7 +246,7 @@ def train_model(train_config, path_config):
     logger_train.close()
     logger_val.flush()
     logger_val.close()
-    l.info('Done')
+    log.info('Done')
 
 
 if __name__ == "__main__":
@@ -230,8 +266,10 @@ if __name__ == "__main__":
     path_config = {
         'exp_name': 'train_UNet',  # train_dmg
         'out_dir': '/home/mrtc101/Desktop/tesina/repo/my_siames/out',
-        'shard_splits_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json',
-        'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
+        'shard_splits_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/ \
+                data/xBD/splits/shard_splits.json',
+        'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/ \
+            data/constants/xBD_label_map.json',
         'starting_checkpoint_path': None
     }
     train_model(train_config, path_config)
