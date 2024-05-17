@@ -1,16 +1,3 @@
-.vscode/
-models/
-envs/
-venv/
-./data/
-src/baseline_model
-.my_modelsvenv/
-__pycache__
-__pycache__/
-*/__pycache__/
-*/*/__pycache__/
-src/mask_r-cnn
-src/baseline
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

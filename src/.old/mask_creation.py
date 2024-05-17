@@ -1,3 +1,6 @@
+import sys
+sys.path.append("src/")
+
 import json
 import os
 from os.path import join
@@ -117,7 +120,7 @@ def create_mask_target_image(json_path: os.path,
 
 def create_instance_mask(zones_list: dict[DisasterZoneFolder]):
     zone: DisasterZoneFolder
-    for i, zone in enumerate(zones_list.values()):
+    for i, zone in tqdm(enumerate(zones_list.values())):
         pre_json_path = join(zone.get_folder_path(), zone.get_pre_json())
         pre_target_path = join(zone.get_folder_path(), zone.get_mask())
         pre_mask = create_mask_target_image(pre_json_path, pre_target_path)
