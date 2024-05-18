@@ -1,29 +1,31 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+import os
+import sys
+from utils.common.logger import LoggerSingleton
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+log = LoggerSingleton()
+from train.phase import Phase
 from utils.datasets.shard_datasets import ShardDataset
-from utils.common.files import is_dir
+from utils.common.files import dump_json, is_dir
 from models.siames.end_to_end_Siam_UNet import SiamUnet
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 import torch.nn as nn
 import torch
-import os
-import sys
-from utils.common.logger import LoggerSingleton
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-log = LoggerSingleton()
 
 
-def resume_model(l, model: SiamUnet, training_config,
-                 starting_checkpoint_path):
-    if starting_checkpoint_path and os.path.isfile(starting_checkpoint_path):
-        log.info('Loading checkpoint from {}'.format(starting_checkpoint_path))
-        _, last_epoch, _ = model.resume_from_checkpoint(training_config)
-        log.info(f"loaded checkpoint at {starting_checkpoint_path}.")
+def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
+    if checkpoint_path and os.path.isfile(checkpoint_path):
+        log.info('Loading checkpoint from {}'.format(checkpoint_path))
+        _, last_epoch, _ = model.resume_from_checkpoint(checkpoint_path,
+                                                        tb_log_dir,
+                                                        training_config)
+        log.info(f"loaded checkpoint at {checkpoint_path}.")
     else:
         log.info('No valid checkpoint is provided.')
+        raise Exception("No weights for model to load.")
     return last_epoch
 
 
@@ -33,28 +35,32 @@ def output_directories(out_dir, exp_name):
     exp_dir = os.path.join(out_dir, exp_name)
 
     # set up directories
-    c_logger_dir = os.path.join(output_dir, exp_name, 'test_logs')
+    c_logger_dir = os.path.join(exp_dir, 'test_logs')
     os.makedirs(c_logger_dir, exist_ok=True)
 
-    tb_logger_dir = os.path.join(output_dir, exp_name, 'tb_test_logs')
+    tb_logger_dir = os.path.join(exp_dir, 'tb_test_logs')
     os.makedirs(tb_logger_dir, exist_ok=True)
 
-    evals_dir = os.path.join(output_dir, exp_name, 'evals')
+    evals_dir = os.path.join(exp_dir, 'evals')
     os.makedirs(evals_dir, exist_ok=True)
 
-    output_dir = os.path.join(output_dir, exp_name, 'output')
+    output_dir = os.path.join(exp_dir, 'predictions')
     os.makedirs(output_dir, exist_ok=True)
 
-    return c_logger_dir, tb_logger_dir, evals_dir, output_dir
+    config_dir = os.path.join(exp_dir, 'configs')
+    os.makedirs(config_dir, exist_ok=True)
 
+    return c_logger_dir, tb_logger_dir, evals_dir, output_dir, config_dir
 
 def test_model(test_config, path_config):
-
     # setup output directories
-    tb_logger_dir, evals_dir = output_directories(
+    c_log_dir, tb_logger_dir, evals_dir, output_dir, config_dir = output_directories(
         path_config['out_dir'], path_config['exp_name'])
+    dump_json(os.path.join(config_dir, 'test_config.txt'), test_config)
+    dump_json(os.path.join(config_dir, 'test_path_config.txt'), path_config)
+
     logger_test = SummaryWriter(log_dir=tb_logger_dir)
-    log.name = "testing model"
+    log = LoggerSingleton("Testing Model",c_log_dir)
 
     # torch device
     log.info(f'Using PyTorch version {torch.__version__}.')
@@ -74,18 +80,17 @@ def test_model(test_config, path_config):
                              pin_memory=False)
 
     log.info('Get sample chips from test set...')
-    sample_test_ids = xBD_test.get_sample_images(
-        test_config['num_chips_to_viz'])
+    sample_test_ids = xBD_test.get_sample_images(test_config['num_chips_to_viz'])
 
-    # TRAINING CONFIG
+    # TEST CONFIG
 
     # define model
     model = SiamUnet().to(device=device)
     log.info(model.model_summary())
 
     # resume from a checkpoint if provided
-    epoch = resume_model(l, model, test_config,
-                         path_config['starting_checkpoint_path'])
+    epoch = resume_model(model,path_config['starting_checkpoint_path'],
+                         tb_logger_dir, test_config)
 
     # define loss functions and weights on classes
     weights_seg_tf = torch.FloatTensor(test_config['weights_seg'])
@@ -93,12 +98,9 @@ def test_model(test_config, path_config):
     weights_loss = test_config['weights_loss']
 
     # loss functions
-    criterion_seg_1 = \
-        nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_seg_2 = \
-        nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_damage = \
-        nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
+    criterion_seg_1 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
+    criterion_seg_2 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
+    criterion_damage = nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
 
     static_context = {
         'crit_seg_1': criterion_seg_1,
@@ -119,58 +121,32 @@ def test_model(test_config, path_config):
         'dataset': xBD_test
     }
 
-    # Objects for testing
+    # TEST STEP
     test = Phase(test_context, static_context)
 
-    # TEST STEP
+    #last epoch
+    epoch_context = {
+        'epoch': epoch,
+        'epochs': epoch,
+        'step_tr': None,
+        'model': model,
+        'optimizer': None,
+        'save_path': output_dir
+    }
 
     with torch.no_grad():
-        conf_mtrx_dmg_df_test, conf_mtrx_bld_df_test, _, \
-            conf_mtrx_df_dmg_bld_level_test = test.epoch_iteration(
-                model)
+        test_metrics, test_loss = test.run_epoch(epoch_context)
 
-    log.info(f'Compute actual metrics for model \
-             evaluation based on test set ...')
-
-    # damage level eval validation (pixelwise)
-    dmg_metrics, f1_harmonic_mean = test.dmg_metric.compute_eval_metrics(
-        epoch, conf_mtrx_dmg_df_test)
-    dmg_metrics.loc[len(dmg_metrics.index)] = {
-        'class': 'harmonic-mean-of-all', 'precision': '-', 'recall': '-',
-        'f1': f1_harmonic_mean, 'accuracy': '-'}
-
-    # bld detection eval validation (pixelwise)
-    bld_metrics, _ = test.bld_metric.compute_eval_metrics(
-        epoch, conf_mtrx_bld_df_test)
-
-    # damage level eval validation (building-level)
-    dmg_bld_metrics, f1_harmonic_mean = test.dmg_bld_metric.compute_eval_metrics(
-        epoch, conf_mtrx_df_dmg_bld_level_test)
-    dmg_bld_metrics.loc[len(dmg_bld_metrics.index)] = {
-        'class': 'harmonic-mean-of-all', 'precision': '-', 'recall': '-',
-        'f1': f1_harmonic_mean, 'accuracy': '-'}
-
-    # save confusion metrices
-    conf_mtrx_bld_df_test.to_csv(os.path.join(
-        evals_dir, 'confusion_mtrx_bld.csv'), index=False)
-    conf_mtrx_dmg_df_test.to_csv(os.path.join(
-        evals_dir, 'confusion_mtrx_dmg.csv'), index=False)
-    conf_mtrx_df_dmg_bld_level_test.to_csv(os.path.join(
-        evals_dir, 'confusion_mtrx_dmg_building_level.csv'), index=False)
+    log.info(f"test loss:{test_loss};")
 
     # save evalution metrics
-    bld_metrics.to_csv(os.path.join(
-        evals_dir, 'eval_results_bld.csv'), index=False)
-    dmg_metrics.to_csv(os.path.join(
-        evals_dir, 'eval_results_dmg.csv'), index=False)
-    dmg_bld_metrics.to_csv(os.path.join(
-        evals_dir, 'eval_results_dmg_building_level.csv'), index=False)
-
+    for key,met in test_metrics.items():
+        met.to_csv(os.path.join(evals_dir, f'{key}.csv'), index=False)
+    
     logger_test.flush()
     logger_test.close()
     log.info('Done')
-
-
+    
 if __name__ == "__main__":
     test_config = {
         'labels_dmg': [0, 1, 2, 3, 4],

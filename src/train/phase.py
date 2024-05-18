@@ -1,20 +1,20 @@
-import cv2
-import numpy as np
-from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
-from tqdm import tqdm
-from utils.metrics.train_metrics import Level, MetricComputer
-from utils.metrics.common import AverageMeter
-import torch
-import pandas as pd
-from datetime import datetime
 import os
 import sys
-from utils.common.logger import LoggerSingleton
-
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-log = LoggerSingleton()
+import cv2
+import numpy as np
+from tqdm import tqdm
+import torch
+from datetime import datetime
+from utils.common.logger import LoggerSingleton
+from utils.metrics.metric_manager import Level, MetricManager
+from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
+from models.siames.end_to_end_Siam_UNet import SiamUnet
+from utils.metrics.loss_manager import LossManager
+import pandas as pd
 
+log = LoggerSingleton()
 
 class Phase:
     """
@@ -24,17 +24,8 @@ class Phase:
     def __init__(self, phase_context, static_context):
         self.__init_phase_context__(**phase_context)
         self.__init_static_context__(**static_context)
-        self.dmg_metric = MetricComputer(Level.DMG,
-                                         static_context['labels_set_dmg'],
-                                         phase_context, static_context)
-        self.bld_metric = MetricComputer(Level.BLD,
-                                         static_context['labels_set_bld'],
-                                         phase_context, static_context)
-        self.dmg_bld_metric = MetricComputer(Level.DMG_BLD,
-                                             static_context['labels_set_bld'],
-                                             phase_context, static_context)
-        self.viz = RasterLabelVisualizer(
-            label_map=static_context['label_map_json'])
+        self.metric_manager = MetricManager(phase_context, static_context)
+        self.viz = RasterLabelVisualizer(label_map=static_context['label_map_json'])
 
     def __init_phase_context__(self, logger, phase, loader, dataset,
                                sample_ids, **kwargs):
@@ -47,61 +38,43 @@ class Phase:
     def __init_static_context__(self, device, crit_seg_1, crit_seg_2,
                                 crit_dmg, weights_loss, **kwargs):
         self.device = device
-        self.crit_seg_1 = crit_seg_1
-        self.crit_seg_2 = crit_seg_2
-        self.crit_dmg = crit_dmg
+        self.criterions = [crit_seg_1, crit_seg_2, crit_dmg]
         self.weights_loss = weights_loss
+
+    def save_pred(self,pred_dmg_mask: np.ndarray,batch_id, path: str) -> None:
+        """Saves current prediction image"""
+        log.info('save png image for damage level predictions: ' + path)
+        os.makedirs(path,exist_ok=True)
+        for i in range(pred_dmg_mask.shape[0]):
+            file = os.path.join(path,f"batch_{batch_id}_{i}_dmg_mask.png")
+            arr = np.array(pred_dmg_mask[i, :, :]).astype(np.uint8)
+            cv2.imwrite(file,arr)
+        log.info(f'saved image size: {pred_dmg_mask.size()}')
 
     def logging_wrapper(func):
         """Wrapper applied to the epoch_iteration method
           for printing messages"""
-
         def decorator(self, args, **kwargs):
             optimizer = args['optimizer']
             epochs = args['epochs']
             epoch = args['epoch']
 
             if (self.phase == "train"):
-                self.logger.add_scalar(
-                    'learning_rate', optimizer.param_groups[0]["lr"], epoch)
+                self.logger.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], epoch)
 
-            log.info(f'Model training for epoch {epoch}/{epochs}')
+            log.info(f'epoch: {epoch}/{epochs}')
             start_time = datetime.now()
 
             result = func(self, **args)
-
+            
             duration = datetime.now() - start_time
-            self.logger.add_scalar(
-                f'time_{self.phase}', duration.total_seconds(), epoch)
+            self.logger.add_scalar(f'time_{self.phase}', duration.total_seconds(), epoch)
 
             return result
         return decorator
 
-    def update_losses(self, scores, x_pre, y_seg, y_cls, losses,
-                      losses_seg_pre, losses_seg_post, losses_dmg):
-        """Computes loss function"""
-        loss_seg_pre = self.crit_seg_1(scores[0], y_seg)
-        loss_seg_post = self.crit_seg_2(scores[1], y_seg)
-        loss_dmg = self.crit_dmg(scores[2], y_cls)
-        loss = self.weights_loss[0] * loss_seg_pre + \
-            self.weights_loss[1] * loss_seg_post + \
-            self.weights_loss[2] * loss_dmg
-
-        losses.update(loss.item(), x_pre.size(0))
-        losses_seg_pre.update(loss_seg_pre.item(), x_pre.size(0))
-        losses_seg_post.update(loss_seg_post.item(), x_pre.size(0))
-        losses_dmg.update(loss_dmg.item(), x_pre.size(0))
-        return loss
-
-    def save_pred(pred_dmg_mask: np.ndarray, path: str) -> None:
-        """Saves current prediction image"""
-        log.info('save png image for damage level predictions: ' + path)
-        os.makedirs(path)
-        cv2.imwrite(pred_dmg_mask[0, :, :].astype(np.uint8), path)
-        log.info(f'saved image size: {pred_dmg_mask.size()}')
-
     @logging_wrapper
-    def epoch_iteration(self, model, optimizer, epoch, **kwargs):
+    def run_epoch(self, model : SiamUnet, optimizer, epoch, save_path, **kwargs):
         """Implements the loop for the current epoch and iterates over steps.
 
         The behavior of this method depends on the `self.phase` variable,
@@ -119,24 +92,13 @@ class Phase:
             tuple: A tuple containing the confusion matrices, average losses,
              and damage building confusion matrix.
         """
+        confusion_matrices = []
 
-        conf_mtrx_dmg_df = pd.DataFrame()
-        conf_mtrx_bld_df = pd.DataFrame()
-        conf_mtrx_dmg_bld_df = pd.DataFrame()
-
-        losses = AverageMeter()
-        losses_seg_pre = AverageMeter()
-        losses_seg_post = AverageMeter()
-        losses_dmg = AverageMeter()
-
-        losses_dict = {
-            'losses': losses,
-            'losses_seg_pre': losses_seg_pre,
-            'losses_seg_post': losses_seg_post,
-            'losses_dmg': losses_dmg
-        }
-
+        loss_manager = LossManager(self.weights_loss,self.criterions)
+        
         for batch_idx, data in enumerate(tqdm(self.loader)):
+            log.info(f"Step: {batch_idx}")
+            #STEP
             # move to device, e.g. GPU
             x_pre = data['pre_image'].to(device=self.device)
             x_post = data['post_image'].to(device=self.device)
@@ -146,85 +108,98 @@ class Phase:
             if (self.phase == "train"):
                 model.train()
                 optimizer.zero_grad()
-            elif (self.phase == "val" or self.phase == "test"):
+            else:
                 model.eval()
 
-            scores = model(x_pre, x_post)
+            logit_masks = model(x_pre, x_post)
 
-            loss = self.update_losses(
-                scores, x_pre, y_seg, y_cls, **losses_dict)
+            loss = loss_manager.compute_loss(logit_masks,x_pre,y_seg,y_cls)
 
             if (self.phase == "train"):
                 loss.backward()  # compute gradients
                 optimizer.step()
 
-            # compute predictions & confusion metrics
+            # Compute predictions
             softmax = torch.nn.Softmax(dim=1)
-            preds_seg_pre = torch.argmax(softmax(scores[0]), dim=1)
-            # preds_seg_post = torch.argmax(softmax(scores[1]), dim=1)
-            preds_cls = torch.argmax(softmax(scores[2]), dim=1)
-
-            # Confusion matrix for damage classification mask
-            curr_conf_mtrx_dmg_df = self.dmg_metric.compute_conf_mtrx(
-                y_pred_mask=preds_cls, y_dmg_mask=y_cls, y_bld_mask=y_seg,
-                epoch=epoch, batch_idx=batch_idx)
-
-            conf_mtrx_dmg_df = pd.concat(
-                [conf_mtrx_dmg_df, curr_conf_mtrx_dmg_df],
-                axis=0, ignore_index=True) \
-                if len(conf_mtrx_dmg_df) > 0 else curr_conf_mtrx_dmg_df
-
-            # Confusion matrix for building semantic segmentation mask
-            curr_conf_mtrx_bld_df = self.bld_metric.compute_conf_mtrx(
-                y_pred_mask=preds_seg_pre, y_dmg_mask=None, y_bld_mask=y_seg,
-                epoch=epoch, batch_idx=batch_idx)
-
-            conf_mtrx_bld_df = pd.concat(
-                [conf_mtrx_bld_df, curr_conf_mtrx_bld_df],
-                axis=0, ignore_index=True) \
-                if len(conf_mtrx_bld_df) > 0 else curr_conf_mtrx_bld_df
-
+            pred_masks = [torch.argmax(softmax(logit_mask), dim=1) for logit_mask in logit_masks]
+            
+            step_matrices = \
+                self.compute_confusion_matrices(y_seg, y_cls, pred_masks[0], pred_masks[2], batch_idx)
+            confusion_matrices.append(step_matrices)
+            
             if (self.phase == "test"):
-                self.save_pred(preds_cls,)
+                self.save_pred(pred_masks[2], batch_idx, save_path)
 
-            # Confusion matrix for dmg-class with building-level (object-level)
-                curr_conf_mtrx_dmg_bld_df = \
-                    self.dmg_bld_metric.compute_conf_mtrx(
-                        y_pred_mask=preds_cls, y_dmg_mask=y_cls,
-                        y_bld_mask=y_seg, epoch=epoch, batch_idx=batch_idx)
+        loss_manager.log_losses(self.logger, self.phase, epoch)
 
-                conf_mtrx_dmg_bld_df = \
-                    pd.concat([conf_mtrx_dmg_bld_df,
-                               curr_conf_mtrx_dmg_bld_df],
-                              axis=0, ignore_index=True) \
-                    if len(conf_mtrx_dmg_bld_df) > 0 \
-                    else curr_conf_mtrx_dmg_bld_df
-
-        self.logger.add_scalars(f'loss_{self.phase}', {
-            '_total': losses.avg,
-            '_seg_pre': losses_seg_pre.avg,
-            '_seg_post': losses_seg_post.avg,
-            '_dmg': losses_dmg.avg
-        }, epoch)
-
-        self.viz.prepare_for_vis(self.logger, self.phase, self.dataset,
-                                 self.sample_ids, model, epoch, self.device)
-
-        return conf_mtrx_dmg_df, conf_mtrx_bld_df, \
-            losses.avg, conf_mtrx_dmg_bld_df
-
-    def compute_metrics(self, conf_mtrx_dmg_df: pd.DataFrame,
-                        conf_mtrx_bld_df: pd.DataFrame, epoch_context: dict):
+        self.viz.prepare_for_vis(self.logger, self.phase, self.dataset, self.sample_ids, model,
+                                  epoch, self.device)
+        
+        log.info(f'Compute actual metrics for model evaluation based on {self.phase} set ...')
+        confusion_matrices_df = pd.DataFrame(confusion_matrices)
+        metrics = self.compute_epoch_metrics(epoch, confusion_matrices_df)
+        self.log_metrics(metrics)
+        return metrics, loss_manager.combined_losses.avg
+ 
+    def compute_confusion_matrices( self, y_seg: torch.Tensor, y_cls: torch.Tensor, 
+                                    pred_y_seg: torch.Tensor, pred_y_cls: torch.Tensor,
+                                    batch_idx: int, *kwargs ) -> dict:
         """
-            Computes metrics for damage and building classification for
-            current phase in current epoch.
+        Computes confusion matrices for damage and building classification at different levels.
+        
+        Args:
+            y_seg (torch.Tensor): Ground truth segmentation tensor.
+            y_cls (torch.Tensor): Ground truth classification tensor.
+            pred_y_seg (torch.Tensor): Predicted segmentation tensor.
+            pred_y_cls (torch.Tensor): Predicted classification tensor.
+            batch_idx (int): Index of the current batch.
+            *kwargs: Additional arguments.
+
+        Returns:
+            dict: Dictionary containing confusion matrices and batch identifier.
         """
-        curr_dmg_metrics, f1_harmonic_mean = \
-            self.dmg_metric.compute_metrics_for(epoch_context['epoch'],
-                                                conf_mtrx_dmg_df)
+        func = self.metric_manager.get_confusion_matrices_for
+        levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
+        matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
+                          "obj_dmg_matrices", "obj_bld_matrices"]
+        matrices = {}
+        for key, lvl in zip(matrices_keys, levels):
+            matrices[key] = func(lvl, y_seg, y_cls, pred_y_seg, pred_y_cls)
+            matrices[key].insert(0, "batch_id", batch_idx)
+        return matrices
 
-        curr_bld_metrics, _ = \
-            self.bld_metric.compute_metrics_for(epoch_context['epoch'],
-                                                conf_mtrx_bld_df)
+    def compute_epoch_metrics(self, epoch, confusion_matrices_df : pd.DataFrame):
+        """Computes metrics for damage and building classification 
+        for the current phase in the current epoch.
+        
+        Args:
+            confusion_matrices (dict): Dictionary containing confusion matrices. 
+            epoch (int): The current epoch number.
 
-        return curr_dmg_metrics, curr_bld_metrics, f1_harmonic_mean
+        Returns:
+            dict: Dictionary containing computed metrics for damage and building classification.
+        """
+        func = self.metric_manager.compute_metrics_for
+        metrics_keys = ["dmg_pixel_level", "bld_pixel_level",
+                         "dmg_object_level", "bld_object_level"]
+        levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
+        matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
+                          "obj_dmg_matrices", "obj_bld_matrices"]
+        metrics = {}
+        for key, lvl, mtrx in zip(metrics_keys,levels,matrices_keys):
+            metrics[key] = func(lvl,confusion_matrices_df[mtrx])
+            metrics[key].insert(0,"epoch",epoch)
+        return metrics 
+
+    def log_metrics(self, metrics: dict[pd.DataFrame]):
+        """Logs evaluation metrics using the provided logger."""
+        metric_df : pd.DataFrame
+        for key, metric_df in metrics.items():
+            msg = f"{self.phase}_{key}_harmonic_mean_f1:"
+            log.info(f"{msg} {metric_df['f1_harmonic_mean'][0]}")
+            self.logger.add_scalar(msg,metric_df['f1_harmonic_mean'][0])    
+            for index, row in metric_df.iterrows():
+                for metric in ["f1"]:
+                    msg = f"{int(row['epoch'])}_{self.phase}_{key}_class_{row['class']}_{metric}"
+                    self.logger.add_scalar(msg, row[metric])
+                    log.info(f"{msg} {row[metric]}")

@@ -1,3 +1,6 @@
+import enum
+
+
 class AverageMeter(object):
     """Computes and stores the average and current value
     https://github.com/pytorch/examples/blob/master/imagenet/main.py
@@ -22,3 +25,9 @@ class AverageMeter(object):
         self.sum += val 
         self.count += n
         self.avg = self.sum / self.count
+
+class Level(enum.Enum):
+    PX_BLD = 0
+    PX_DMG = 1
+    OBJ_BLD = 2
+    OBJ_DMG = 3
