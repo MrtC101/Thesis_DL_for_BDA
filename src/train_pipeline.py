@@ -16,17 +16,18 @@ os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-from utils.common.logger import LoggerSingleton
 
-from preprocessing.prepare_folder.clean_folder import delete_not_in
-from preprocessing.prepare_folder.create_label_masks import create_masks
-from preprocessing.prepare_folder.delete_extra import leave_only_n
-from preprocessing.raw.data_stdv_mean import create_data_dicts
-from preprocessing.raw.split_raw_dataset import split_dataset
-from preprocessing.sliced.make_smaller_tiles import slice_dataset
-from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
-from preprocessing.shards.split_shard_dataset import split_shard_dataset
+
 from preprocessing.shards.make_data_shards import create_shards
+from preprocessing.shards.split_shard_dataset import split_shard_dataset
+from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
+from preprocessing.sliced.make_smaller_tiles import slice_dataset
+from preprocessing.raw.split_raw_dataset import split_dataset
+from preprocessing.raw.data_stdv_mean import create_data_dicts
+from preprocessing.prepare_folder.delete_extra import leave_only_n
+from preprocessing.prepare_folder.create_label_masks import create_masks
+from preprocessing.prepare_folder.clean_folder import delete_not_in
+from utils.common.logger import LoggerSingleton
 from train.training import train_model
 from validate.validation import test_model
 
@@ -53,6 +54,7 @@ def preprocess():
     split_shard_json_path = split_shard_dataset(shards_path, xbd_path)
     return split_shard_json_path
 
+
 def train(split_shard_json_path):
     """Pipeline sequence for training the model."""
     train_config = {
@@ -78,6 +80,7 @@ def train(split_shard_json_path):
     }
     train_model(train_config, path_config)
 
+
 def test(split_shard_json_path):
     """Pipeline sequence for training the model."""
     train_config = {
@@ -99,7 +102,8 @@ def test(split_shard_json_path):
         'shard_splits_json': split_shard_json_path,
         'label_map_json': join(os.environ["DATA_PATH"], "constants",
                                "xBD_label_map.json"),
-        'starting_checkpoint_path': None
+        'starting_checkpoint_path': join(os.environ["OUT_PATH"], "train_UNet",
+                                         "checkpoints", "model_best.pth.tar")
     }
     test_model(train_config, path_config)
 
@@ -107,8 +111,10 @@ def test(split_shard_json_path):
 if __name__ == "__main__":
     # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     log = LoggerSingleton("Training Pipeline",
-                          folder_path=join(os.environ["OUT_PATH"], "console_logs"))
-    split_shard_json_path = preprocess()
-    #split_shard_json_path = join(os.environ["DATA_PATH"], "xBD", "shards")
-    train(split_shard_json_path)
+                          folder_path=join(os.environ["OUT_PATH"],
+                                            "console_logs"))
+    # split_shard_json_path = preprocess()
+    split_shard_json_path = join(os.environ["DATA_PATH"], "xBD",
+                                 "splits", "shard_splits.json")
+    #train(split_shard_json_path)
     test(split_shard_json_path)

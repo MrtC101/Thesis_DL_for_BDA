@@ -252,54 +252,61 @@ class SiamUnet(nn.Module):
         self.upconv1_c.bias.data.fill_(0.01)
         self.conv_c.bias.data.fill_(0.01)
 
-        self.conv4_c.apply(self.init_weights)
-        self.conv3_c.apply(self.init_weights)
-        self.conv2_c.apply(self.init_weights)
-        self.conv1_c.apply(self.init_weights)
+        self.conv4_c.apply(SiamUnet.init_weights)
+        self.conv3_c.apply(SiamUnet.init_weights)
+        self.conv2_c.apply(SiamUnet.init_weights)
+        self.conv1_c.apply(SiamUnet.init_weights)
 
     def init_weights(m):
         if type(m) == nn.Linear:
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
     
-    def resume_from_checkpoint(self,config):
+    def resume_from_checkpoint(self,checkpoint_path,tb_log_dir,config):
     
-        checkpoint = torch.load(config['starting_checkpoint_path'],
-                                 map_location=config['device'])
+        checkpoint = torch.load(checkpoint_path, map_location=config['device'])
         self.load_state_dict(checkpoint['state_dict'])
 
-        #don't load the optimizer settings so that a newly specified lr can take effect
+        # don't load the optimizer settings so that a newly
+        # specified lr can take effect
         if config["mode"] == 'dmg':
             self.print_network()
             self.freeze_model_param()
             self.print_network()
 
             # monitor model
-            logger_model = SummaryWriter(log_dir=config['logger_dir'])
+            logger_model = SummaryWriter(log_dir=tb_log_dir)
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')
-                logger_model.add_histogram(tag, value.data.cpu().numpy(), global_step=0)
+                logger_model.add_histogram(tag, value.data.cpu().numpy(),
+                                            global_step=0)
             
             self.reinitialize_Siamese()
             
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')
-                logger_model.add_histogram(tag, value.data.cpu().numpy(), global_step=1)
+                logger_model.add_histogram(tag, value.data.cpu().numpy(),
+                                            global_step=1)
 
             logger_model.flush()
             logger_model.close()
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()), lr=config['init_learning_rate'])
+            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad,
+                                                self.parameters()),
+                                            lr=config['init_learning_rate'])
         else:
-            optimizer = torch.optim.Adam(self.parameters(), lr=config['init_learning_rate'])
+            optimizer = torch.optim.Adam(self.parameters(),
+                                          lr=config['init_learning_rate'])
 
-        starting_epoch = checkpoint['epoch'] + 1  # we did not increment epoch before saving it, so can just start here
+        starting_epoch = checkpoint['epoch'] + 1  
+        # we did not increment epoch before saving it, so can just start here
         best_acc = checkpoint.get('best_f1', 0.0)
         return optimizer, starting_epoch, best_acc
 
     def resume_from_scratch(self,config):
-        optimizer = torch.optim.Adam(self.parameters(), lr=config['init_learning_rate'])
+        optimizer = torch.optim.Adam(self.parameters(),
+                                      lr=config['init_learning_rate'])
         starting_epoch = 1
-        best_acc = 0.0
+        best_acc = (0.0,0.0)
         return optimizer, starting_epoch, best_acc
 
     def save_checkpoint(self, state, is_best, checkpoint_dir='../checkpoints'):

@@ -37,7 +37,6 @@ log = LoggerSingleton()
 path = join(os.environ.get("DATA_PATH"), 'constants/xBD_label_map.json')
 LABEL_NAME_TO_NUM = read_json(path)['label_name_to_num']
 
-
 def get_shape(image_path: str) -> tuple:
     """Opens the image and retrieves its size."""
     image = imread(image_path)

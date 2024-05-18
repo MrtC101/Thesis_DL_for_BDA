@@ -12,12 +12,11 @@ TODO: we need the outer loop to iterate over tiles, and to draw confusion matric
 import os
 import sys
 
-from preprocessing.prepare_folder.create_label_masks import get_feature_info
-from utils.common.files import read_json
-
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
+from preprocessing.prepare_folder.create_label_masks import get_feature_info
+from utils.common.files import read_json
 from collections import defaultdict
 import cv2
 import rasterio.features
@@ -187,15 +186,15 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
     # 1. Detect the connected components by all non-background classes to determine the predicted
     # building blobs first (if we do this per class, a building with some pixels predicted to be
     # in another class will result in more buildings than connected components)
-    mask_pred = np.asarray(Image.open(path_pred_mask))
-    assert len(mask_pred.shape) == 2, 'mask should be 2D only.'
+    pred_dmg_mask = np.asarray(Image.open(path_pred_mask))
+    assert len(pred_dmg_mask.shape) == 2, 'mask should be 2D only.'
 
-    background_and_others_mask = np.where(mask_pred > 0, 1, 0).astype(np.int16)  # all non-background classes become 1
+    background_and_others_mask = np.where(pred_dmg_mask > 0, 1, 0).astype(np.int16)  # all non-background classes become 1
 
     # rasterio.features.shapes:
     # default is 4-connected for connectivity - see https://www.mathworks.com/help/images/pixel-connectivity.html
     # specify the `mask` parameter, otherwise the background will be returned as a shape
-    connected_components = rasterio.features.shapes(background_and_others_mask, mask=mask_pred > 0)
+    connected_components = rasterio.features.shapes(background_and_others_mask, mask=pred_dmg_mask > 0)
 
     polygons = []
     for component_geojson, pixel_val in connected_components:
@@ -211,7 +210,7 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
     for c in all_classes:
 
         # default is 4-connected for connectivity
-        shapes = rasterio.features.shapes(mask_pred, mask=mask_pred == c)
+        shapes = rasterio.features.shapes(pred_dmg_mask, mask=pred_dmg_mask == c)
 
         for shape_geojson, pixel_val in shapes:
             shape = shapely.geometry.shape(shape_geojson)
@@ -243,14 +242,11 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
         )
     return pred_polygons_and_class, label_polygons_and_class
 
-def get_label_and_pred_polygons_for_tile_mask_input(label_mask, path_pred_mask):
+def get_label_and_pred_polygons_for_tile_mask_input(pred_dmg_mask, true_dmg_mask):
     """
     For each tile, polygonize the prediction and label mask.
 
     Args:
-        label_mask: array that contains label mask
-        path_pred_mask: path to the PNG or TIFF mask predicted by the model, where each pixel is one
-            of the allowed classes.
 
     Returns:
         pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of the prediction,
@@ -258,15 +254,16 @@ def get_label_and_pred_polygons_for_tile_mask_input(label_mask, path_pred_mask):
         label_polygons_and_class: list of tuples of shapely Polygon representing the ground truth geometry,
             and the class
     """
+    for i in pred_dmg_mask.shape[0]:
+        pred_dmg_mask = np.array(pred_dmg_mask[i,:,:,:]).astype(np.uint8)
+        true_dmg_mask = np.array(true_dmg_mask[i,:,:,:]).astype(np.uint8)
     # polygonize the label mask
     # mask_label = np.asarray(Image.open(path_label_mask))
     label_polygons_and_class = []  # tuples of (shapely polygon, damage_class_num)
-    # print('label_mask')
-    # print(label_mask.shape)
     for c in all_classes:
 
         # default is 4-connected for connectivity
-        shapes = rasterio.features.shapes(label_mask, mask=label_mask == c)
+        shapes = rasterio.features.shapes(pred_dmg_mask, mask=pred_dmg_mask == c)
 
         for shape_geojson, pixel_val in shapes:
             shape = shapely.geometry.shape(shape_geojson)
@@ -279,19 +276,18 @@ def get_label_and_pred_polygons_for_tile_mask_input(label_mask, path_pred_mask):
     # 1. Detect the connected components by all non-background classes to determine the predicted
     # building blobs first (if we do this per class, a building with some pixels predicted to be
     # in another class will result in more buildings than connected components)
-    mask_pred = np.asarray(Image.open(path_pred_mask))
-    # mask_pred = cv2.medianBlur(mask_pred, 17)
+    # pred_dmg_mask = np.asarray(Image.open(path_pred_mask))
+    # pred_dmg_mask = cv2.medianBlur(pred_dmg_mask, 17)
 
-    # print('mask_pred')
-    # print(mask_pred.shape)
-    assert len(mask_pred.shape) == 2, 'mask should be 2D only.'
+    # print('pred_dmg_mask')
+    # print(pred_dmg_mask.shape)
 
-    background_and_others_mask = np.where(mask_pred > 0, 1, 0).astype(np.int16)  # all non-background classes become 1
+    background_and_others_mask = np.where(pred_dmg_mask > 0, 1, 0).astype(np.int16)  # all non-background classes become 1
 
     # rasterio.features.shapes:
     # default is 4-connected for connectivity - see https://www.mathworks.com/help/images/pixel-connectivity.html
     # specify the `mask` parameter, otherwise the background will be returned as a shape
-    connected_components = rasterio.features.shapes(background_and_others_mask, mask=mask_pred > 0)
+    connected_components = rasterio.features.shapes(background_and_others_mask, mask=pred_dmg_mask > 0)
 
     polygons = []
     for component_geojson, pixel_val in connected_components:
@@ -307,7 +303,7 @@ def get_label_and_pred_polygons_for_tile_mask_input(label_mask, path_pred_mask):
     for c in all_classes:
 
         # default is 4-connected for connectivity
-        shapes = rasterio.features.shapes(mask_pred, mask=mask_pred == c)
+        shapes = rasterio.features.shapes(pred_dmg_mask, mask=pred_dmg_mask == c)
 
         for shape_geojson, pixel_val in shapes:
             shape = shapely.geometry.shape(shape_geojson)
