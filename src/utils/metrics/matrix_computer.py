@@ -16,6 +16,7 @@ class MatrixComputer:
 
     @staticmethod
     def conf_mtrx_for_px_level(level, labels_set, pred_bld_mask, pred_dmg_mask, y_bld_mask, y_dmg_mask):
+        """Confusion pixel level metrics for masks"""
         conf_mtrx_list = []
         for cls in labels_set:
             if level == Level.PX_BLD:

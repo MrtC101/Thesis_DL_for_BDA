@@ -63,9 +63,24 @@ def train_model(train_config: dict, path_config: dict) -> None:
     """Trains the model using the specified configurations.
 
     Args:
-        train_config (dict): Configuration parameters for training.
-        path_config (dict): Configuration parameters for file paths.
-
+        - test_config (dict): Configuration parameters for testing, including:
+            - 'labels_dmg': List of damage class labels.
+            - 'labels_bld': List of building class labels.
+            - 'weights_seg': List of weights for segmentation classes.
+            - 'weights_damage': List of weights for damage classes.
+            - 'weights_loss': List of weights for different loss components.
+            - 'mode': Mode of the model ('dmg' or 'bld').
+            - 'init_learning_rate': Initial learning rate.
+            - 'device': Device to use ('cpu' or 'cuda').
+            - 'epochs': Number of epochs.
+            - 'batch_size': Batch size for data loading.
+            - 'num_chips_to_viz': Number of chips to visualize.
+        - path_config (dict): Paths required for testing, including:
+            - 'exp_name': Name of the experiment.
+            - 'out_dir': Output directory for results.
+            - 'shard_splits_json': Path to the JSON file with shard splits.
+            - 'label_map_json': Path to the JSON file with label mappings.
+            - 'starting_checkpoint_path': Path to the checkpoint to resume from.
     Returns:
         None
 
@@ -202,6 +217,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
     log.info('Done')
 
 def save_metrics(metrics,metric_dir):
+    """Save metrics in csv"""
     # save evalution metrics
     for epoch in range(len(metrics)):
         for key,met in metrics[epoch].items():
@@ -210,6 +226,9 @@ def save_metrics(metrics,metric_dir):
             met.to_csv(os.path.join(metric_dir, f'{key}.csv'),mode=mode,header=header, index=False)
 
 def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer,**kwargs):
+    """Compares f1_harmonic_mean from pixel level damage metrics and 
+    f1_harmonic_mean from object level damage classification metrics and 
+    saves the checkpoint as best model if needed"""
     # saves the model with the highest f1_score for damage classification
     # compute average accuracy across all classes to select the best model
     pixel_h_f1 = metrics_df["dmg_pixel_level"]["f1_harmonic_mean"].mean()
