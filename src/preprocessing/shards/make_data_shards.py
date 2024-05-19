@@ -113,6 +113,7 @@ def shard_patches(dataset: PatchDataset, split_name: str,
             image_patches["class-mask"].append(dmg_mask)
 
         # save n shards
+        log.info(f"SHARD {i}/{num_shards}")
         ShardDataset.save_shard(image_patches, out_path, log, split_name, i)
 
         # freeing memory
@@ -156,7 +157,7 @@ def create_shards(sliced_splits_json: str, mean_stddev_json: str,
         idx_path = os.path.join(output_path, f"{split_name}_shard_idxs.json")
         dump_json(idx_path, {"shard_idxs": shard_idxs})
 
-        log.info(f'Done creating shards for {split_name}')
+        log.info(f'Done creating shards for {split_name}\n')
 
     # could be parallelized
     iterate_and_shard("train")

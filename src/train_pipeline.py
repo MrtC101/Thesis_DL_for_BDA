@@ -31,32 +31,47 @@ from utils.common.logger import LoggerSingleton
 from train.training import train_model
 from validate.validation import test_model
 
+def log_Title(title : str):
+    log.info("="*50)
+    log.info(f"{title.upper()}...")
+    log.info("="*50)
+
 def preprocess():
     """Pipeline sequence for data preprocessing."""
     xbd_path = join(os.environ["DATA_PATH"], "xBD")
     raw_path = join(xbd_path, "raw")
     # folder cleaning
+    log_Title("deleting disasters that are not of interest")
     delete_not_in(raw_path)
+    log_Title("creating target masks")
     create_masks(raw_path, 1)
+    log_Title("deleting extra disasters")
     leave_only_n(raw_path, 40)
     # Raw data
+    log_Title("split disasters")
     split_json_path = split_dataset(raw_path, xbd_path)
+    log_Title("creating data statistics")
     data_dicts_path = create_data_dicts(split_json_path, xbd_path)
     # Sliced
+    log_Title("creating data patches")
     sliced_path = join(xbd_path, "sliced")
     slice_dataset(split_json_path, sliced_path)
+    log_Title("split patches")
     split_sliced_json_path = split_sliced_dataset(
         sliced_path, split_json_path, xbd_path)
     # Sharded
+    log_Title("creating data shards")
     mean_stddev_json = join(data_dicts_path, "all_tiles_mean_stddev.json")
     shards_path = join(xbd_path, "shards")
     create_shards(split_sliced_json_path, mean_stddev_json, shards_path, 4)
+    log_Title("split shards")
     split_shard_json_path = split_shard_dataset(shards_path, xbd_path)
     return split_shard_json_path
 
 
 def train(split_shard_json_path):
     """Pipeline sequence for training the model."""
+    log_Title("training and validating  model")
     train_config = {
         'labels_dmg': [0, 1, 2, 3, 4],
         'labels_bld': [0, 1],
@@ -83,6 +98,8 @@ def train(split_shard_json_path):
 
 def test(split_shard_json_path):
     """Pipeline sequence for training the model."""
+    log_Title("testing model")
+
     train_config = {
         'labels_dmg': [0, 1, 2, 3, 4],
         'labels_bld': [0, 1],
@@ -111,10 +128,9 @@ def test(split_shard_json_path):
 if __name__ == "__main__":
     # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     log = LoggerSingleton("Training Pipeline",
-                          folder_path=join(os.environ["OUT_PATH"],
-                                            "console_logs"))
-    # split_shard_json_path = preprocess()
+                          folder_path=join(os.environ["OUT_PATH"],"console_logs"))
+    #split_shard_json_path = preprocess()
     split_shard_json_path = join(os.environ["DATA_PATH"], "xBD",
                                  "splits", "shard_splits.json")
-    #train(split_shard_json_path)
-    test(split_shard_json_path)
+    train(split_shard_json_path)
+    #test(split_shard_json_path)

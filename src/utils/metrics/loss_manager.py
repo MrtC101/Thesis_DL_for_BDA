@@ -33,9 +33,9 @@ class LossManager():
 
     def log_losses(self,tb_log,phase,epoch):
         obj = {
-            '_total': self.combined_losses.avg,
-            '_seg_pre': self.losses_seg_pre.avg,
-            '_seg_post': self.losses_seg_post.avg,
-            '_dmg': self.losses_dmg.avg
+            'total': self.combined_losses.avg,
+            'seg_pre': self.losses_seg_pre.avg,
+            'seg_post': self.losses_seg_post.avg,
+            'dmg': self.losses_dmg.avg
         } 
         tb_log.add_scalars(f'loss_{phase}', obj, epoch)

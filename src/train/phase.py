@@ -60,7 +60,8 @@ class Phase:
             epoch = args['epoch']
 
             if (self.phase == "train"):
-                self.logger.add_scalar('learning_rate', optimizer.param_groups[0]["lr"], epoch)
+                self.logger.add_scalars(f'{self.phase}',{"lr": optimizer.param_groups[0]["lr"]},
+                                         epoch)
 
             log.info(f'epoch: {epoch}/{epochs}')
             start_time = datetime.now()
@@ -194,12 +195,10 @@ class Phase:
     def log_metrics(self, metrics: dict[pd.DataFrame]):
         """Logs evaluation metrics using the provided logger."""
         metric_df : pd.DataFrame
+        log.info(f"--{self.phase.upper()} METRICS--")        
         for key, metric_df in metrics.items():
-            msg = f"{self.phase}_{key}_harmonic_mean_f1:"
-            log.info(f"{msg} {metric_df['f1_harmonic_mean'][0]}")
-            self.logger.add_scalar(msg,metric_df['f1_harmonic_mean'][0])    
+            log.info(f"-{key.upper()} METRICS-")
             for index, row in metric_df.iterrows():
-                for metric in ["f1"]:
-                    msg = f"{int(row['epoch'])}_{self.phase}_{key}_class_{row['class']}_{metric}"
-                    self.logger.add_scalar(msg, row[metric])
-                    log.info(f"{msg} {row[metric]}")
+                msg = f"{self.phase}_{key}_metrics"
+                self.logger.add_scalars(msg, dict(row), row["epoch"])
+                log.info(f"{row}")
