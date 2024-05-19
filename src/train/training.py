@@ -53,7 +53,10 @@ def output_directories(out_dir, exp_name):
     config_dir = os.path.join(exp_dir, 'configs')
     os.makedirs(config_dir, exist_ok=True)
 
-    return checkpoint_dir, tb_logger_dir, config_dir
+    metric_dir = os.path.join(exp_dir,'training_metrics')
+    os.makedirs(metric_dir,exist_ok=True)
+
+    return checkpoint_dir, tb_logger_dir, config_dir, metric_dir
 
 
 def train_model(train_config: dict, path_config: dict) -> None:
@@ -73,7 +76,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
     log.name = "Training Model"
 
     # setup output directories
-    checkpoint_dir, tb_logger_dir, config_dir = \
+    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = \
         output_directories(path_config['out_dir'], path_config['exp_name'])
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
@@ -167,10 +170,10 @@ def train_model(train_config: dict, path_config: dict) -> None:
     train_metrics =[]
     val_metrics = []
 
-    for epoch in trange(epoch, epochs):
+    for ep in trange(epoch, epochs+1):
         # epochs
         epoch_context = {
-            'epoch': epoch,
+            'epoch': ep,
             'epochs': epochs,
             'step': step,
             'model': model,
@@ -188,12 +191,23 @@ def train_model(train_config: dict, path_config: dict) -> None:
         log.info(f"epoch {epoch}/{epochs}: train loss:{tr_loss}; val loss:{val_loss};")
         #CHECKPOINT
         best_acc = save_if_best(val_epoch_metrics, best_acc, checkpoint_dir, **epoch_context)
-        
+    
+    save_metrics(train_metrics,metric_dir)
+    save_metrics(val_metrics,metric_dir)
+    
     logger_train.flush()
     logger_train.close()
     logger_val.flush()
     logger_val.close()
     log.info('Done')
+
+def save_metrics(metrics,metric_dir):
+    # save evalution metrics
+    for epoch in range(len(metrics)):
+        for key,met in metrics[epoch].items():
+            mode = "w" if not epoch > 0 else "a"
+            header = not epoch > 0
+            met.to_csv(os.path.join(metric_dir, f'{key}.csv'),mode=mode,header=header, index=False)
 
 def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer,**kwargs):
     # saves the model with the highest f1_score for damage classification

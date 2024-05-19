@@ -43,6 +43,7 @@ class LoggerSingleton:
 
     def new_tqdm_handler(cls, folder_path):
         file_name = cls._instance.name.replace(" ", "_").strip("")
+        os.makedirs(folder_path,exist_ok=True)
         file = os.path.join(folder_path, f"{file_name}.txt")
         tqdm_handler = TqdmLoggingHandler(filename=file, mode='w')
         tqdm_handler.setLevel(cls._level)
