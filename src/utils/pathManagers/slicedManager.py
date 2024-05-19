@@ -25,7 +25,19 @@ class SlicedPathManager:
 
     def load_paths(self, sliced_path: str, split_json_path: str) -> dict:
         """
-            Creates a DisasterDict that stores each file path
+            Creates a DisasterDict that stores each file path.
+
+            This function loads file paths from a given directory structure and a JSON file. 
+            It verifies the existence of the paths, reads the JSON file to get the splits, 
+            and then organizes the file paths into a nested dictionary.
+
+            Args:
+                sliced_path (str): Path to the directory containing the sliced data.
+                split_json_path (str): Path to the JSON file that contains the data splits.
+
+            Returns:
+                dict: A nested dictionary (DisasterDict) where each key represents a subset 
+                    (train, val, test) and contains the file paths organized by patch and file type.
         """
         is_dir(sliced_path)
         is_file(split_json_path)

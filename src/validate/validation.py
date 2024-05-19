@@ -17,6 +17,7 @@ import torch
 
 
 def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
+    """Choose how to load model parameters"""
     if checkpoint_path and os.path.isfile(checkpoint_path):
         log.info('Loading checkpoint from {}'.format(checkpoint_path))
         _, last_epoch, _ = model.resume_from_checkpoint(checkpoint_path,
@@ -30,6 +31,7 @@ def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
 
 
 def output_directories(out_dir, exp_name):
+    """Creates out output folders"""
     # set up directories (TrainPathManager?)
     is_dir(out_dir)
     exp_dir = os.path.join(out_dir, exp_name)
@@ -53,6 +55,27 @@ def output_directories(out_dir, exp_name):
     return c_logger_dir, tb_logger_dir, evals_dir, output_dir, config_dir
 
 def test_model(test_config, path_config):
+    """Test the model using the provided configuration and paths.
+    Args:
+        - test_config (dict): Configuration parameters for testing, including:
+            - 'labels_dmg': List of damage class labels.
+            - 'labels_bld': List of building class labels.
+            - 'weights_seg': List of weights for segmentation classes.
+            - 'weights_damage': List of weights for damage classes.
+            - 'weights_loss': List of weights for different loss components.
+            - 'mode': Mode of the model ('dmg' or 'bld').
+            - 'init_learning_rate': Initial learning rate.
+            - 'device': Device to use ('cpu' or 'cuda').
+            - 'epochs': Number of epochs.
+            - 'batch_size': Batch size for data loading.
+            - 'num_chips_to_viz': Number of chips to visualize.
+        - path_config (dict): Paths required for testing, including:
+            - 'exp_name': Name of the experiment.
+            - 'out_dir': Output directory for results.
+            - 'shard_splits_json': Path to the JSON file with shard splits.
+            - 'label_map_json': Path to the JSON file with label mappings.
+            - 'starting_checkpoint_path': Path to the checkpoint to resume from.
+    """
     # setup output directories
     c_log_dir, tb_logger_dir, evals_dir, output_dir, config_dir = output_directories(
         path_config['out_dir'], path_config['exp_name'])
