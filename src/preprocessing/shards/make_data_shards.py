@@ -88,6 +88,8 @@ def shard_patches(dataset: PatchDataset, split_name: str,
     shard_idxs = [((i - 1) * pxs, ((i) * pxs)) for i in range(1, num_shards+1)]
     for i, tpl in tqdm(enumerate(shard_idxs), total=num_shards):
         begin_idx, end_idx = tpl
+        if(i == num_shards-1):
+            end_idx = num_patches
         # gets data
         image_patches = defaultdict(lambda: [])
         for idx in range(begin_idx, end_idx):
