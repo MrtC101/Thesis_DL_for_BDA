@@ -19,6 +19,7 @@
 #################################################################################
 
 import os
+import shutil
 import sys
 import argparse
 import numpy as np
@@ -205,8 +206,10 @@ def create_masks(raw_path: str, border_width: int) -> None:
         images_dir = join(subset_path, 'images')
         labels_dir = join(subset_path, 'labels')
         is_dir(subset_path)
-        is_dir(images_dir)
-        is_dir(labels_dir)
+        if(not os.path.exists(images_dir) or not os.path.exists(labels_dir)):
+            log.info(f"Skiping folder {subset_path}, there is no folder 'images' or 'labels'.")
+            shutil.move(subset_path,join(raw_path,"..",subset))
+            continue
 
         targets_dir = join(subset_path, 'targets')
         os.makedirs(targets_dir, exist_ok=True)

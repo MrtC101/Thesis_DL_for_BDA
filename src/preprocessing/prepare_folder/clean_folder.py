@@ -42,18 +42,19 @@ def delete_not_in(data_path: str) -> None:
     """
 
     log.name = "Clean Folder"
-    DISASTERS_OF_INTEREST = ('mexico-earthquake_', 'palu-tsunami_',
-                             'sunda-tsunami_')
+    DISASTERS_OF_INTEREST = ('mexico-earthquake_', 'palu-tsunami_', 'sunda-tsunami_')
     is_dir(data_path)
     for subset in tqdm(os.listdir(data_path)):
         subset_path = join(data_path, subset)
         log.info(f"Cleaning {subset_path}/ folder.")
         for folder in os.listdir(subset_path):
             folder_path = join(subset_path, folder)
-            for file in os.listdir(folder_path):
-                if not file.startswith(DISASTERS_OF_INTEREST):
-                    os.remove(join(folder_path, file))
-
+            if(not os.path.isfile(folder_path)):
+                for file in os.listdir(folder_path):
+                    if not file.startswith(DISASTERS_OF_INTEREST):
+                        os.remove(join(folder_path, file))
+            else:
+                continue
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
