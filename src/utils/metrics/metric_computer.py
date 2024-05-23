@@ -6,12 +6,6 @@ from utils.metrics.common import Level
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from preprocessing.prepare_folder.create_label_masks import get_feature_info
-from utils.common.files import read_json
-from collections import defaultdict
-from shapely.geometry import mapping, Polygon
-from PIL import Image
-
 class MetricComputer:
     """Class for computing confusion matrices and evaluation metrics for
       classification tasks.
@@ -34,7 +28,7 @@ class MetricComputer:
         self.phase = phase_context['phase']
 
     # Compute Metrics
-    def compute_metrics_for(self, level, conf_mtrx_list : pd.Series):
+    def compute_metrics(self, conf_mtrx_list : pd.Series):
         conf_matrices_df = pd.concat(list(conf_mtrx_list),axis=0,ignore_index=True)
         class_metrics = self.compute_eval_metrics(conf_matrices_df)
         return class_metrics
@@ -57,17 +51,23 @@ class MetricComputer:
             tn = conf_mtrx_df.loc[class_idx, 'true_neg'].sum()
             tot = conf_mtrx_df.loc[class_idx, 'total'].sum()
 
-            precision = tp / (tp + fp) if (tp > 0 and fp > 0) else 0
-            recall = tp / (tp + fn) if (tp > 0 and fn > 0) else 0
+            precision = tp / (tp + fp) if (tp > 0 or fp > 0) else 0
+            
+            recall = tp / (tp + fn) if (tp > 0 or fn > 0) else 0
+            
             f1 = 2 * (precision * recall) / (precision + recall) \
-                if (precision > 0 and recall > 0) else 0
+                if (precision > 0 or recall > 0) else 0
+            
             accuracy = (tp + tn) / (tot) if(tot > 0) else 0
-            eval_results.append({'class': cls, 'precision': precision, 'recall': recall,
-                                 'f1': f1, 'accuracy': accuracy})
-            f1_harmonic_mean += 1.0 / (f1 + 1e-10)
+            
+            eval_results.append({'class': cls, 'precision': precision,
+                                 'recall': recall, 'f1': f1,
+                                 'accuracy': accuracy})
+            #F1_harmonico
+            f1_harmonic_mean += 1.0 / (f1) if f1 > 0.0 else 0.0
 
-        f1_harmonic_mean = len(self.labels_set) / f1_harmonic_mean
+        f1_harmonic_mean = len(self.labels_set) / f1_harmonic_mean if f1_harmonic_mean > 0.0 else 0.0
+        
         metrics = pd.DataFrame(eval_results)
         metrics.insert(0,"f1_harmonic_mean",f1_harmonic_mean)
         return metrics
-    

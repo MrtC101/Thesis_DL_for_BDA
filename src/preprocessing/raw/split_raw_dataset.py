@@ -48,9 +48,15 @@ def split_dataset(raw_path: str, out_path: str) -> str:
         tiles_ids = list(tiles_dict.keys())
         shuffle(tiles_ids)
 
-        # works fine if len(tiles_ids) >= 10
-        train_top = math.ceil(0.8 * len(tiles_ids))
-        val_top = train_top + math.floor(0.1 * len(tiles_ids))
+        if(len(tiles_ids) < 3):
+            raise Exception(f"{disaster_name} disasters are less than 3.")
+        elif(len(tiles_ids) < 10):
+            train_top = len(tiles_ids) -2
+            val_top = len(tiles_ids) -1
+        else:
+            # works fine if len(tiles_ids) >= 10 for each disaster
+            train_top = math.ceil(0.8 * len(tiles_ids))
+            val_top = train_top + math.floor(0.1 * len(tiles_ids))
 
         ids = {
             "train": sorted(tiles_ids[0:train_top]),
