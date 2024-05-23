@@ -17,7 +17,6 @@ os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-
 from preprocessing.shards.make_data_shards import create_shards
 from preprocessing.shards.split_shard_dataset import split_shard_dataset
 from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
@@ -46,7 +45,7 @@ def preprocess():
     log_Title("creating target masks")
     create_masks(raw_path, 1)
     log_Title("deleting extra disasters")
-    leave_only_n(raw_path, 40)
+    leave_only_n(raw_path, 20)
     # Raw data
     log_Title("split disasters")
     split_json_path = split_dataset(raw_path, xbd_path)
@@ -63,7 +62,7 @@ def preprocess():
     log_Title("creating data shards")
     mean_stddev_json = join(data_dicts_path, "all_tiles_mean_stddev.json")
     shards_path = join(xbd_path, "shards")
-    create_shards(split_sliced_json_path, mean_stddev_json, shards_path, 4)
+    create_shards(split_sliced_json_path, mean_stddev_json, shards_path, 1)
     log_Title("split shards")
     split_shard_json_path = split_shard_dataset(shards_path, xbd_path)
     return split_shard_json_path
@@ -129,8 +128,8 @@ if __name__ == "__main__":
     # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     log = LoggerSingleton("Training Pipeline",
                           folder_path=join(os.environ["OUT_PATH"],"console_logs"))
-    split_shard_json_path = preprocess()
-    #split_shard_json_path = join(os.environ["DATA_PATH"], "xBD",
-    #                             "splits", "shard_splits.json")
+    #split_shard_json_path = preprocess()
+    split_shard_json_path = join(os.environ["DATA_PATH"], "xBD",
+                                 "splits", "shard_splits.json")
     train(split_shard_json_path)
     #test(split_shard_json_path)

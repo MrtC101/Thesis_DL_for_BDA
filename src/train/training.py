@@ -203,7 +203,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
             val_epoch_metrics, val_loss = validation.run_epoch(epoch_context)
         scheduler.step(val_loss)  # decay Learning Rate
         val_metrics.append(val_epoch_metrics)
-        log.info(f"epoch {epoch}/{epochs}: train loss:{tr_loss}; val loss:{val_loss};")
+        log.info(f"epoch {epoch}/{epochs}: train loss:{tr_loss:3f}; val loss:{val_loss:3f};")
         #CHECKPOINT
         best_acc = save_if_best(val_epoch_metrics, best_acc, checkpoint_dir, **epoch_context)
     
