@@ -25,7 +25,9 @@ class ShardDataset(Dataset):
         self.refer_to_shard()
 
     def __len__(self):
-        return self.shard_size
+        size = len(self.paths["idx"])
+        start, end = self.paths["idx"][size-1]
+        return end
 
     def refer_to_shard(self):
         """
@@ -45,22 +47,22 @@ class ShardDataset(Dataset):
         }
 
     def get_shard(self, i):
-        req_shard = 0
-        j = 0
+        new_idx = i
         size = 0
+        req_shard = 0
         for shard_i, segment in enumerate(self.paths["idx"]):
             start, end = segment
             if (start <= i and i < end):
                 req_shard = shard_i
-                j -= start
+                new_idx -= start
                 size = end-start
                 break
         req_shard = str(req_shard).zfill(3)
         if (req_shard != self.shard_i):
             self.shard_i = req_shard
             self.shard_size = size
-            self.refer_to_shard(req_shard)
-        return self.shard, j
+            self.refer_to_shard()
+        return self.shard, new_idx
 
     def __getitem__(self, i):
 

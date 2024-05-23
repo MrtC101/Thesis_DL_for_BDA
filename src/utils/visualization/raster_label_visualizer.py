@@ -2,6 +2,10 @@
 # Licensed under the MIT License.
 
 from PIL import Image, ImageColor
+import torch.utils
+import torch.utils.data
+import torch.utils.tensorboard
+import torch.utils.tensorboard.summary
 from torchvision.transforms import transforms
 import numpy as np
 import matplotlib.pyplot as plt
@@ -198,12 +202,12 @@ class RasterLabelVisualizer(object):
         im = Image.open(buf)
         return im, buf
 
-    def prepare_for_vis(self, logger, phase, dataset, sample_ids, model,
+    def tb_log_images(self, tb_log: torch.utils.tensorboard.SummaryWriter , phase, dataset, sample_ids, model,
                         epoch, device):
         """This method creates logging image files for tensorboard visualization"""
-        for item in sample_ids:
-            data = dataset[item]
-
+        
+        for index in sample_ids:
+            data = dataset[index]
             c, h, w = data['pre_image'].size()
             pre = data['pre_image'].reshape(1, c, h, w)
             post = data['post_image'].reshape(1, c, h, w)
@@ -211,29 +215,29 @@ class RasterLabelVisualizer(object):
             scores = model(pre.to(device=device), post.to(device=device))
 
             if (epoch == 1):
+                # Log ground truth images onece
                 gt = {}
-                gt['pre_img'] = data["pre_image_orig"]
-                gt['post_img'] = data["post_image_orig"]
+                gt['pre_img'] = data["pre_image"]
+                gt['post_img'] = data["post_image"]
                 gt['bld_mask'] = data["building_mask"].reshape(1, h, w)
                 true_dmg_mask = data["damage_mask"]
-                im, _ = self.show_label_raster(
-                    np.array(true_dmg_mask), size=(5, 5))
-                gt['dmg_mask'] = transforms.ToTensor()(
-                    transforms.ToPILImage()(np.array(im)).convert("RGB"))
+                im, _ = self.show_label_raster(np.array(true_dmg_mask), size=(5, 5))
+                gt['dmg_mask'] = \
+                    transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
                 for key, img in gt.items():
-                    tag = f'{"gt"}_{key}_{phase}_id_{item}'
-                    logger.add_image(tag, img, epoch, dataformats='CHW')
+                    tag = f"{phase}/images/predicted_{key}_{index}"
+                    tb_log.add_image(tag, img, epoch-1, dataformats='CHW')
 
             tp = {}
             # compute predictions & confusion metrics
             softmax = torch.nn.Softmax(dim=1)
-            tp['pred_seg_pre'] = torch.argmax(softmax(scores[0]), dim=1)
-            tp['pred_seg_post'] = torch.argmax(softmax(scores[1]), dim=1)
+            tp['bld_mask'] = torch.argmax(softmax(scores[0]), dim=1)
+            #tp['post_img'] = torch.argmax(softmax(scores[1]), dim=1)
             preds_cls = torch.argmax(softmax(scores[2]), dim=1)
             im, _ = self.show_label_raster(
                 preds_cls.cpu().numpy(), size=(5, 5))
-            tp['pred_dmg_cls'] = transforms.ToTensor()(
-                transforms.ToPILImage()(np.array(im)).convert("RGB"))
+            tp['dmg_mask'] = \
+                transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
             for key, img in tp.items():
-                tag = f'{"tp"}_{key}_{phase}_id_{item}'
-                logger.add_image(tag, img, epoch, dataformats='CHW')
+                tag = f"{phase}/images/predicted_{key}_{index}"
+                tb_log.add_image(tag, img, epoch, dataformats='CHW')

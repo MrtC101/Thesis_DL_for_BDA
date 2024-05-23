@@ -38,4 +38,4 @@ class LossManager():
             'seg_post': self.losses_seg_post.avg,
             'dmg': self.losses_dmg.avg
         } 
-        tb_log.add_scalars(f'loss_{phase}', obj, epoch)
+        tb_log.add_scalars(f'{phase}/loss', obj, epoch)
