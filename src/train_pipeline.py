@@ -37,8 +37,8 @@ pre_config = {
 }
 
 model_config = {
-    'labels_dmg': [0, 1, 2, 3, 4],
-    'labels_bld': [0, 1],
+    'labels_dmg': [1, 2, 3, 4],
+    'labels_bld': [1],
     'weights_seg': [1, 15],
     'weights_damage': [1, 35, 70, 150, 120],
     'weights_loss': [0, 0, 1],
@@ -46,7 +46,7 @@ model_config = {
     'init_learning_rate': 0.0005,  # dmg: 0.005, #UNet: 0.01,
     'device': 'cpu',
     'epochs': 1,  # 1500,
-    'batch_size': 32,
+    'batch_size': 120,
     'num_chips_to_viz': 1,
     'torch_threads':1,
     'torch_op_threads':1,
