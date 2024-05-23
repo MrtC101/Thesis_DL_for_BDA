@@ -125,8 +125,8 @@ class Phase:
             softmax = torch.nn.Softmax(dim=1)
             pred_masks = [torch.argmax(softmax(logit_mask), dim=1) for logit_mask in logit_masks]
             
-            step_matrices = \
-                self.compute_confusion_matrices(y_seg, y_cls, pred_masks[0], pred_masks[2], batch_idx)
+            step_matrices = self.metric_manager.\
+                compute_confusion_matrices(y_seg, y_cls, pred_masks[0], pred_masks[2], batch_idx)
             confusion_matrices.append(step_matrices)
             
             if (self.phase == "test"):
@@ -134,62 +134,10 @@ class Phase:
 
         loss_manager.log_losses(self.logger, self.phase, epoch)
 
-        self.viz.tb_log_images(self.logger, self.phase, self.dataset, self.sample_ids, model, epoch, self.device)
+        self.viz.tb_log_images(self.logger, self.phase, self.dataset, self.sample_ids,\
+                                model, epoch, self.device)
         
         confusion_matrices_df = pd.DataFrame(confusion_matrices)
-        metrics = self.compute_epoch_metrics(epoch, confusion_matrices_df)
-
+        metrics = self.metric_manager.\
+            compute_epoch_metrics(self.phase, self.logger, epoch, confusion_matrices_df)
         return metrics, loss_manager.combined_losses.avg
- 
-    def compute_confusion_matrices( self, y_seg: torch.Tensor, y_cls: torch.Tensor, 
-                                    pred_y_seg: torch.Tensor, pred_y_cls: torch.Tensor,
-                                    batch_idx: int, *kwargs ) -> dict:
-        """
-        Computes confusion matrices for damage and building classification at different levels.
-        
-        Args:
-            y_seg (torch.Tensor): Ground truth segmentation tensor.
-            y_cls (torch.Tensor): Ground truth classification tensor.
-            pred_y_seg (torch.Tensor): Predicted segmentation tensor.
-            pred_y_cls (torch.Tensor): Predicted classification tensor.
-            batch_idx (int): Index of the current batch.
-            *kwargs: Additional arguments.
-
-        Returns:
-            dict: Dictionary containing confusion matrices and batch identifier.
-        """
-        levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
-        matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
-                          "obj_dmg_matrices", "obj_bld_matrices"]
-        matrices = {}
-        for key, lvl in zip(matrices_keys, levels):
-            matrices[key] = self.metric_manager.get_confusion_matrices_for(
-                lvl,{"pred_bld_mask":pred_y_seg,
-                     "pred_dmg_mask":pred_y_cls,
-                     "y_bld_mask":y_seg,
-                     "y_dmg_mask":y_cls})
-            matrices[key].insert(0, "batch_id", batch_idx)
-        return matrices
-
-    def compute_epoch_metrics(self, epoch, confusion_matrices_df : pd.DataFrame):
-        """Computes metrics for damage and building classification 
-        for the current phase in the current epoch.
-        
-        Args:
-            confusion_matrices (dict): Dictionary containing confusion matrices. 
-            epoch (int): The current epoch number.
-
-        Returns:
-            dict: Dictionary containing computed metrics for damage and building classification.
-        """
-        metrics_keys = ["dmg_pixel_level", "bld_pixel_level",
-                         "dmg_object_level", "bld_object_level"]
-        levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
-        matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
-                          "obj_dmg_matrices", "obj_bld_matrices"]
-        metrics = {}
-        for key, lvl, mtrx in zip(metrics_keys,levels,matrices_keys):
-            metrics[key] = self.metric_manager.compute_metrics_for(lvl,confusion_matrices_df[mtrx])
-            metrics[key].insert(0,"epoch",epoch)
-        self.metric_manager.log_metrics(phase=self.phase,tb_log=self.logger,metrics=metrics)
-        return metrics 

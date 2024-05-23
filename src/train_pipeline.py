@@ -45,9 +45,12 @@ model_config = {
     'mode': 'dmg',
     'init_learning_rate': 0.0005,  # dmg: 0.005, #UNet: 0.01,
     'device': 'cpu',
-    'epochs': 2,  # 1500,
+    'epochs': 1,  # 1500,
     'batch_size': 32,
-    'num_chips_to_viz': 1
+    'num_chips_to_viz': 1,
+    'torch_threads':1,
+    'torch_op_threads':1,
+    'batch_workers':1,
 }
 path_config = {
     'exp_name': 'train_UNet',  # train_dmg

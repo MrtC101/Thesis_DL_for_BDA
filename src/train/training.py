@@ -101,9 +101,9 @@ def train_model(train_config: dict, path_config: dict) -> None:
     device = torch.device(train_config['device'] if torch.cuda.is_available() else "cpu")
     log.info(f'Using device: {device}.')
     # Establecer el número de threads que TorchScript utilizará
-    torch.set_num_threads(1)
+    torch.set_num_threads(train_config['torch_op_threads'])
     # Establecer el número de threads que las librerías internas de PyTorch utilizarán
-    torch.set_num_interop_threads(1)
+    torch.set_num_interop_threads(train_config['torch_op_threads'])
     log.info(f"Número de threads que TorchScript utilizará: {torch.get_num_threads()}")
     log.info(f"Número de threads que las librerías internas de PyTorch utilizarán: {torch.get_num_interop_threads()}")
 
@@ -118,9 +118,9 @@ def train_model(train_config: dict, path_config: dict) -> None:
     log.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
 
     train_loader = DataLoader(xBD_train, batch_size=train_config['batch_size'], shuffle=True, 
-                              num_workers=8,pin_memory=False)
+                              num_workers=train_config['batch_workers'],pin_memory=False)
     val_loader = DataLoader(xBD_val, batch_size=train_config['batch_size'], shuffle=False,
-                            num_workers=8, pin_memory=False)
+                            num_workers=train_config['batch_workers'], pin_memory=False)
 
     # samples are for tensorboard visualization of same images through epochs
     logger_train = SummaryWriter(log_dir=tb_logger_dir)
