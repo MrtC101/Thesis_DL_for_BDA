@@ -97,7 +97,7 @@ class MatrixComputer:
                 allowed_classes = labels_set
             elif level == Level.OBJ_DMG:
                 pred_polys, true_polys = MatrixComputer.get_buildings(pred_dmg_mask[i], y_dmg_mask[i],labels_set)
-                allowed_classes = labels_set[:5]
+                allowed_classes = labels_set
             results, list_preds, list_labels = MatrixComputer.evaluate_polys(pred_polys, true_polys, allowed_classes, 0.1)
             for label_class in results:
                 if label_class != -1:
@@ -121,11 +121,13 @@ class MatrixComputer:
         polygons_and_class = []  # tuples of (shapely polygon, damage_class_num)
         for c in labels:
             # default is 4-connected for connectivity
+
             shapes = rasterio.features.shapes(mask, mask=(mask == c))
             for shape_geojson, pixel_val in shapes:
                 shape = shapely.geometry.shape(shape_geojson)
                 assert isinstance(shape, Polygon)
                 polygons_and_class.append((shape, int(pixel_val)))
+
         return polygons_and_class
     
     @staticmethod
@@ -152,7 +154,6 @@ class MatrixComputer:
         background_and_others_mask = np.where(pred_mask > 0, 1, 0).astype(np.int16) 
         # all non-background classes become 1
 
-        # rasterio.features.shapes:
         # default is 4-connected for connectivity - see https://www.mathworks.com/help/images/pixel-connectivity.html
         # specify the `mask` parameter, otherwise the background will be returned as a shape
         connected_components = rasterio.features.shapes(background_and_others_mask, mask=pred_mask > 0)
