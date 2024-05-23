@@ -59,16 +59,17 @@ class Phase:
             epoch = args['epoch']
 
             if (self.phase == "train"):
-                self.logger.add_scalars(f'{self.phase}',{"lr": optimizer.param_groups[0]["lr"]},
+                self.logger.add_scalars(f'{self.phase}/learning_rate',
+                                        {"lr": optimizer.param_groups[0]["lr"]},
                                          epoch)
             log = LoggerSingleton(f"{self.phase} Step")
-            log.info(f'epoch: {epoch}/{epochs}')
+            log.info(f'{self.phase.upper()}  epoch: {epoch}/{epochs}')
             start_time = datetime.now()
 
             result = func(self, **args)
             
             duration = datetime.now() - start_time
-            self.logger.add_scalar(f'time_{self.phase}', duration.total_seconds(), epoch)
+            self.logger.add_scalar(f'{self.phase}/time', duration.total_seconds(), epoch)
 
             return result
         return decorator
@@ -98,7 +99,7 @@ class Phase:
         loss_manager = LossManager(self.weights_loss,self.criterions)
         
         for batch_idx, data in enumerate(tqdm(self.loader)):
-            log.info(f"Step: {batch_idx}/{len(self.loader)}")
+            log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
             #STEP
             # move to device, e.g. GPU
             x_pre = data['pre_image'].to(device=self.device)
@@ -133,11 +134,11 @@ class Phase:
 
         loss_manager.log_losses(self.logger, self.phase, epoch)
 
-        self.viz.prepare_for_vis(self.logger, self.phase, self.dataset, self.sample_ids, model,
-                                  epoch, self.device)
+        self.viz.tb_log_images(self.logger, self.phase, self.dataset, self.sample_ids, model, epoch, self.device)
         
         confusion_matrices_df = pd.DataFrame(confusion_matrices)
         metrics = self.compute_epoch_metrics(epoch, confusion_matrices_df)
+
         return metrics, loss_manager.combined_losses.avg
  
     def compute_confusion_matrices( self, y_seg: torch.Tensor, y_cls: torch.Tensor, 

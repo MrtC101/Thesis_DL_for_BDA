@@ -30,12 +30,40 @@ from utils.common.logger import LoggerSingleton
 from train.training import train_model
 from validate.validation import test_model
 
+pre_config = {
+    "disaster_num": 10,
+    "border_with":1,
+    "shard_num":2
+}
+
+model_config = {
+    'labels_dmg': [0, 1, 2, 3, 4],
+    'labels_bld': [0, 1],
+    'weights_seg': [1, 15],
+    'weights_damage': [1, 35, 70, 150, 120],
+    'weights_loss': [0, 0, 1],
+    'mode': 'dmg',
+    'init_learning_rate': 0.0005,  # dmg: 0.005, #UNet: 0.01,
+    'device': 'cpu',
+    'epochs': 2,  # 1500,
+    'batch_size': 32,
+    'num_chips_to_viz': 1
+}
+path_config = {
+    'exp_name': 'train_UNet',  # train_dmg
+    'out_dir': os.environ["OUT_PATH"],
+    'shard_splits_json': "",
+    'label_map_json': join(os.environ["DATA_PATH"], "constants",
+                            "xBD_label_map.json"),
+    'starting_checkpoint_path': None
+}
+
 def log_Title(title : str):
     log.info("="*50)
     log.info(f"{title.upper()}...")
     log.info("="*50)
 
-def preprocess():
+def preprocess(disaster_num,border_with,shard_num):
     """Pipeline sequence for data preprocessing."""
     xbd_path = join(os.environ["DATA_PATH"], "xBD")
     raw_path = join(xbd_path, "raw")
@@ -43,9 +71,9 @@ def preprocess():
     log_Title("deleting disasters that are not of interest")
     delete_not_in(raw_path)
     log_Title("creating target masks")
-    create_masks(raw_path, 1)
+    create_masks(raw_path, border_with)
     log_Title("deleting extra disasters")
-    leave_only_n(raw_path, 20)
+    leave_only_n(raw_path, disaster_num)
     # Raw data
     log_Title("split disasters")
     split_json_path = split_dataset(raw_path, xbd_path)
@@ -62,74 +90,18 @@ def preprocess():
     log_Title("creating data shards")
     mean_stddev_json = join(data_dicts_path, "all_tiles_mean_stddev.json")
     shards_path = join(xbd_path, "shards")
-    create_shards(split_sliced_json_path, mean_stddev_json, shards_path, 1)
+    create_shards(split_sliced_json_path, mean_stddev_json, shards_path, shard_num)
     log_Title("split shards")
     split_shard_json_path = split_shard_dataset(shards_path, xbd_path)
     return split_shard_json_path
-
-
-def train(split_shard_json_path):
-    """Pipeline sequence for training the model."""
-    log_Title("training and validating  model")
-    train_config = {
-        'labels_dmg': [0, 1, 2, 3, 4],
-        'labels_bld': [0, 1],
-        'weights_seg': [1, 15],
-        'weights_damage': [1, 35, 70, 150, 120],
-        'weights_loss': [0, 0, 1],
-        'mode': 'dmg',
-        'init_learning_rate': 0.0005,  # dmg: 0.005, #UNet: 0.01,
-        'device': 'cpu',
-        'epochs': 2,  # 1500,
-        'batch_size': 32,
-        'num_chips_to_viz': 1
-    }
-    path_config = {
-        'exp_name': 'train_UNet',  # train_dmg
-        'out_dir': os.environ["OUT_PATH"],
-        'shard_splits_json': split_shard_json_path,
-        'label_map_json': join(os.environ["DATA_PATH"], "constants",
-                               "xBD_label_map.json"),
-        'starting_checkpoint_path': None
-    }
-    train_model(train_config, path_config)
-
-
-def test(split_shard_json_path):
-    """Pipeline sequence for training the model."""
-    log_Title("testing model")
-
-    train_config = {
-        'labels_dmg': [0, 1, 2, 3, 4],
-        'labels_bld': [0, 1],
-        'weights_seg': [1, 15],
-        'weights_damage': [1, 35, 70, 150, 120],
-        'weights_loss': [0, 0, 1],
-        'mode': 'dmg',
-        'init_learning_rate': 0.0005,  # dmg: 0.005, #UNet: 0.01,
-        'device': 'cpu',
-        'epochs': 2,  # 1500,
-        'batch_size': 32,
-        'num_chips_to_viz': 1
-    }
-    path_config = {
-        'exp_name': 'train_UNet',  # train_dmg
-        'out_dir': os.environ["OUT_PATH"],
-        'shard_splits_json': split_shard_json_path,
-        'label_map_json': join(os.environ["DATA_PATH"], "constants",
-                               "xBD_label_map.json"),
-        'starting_checkpoint_path': join(os.environ["OUT_PATH"], "train_UNet",
-                                         "checkpoints", "model_best.pth.tar")
-    }
-    test_model(train_config, path_config)
-
 
 if __name__ == "__main__":
     # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     log = LoggerSingleton("Training Pipeline",
                           folder_path=join(os.environ["OUT_PATH"],"console_logs"))
-    #split_shard_json_path = preprocess()
-    split_shard_json_path = join(os.environ["DATA_PATH"], "xBD",
-                                 "splits", "shard_splits.json")
-    train(split_shard_json_path)
-    #test(split_shard_json_path)
+    #split_shard_json_path = preprocess(**pre_config)
+    split_shard_json_path = join(os.environ["DATA_PATH"], "xBD", "splits", "shard_splits.json")
+    path_config["shard_splits_json"] = split_shard_json_path
+    log_Title("training and validating  model")
+    train_model(model_config, path_config)
+    #test_model(model_config, path_config)

@@ -74,5 +74,5 @@ class MetricManager:
         for key, metric_df in metrics.items():
             log.info(to_table(curr_type=key,df=metric_df,odd=True,decim_digits=5))
             for index, row in metric_df.iterrows():
-                msg = f"{phase}_{key}_metrics"
+                msg = f"{phase}/{key}_metrics"
                 tb_log.add_scalars(msg, dict(row), int(row["epoch"]))

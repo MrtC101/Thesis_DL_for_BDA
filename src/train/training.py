@@ -77,7 +77,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
             - 'num_chips_to_viz': Number of chips to visualize.
         - path_config (dict): Paths required for testing, including:
             - 'exp_name': Name of the experiment.
-            - 'out_dir': Output directory for results.
+            - 'out_dir': Output directory for results.logger_train
             - 'shard_splits_json': Path to the JSON file with shard splits.
             - 'label_map_json': Path to the JSON file with label mappings.
             - 'starting_checkpoint_path': Path to the checkpoint to resume from.
@@ -96,14 +96,18 @@ def train_model(train_config: dict, path_config: dict) -> None:
     dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
     dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
 
-    # tensorboard loggers
-    logger_train = SummaryWriter(log_dir=tb_logger_dir)
-    logger_val = SummaryWriter(log_dir=tb_logger_dir)
-
     # torch device
     log.info(f'Using PyTorch version {torch.__version__}.')
     device = torch.device(train_config['device'] if torch.cuda.is_available() else "cpu")
     log.info(f'Using device: {device}.')
+    # Establecer el número de threads que TorchScript utilizará
+    torch.set_num_threads(1)
+    # Establecer el número de threads que las librerías internas de PyTorch utilizarán
+    torch.set_num_interop_threads(1)
+    log.info(f"Número de threads que TorchScript utilizará: {torch.get_num_threads()}")
+    log.info(f"Número de threads que las librerías internas de PyTorch utilizarán: {torch.get_num_interop_threads()}")
+
+
 
     # DATA
     # Load datasets
@@ -118,17 +122,17 @@ def train_model(train_config: dict, path_config: dict) -> None:
     val_loader = DataLoader(xBD_val, batch_size=train_config['batch_size'], shuffle=False,
                             num_workers=8, pin_memory=False)
 
-    log.info('Get sample chips from train set...')
+    # samples are for tensorboard visualization of same images through epochs
+    logger_train = SummaryWriter(log_dir=tb_logger_dir)
     sample_train_ids = xBD_train.get_sample_images(train_config['num_chips_to_viz'])
-    
-    log.info('Get sample chips from val set...')
+    logger_val = SummaryWriter(log_dir=tb_logger_dir)
     sample_val_ids = xBD_val.get_sample_images(train_config['num_chips_to_viz'])
 
     # TRAINING CONFIG
 
     # define model
     model = SiamUnet().to(device=device)
-    log.info(model.model_summary())
+    #log.info(model.model_summary())
 
     # resume from a checkpoint if provided
     optimizer, starting_epoch, best_acc = \
@@ -203,7 +207,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
             val_epoch_metrics, val_loss = validation.run_epoch(epoch_context)
         scheduler.step(val_loss)  # decay Learning Rate
         val_metrics.append(val_epoch_metrics)
-        log.info(f"epoch {epoch}/{epochs}: train loss:{tr_loss:3f}; val loss:{val_loss:3f};")
+        log.info(f"epoch {ep}/{epochs}: train loss:{tr_loss:3f}; val loss:{val_loss:3f};")
         #CHECKPOINT
         best_acc = save_if_best(val_epoch_metrics, best_acc, checkpoint_dir, **epoch_context)
     
