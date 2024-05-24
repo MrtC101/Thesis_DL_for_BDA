@@ -1,14 +1,15 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from utils.pathManagers.slicedManager import SlicedPathManager
 from utils.common.files import dump_json
 import argparse
-import os
-import sys
 from utils.common.logger import LoggerSingleton
 
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 

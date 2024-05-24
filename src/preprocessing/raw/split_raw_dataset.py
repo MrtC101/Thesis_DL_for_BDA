@@ -2,6 +2,9 @@
 # Licensed under the MIT License.
 import os
 import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+    
 import argparse
 import math
 from tqdm import tqdm
@@ -9,9 +12,6 @@ from random import shuffle
 from utils.common.files import dump_json
 from utils.pathManagers.rawManager import RawPathManager, DisasterDict
 from utils.common.logger import LoggerSingleton
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 

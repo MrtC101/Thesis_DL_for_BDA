@@ -8,7 +8,7 @@ from tqdm import tqdm
 import torch
 from datetime import datetime
 from utils.common.logger import LoggerSingleton
-from utils.metrics.metric_manager import Level, MetricManager
+from utils.metrics.metric_manager import MetricManager
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 from models.siames.end_to_end_Siam_UNet import SiamUnet
 from utils.metrics.loss_manager import LossManager
@@ -144,7 +144,6 @@ class Phase:
                                model, epoch, self.device)
 
         confusion_matrices_df = pd.DataFrame(confusion_matrices)
-        metrics = self.metric_manager.\
-            compute_epoch_metrics(self.phase, self.logger,
-                                  epoch, confusion_matrices_df)
+        metrics = self.metric_manager.compute_epoch_metrics(self.phase, self.logger,
+                                                            epoch, confusion_matrices_df)
         return metrics, loss_manager.combined_losses.avg

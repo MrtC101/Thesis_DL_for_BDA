@@ -32,7 +32,7 @@ from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from preprocessing.shards.split_shard_dataset import split_shard_dataset
 from preprocessing.shards.make_data_shards import create_shards
 from train.training import train_model
-from validate.validation import test_model
+from train.validation import test_model
 
 # Configuration dictionary for pre processing step
 pre_config = {
@@ -123,7 +123,7 @@ if __name__ == "__main__":
     log = LoggerSingleton("Training Pipeline",
                           folder_path=join(os.environ["OUT_PATH"], "console_logs"))
     split_shard_json_path = preprocess(**pre_config)
-    # split_shard_json_path = join(os.environ['DATA_PATH'],"xBD","splits")
+    #split_shard_json_path = join(os.environ["DATA_PATH"],"xBD","splits", "shard_splits.json")
     path_config["shard_splits_json"] = split_shard_json_path
     log_Title("training and validating model")
     train_model(model_config, path_config)

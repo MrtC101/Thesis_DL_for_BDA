@@ -11,8 +11,12 @@
 # - Changes in the logic of implementation for better performance.
 # - Bug fixes in the code.
 #
-# See the LICENSE file in the root directory of this project for the full text of the MIT License.import os
+# See the LICENSE file in the root directory of this project for the full text of the MIT License.
+import os
 import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 import numpy as np
 from utils.common.files import dump_json, is_dir
 from utils.datasets.raw_datasets import RawDataset
@@ -21,16 +25,11 @@ from shapely import wkt
 import argparse
 from tqdm import tqdm
 from utils.common.logger import LoggerSingleton, TqdmToLog
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 
 def compute_mean_stddev(pre_img: np.array, post_img: np.array) -> dict:
-    """Computes the mean and standard deviation from each tile
-    from each disaster.
-    """
+    """Computes the mean and standard deviation from each tile from each disaster."""
     mean = {}
     for time, img in zip(["pre", "post"], [pre_img, post_img]):
         mean[time] = {}

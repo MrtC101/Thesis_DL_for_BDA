@@ -2,15 +2,15 @@
 # Licensed under the MIT License.
 import os
 import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 import random
 import argparse
 from tqdm import tqdm
 from itertools import chain
 from utils.pathManagers.rawManager import RawPathManager
 from utils.common.logger import LoggerSingleton, TqdmToLog
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 

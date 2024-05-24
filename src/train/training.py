@@ -1,5 +1,8 @@
 import os
 import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from utils.datasets.shard_datasets import ShardDataset
 from utils.common.files import is_dir, dump_json
 from torch.optim.lr_scheduler import ReduceLROnPlateau
@@ -12,8 +15,6 @@ import torch
 from train.phase import Phase
 from utils.common.logger import LoggerSingleton
 
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 
@@ -25,11 +26,9 @@ def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
             model.resume_from_checkpoint(checkpoint_path, tb_log_dir,
                                          training_config)
         log.info(
-            f'Loaded checkpoint, starting epoch is {starting_epoch},\
-                  best f1 is {best_acc}')
+            f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
     else:
-        log.info('No valid checkpoint is provided. \
-            Start to train from scratch...')
+        log.info('No valid checkpoint is provided. Start to train from scratch...')
         optimizer, starting_epoch, best_acc = \
             model.resume_from_scratch(training_config)
     return optimizer, starting_epoch, best_acc
@@ -105,8 +104,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
     torch.set_num_interop_threads(train_config['torch_op_threads'])
     log.info(
         f"Número de threads que TorchScript utilizará: {torch.get_num_threads()}")
-    log.info(
-        f"Número de threads que las librerías internas de PyTorch utilizarán:\
+    log.info(f"Número de threads que las librerías internas de PyTorch utilizarán:\
               {torch.get_num_interop_threads()}")
 
     # DATA
@@ -138,8 +136,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
 
     # resume from a checkpoint if provided
     optimizer, starting_epoch, best_acc = \
-        resume_model(
-            model, path_config['starting_checkpoint_path'], tb_logger_dir, train_config)
+        resume_model(model, path_config['starting_checkpoint_path'], tb_logger_dir, train_config)
 
     # loss functions
     weights_seg_tf = torch.FloatTensor(train_config['weights_seg'])
