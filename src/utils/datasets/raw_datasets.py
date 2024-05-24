@@ -9,9 +9,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 
 
 class TileDataset(Dataset):
-    """Class that implements the corresponding methods to access raw xBD
-    dataset data.
-    """
+    """Class that implements the corresponding methods to access raw xBD dataset data."""
 
     def __init__(self, split_name: str, splits_json_path: str):
         self.split_name = split_name
@@ -31,26 +29,20 @@ class TileDataset(Dataset):
 
     def same_shape(self, dis_id, tile_id, img1, img2) -> bool:
         assert img1.shape[:2] == img2.shape[:2], \
-            f'Images from {dis_id}_{tile_id} should be the same size,\
-                  {img1.shape} != {img2.shape}.'
+            f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
         return True
 
     def load_images(self, disaster_id, tile_id, tile):
         """Load images and mask from dataset paths"""
         data = {}
-        data["pre_image"] = cv2.cvtColor(cv2.imread(tile["pre"]["image"]),
-                                         cv2.COLOR_BGR2RGB)
-        data["post_image"] = cv2.cvtColor(cv2.imread(tile["post"]["image"]),
-                                          cv2.COLOR_BGR2RGB)
-        data["pre_mask"] = cv2.imread(tile["pre"]["mask"])[:, :, 0]
-        data["post_mask"] = cv2.imread(tile["post"]["mask"])[:, :, 0]
+        data["pre_img"] = cv2.cvtColor(cv2.imread(tile["pre"]["image"]), cv2.COLOR_BGR2RGB)
+        data["post_img"] = cv2.cvtColor(cv2.imread(tile["post"]["image"]), cv2.COLOR_BGR2RGB)
+        data["bld_mask"] = cv2.imread(tile["pre"]["mask"])[:, :, 0]
+        data["dmg_mask"] = cv2.imread(tile["post"]["mask"])[:, :, 0]
 
-        self.same_shape(disaster_id, tile_id, data["pre_image"],
-                        data["post_image"])
-        self.same_shape(disaster_id, tile_id, data["post_image"],
-                        data["pre_mask"])
-        self.same_shape(disaster_id, tile_id, data["post_image"],
-                        data["post_mask"])
+        self.same_shape(disaster_id, tile_id, data["pre_img"], data["post_img"])
+        self.same_shape(disaster_id, tile_id, data["post_img"], data["bld_mask"])
+        self.same_shape(disaster_id, tile_id, data["post_img"], data["dmg_mask"])
         return data
 
     def __getitem__(self, i):

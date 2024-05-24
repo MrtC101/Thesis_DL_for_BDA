@@ -117,10 +117,8 @@ def create_data_dicts(splits_json_path: str, out_path: str) -> str:
         log.info(f'Counting {split_name} subset with length: {len(dataset)}')
         psb = tqdm(iter(dataset), total=len(dataset))
         for dis_id, tile_id, data in psb:
-            mean[dis_id][tile_id] = \
-                compute_mean_stddev(data["pre_image"], data["post_image"])
-            count[dis_id][tile_id] = \
-                count_buildings(data["pre_json"], data["post_json"])
+            mean[dis_id][tile_id] = compute_mean_stddev(data["pre_img"], data["post_img"])
+            count[dis_id][tile_id] = count_buildings(data["pre_json"], data["post_json"])
 
     mean_path = os.path.join(dicts_path, "all_tiles_mean_stddev.json")
     count_path = os.path.join(dicts_path, "all_tiles_count_area.json")
@@ -129,8 +127,7 @@ def create_data_dicts(splits_json_path: str, out_path: str) -> str:
 
     log.info('Total counting by each disaster.')
     c_by_d = count_by_disaster(count=count)
-    mean_disaster_path = os.path.join(
-        dicts_path, "all_tiles_count_area_by_disaster.json")
+    mean_disaster_path = os.path.join(dicts_path, "all_tiles_count_area_by_disaster.json")
     dump_json(mean_disaster_path, c_by_d)
     return dicts_path
 

@@ -31,7 +31,7 @@ class ShardPathManager:
         """
         is_dir(shard_dir_path)
         shards_dict = nested_defaultdict(5, str)
-        for subset in ["train", "val","test"]:
+        for subset in ["train", "val", "test"]:
             subset_path = join(shard_dir_path, subset)
             dataset_shards = sorted(os.listdir(subset_path))
             for shard in dataset_shards:
@@ -40,7 +40,7 @@ class ShardPathManager:
                 is_npy(shard_path)
                 shard_name = shard.split(".")[0]
                 split_id, type_id, shard_id = shard_name.split("_")
-                shards_dict[split_id][type_id][shard_id] = shard_path
+                shards_dict[split_id][type_id.replace("-","_")][shard_id] = shard_path
 
             idx_json = join(shard_dir_path, f"{subset}_shard_idxs.json")
             is_json(idx_json)

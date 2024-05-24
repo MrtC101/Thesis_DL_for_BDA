@@ -1,5 +1,3 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
 import os
 import sys
 from utils.datasets.shard_datasets import ShardDataset
@@ -10,7 +8,6 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 import torch.nn as nn
 from tqdm import trange
-import pandas as pd
 import torch
 from train.phase import Phase
 from utils.common.logger import LoggerSingleton
@@ -18,6 +15,7 @@ from utils.common.logger import LoggerSingleton
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
+
 
 def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
     """Calls the corresponding model resume method"""
@@ -53,8 +51,8 @@ def output_directories(out_dir, exp_name):
     config_dir = os.path.join(exp_dir, 'configs')
     os.makedirs(config_dir, exist_ok=True)
 
-    metric_dir = os.path.join(exp_dir,'training_metrics')
-    os.makedirs(metric_dir,exist_ok=True)
+    metric_dir = os.path.join(exp_dir, 'training_metrics')
+    os.makedirs(metric_dir, exist_ok=True)
 
     return checkpoint_dir, tb_logger_dir, config_dir, metric_dir
 
@@ -98,16 +96,18 @@ def train_model(train_config: dict, path_config: dict) -> None:
 
     # torch device
     log.info(f'Using PyTorch version {torch.__version__}.')
-    device = torch.device(train_config['device'] if torch.cuda.is_available() else "cpu")
+    device = torch.device(
+        train_config['device'] if torch.cuda.is_available() else "cpu")
     log.info(f'Using device: {device}.')
     # Establecer el número de threads que TorchScript utilizará
     torch.set_num_threads(train_config['torch_op_threads'])
     # Establecer el número de threads que las librerías internas de PyTorch utilizarán
     torch.set_num_interop_threads(train_config['torch_op_threads'])
-    log.info(f"Número de threads que TorchScript utilizará: {torch.get_num_threads()}")
-    log.info(f"Número de threads que las librerías internas de PyTorch utilizarán: {torch.get_num_interop_threads()}")
-
-
+    log.info(
+        f"Número de threads que TorchScript utilizará: {torch.get_num_threads()}")
+    log.info(
+        f"Número de threads que las librerías internas de PyTorch utilizarán:\
+              {torch.get_num_interop_threads()}")
 
     # DATA
     # Load datasets
@@ -117,38 +117,45 @@ def train_model(train_config: dict, path_config: dict) -> None:
     xBD_val = ShardDataset('val', path_config['shard_splits_json'])
     log.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
 
-    train_loader = DataLoader(xBD_train, batch_size=train_config['batch_size'], shuffle=True, 
-                              num_workers=train_config['batch_workers'],pin_memory=False)
+    train_loader = DataLoader(xBD_train, batch_size=train_config['batch_size'], shuffle=True,
+                              num_workers=train_config['batch_workers'], pin_memory=False)
     val_loader = DataLoader(xBD_val, batch_size=train_config['batch_size'], shuffle=False,
                             num_workers=train_config['batch_workers'], pin_memory=False)
 
     # samples are for tensorboard visualization of same images through epochs
     logger_train = SummaryWriter(log_dir=tb_logger_dir)
-    sample_train_ids = xBD_train.get_sample_images(train_config['num_chips_to_viz'])
+    sample_train_ids = xBD_train.get_sample_images(
+        train_config['num_chips_to_viz'])
     logger_val = SummaryWriter(log_dir=tb_logger_dir)
-    sample_val_ids = xBD_val.get_sample_images(train_config['num_chips_to_viz'])
+    sample_val_ids = xBD_val.get_sample_images(
+        train_config['num_chips_to_viz'])
 
     # TRAINING CONFIG
 
     # define model
     model = SiamUnet().to(device=device)
-    #log.info(model.model_summary())
+    # log.info(model.model_summary())
 
     # resume from a checkpoint if provided
     optimizer, starting_epoch, best_acc = \
-        resume_model(model, path_config['starting_checkpoint_path'], tb_logger_dir, train_config)
+        resume_model(
+            model, path_config['starting_checkpoint_path'], tb_logger_dir, train_config)
 
     # loss functions
     weights_seg_tf = torch.FloatTensor(train_config['weights_seg'])
     weights_damage_tf = torch.FloatTensor(train_config['weights_damage'])
     weights_loss = train_config['weights_loss']
 
-    criterion_seg_1 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_seg_2 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_damage = nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
+    criterion_seg_1 = nn.CrossEntropyLoss(
+        weight=weights_seg_tf).to(device=device)
+    criterion_seg_2 = nn.CrossEntropyLoss(
+        weight=weights_seg_tf).to(device=device)
+    criterion_damage = nn.CrossEntropyLoss(
+        weight=weights_damage_tf).to(device=device)
 
     # scheduler
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=2000, verbose=True)
+    scheduler = ReduceLROnPlateau(
+        optimizer, mode='min', patience=2000, verbose=True)
 
     static_context = {
         'crit_seg_1': criterion_seg_1,
@@ -176,7 +183,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
         'sample_ids': sample_val_ids,
         'dataset': xBD_val
     }
-    
+
     # Objects for training
     training = Phase(train_context, static_context)
     validation = Phase(val_context, static_context)
@@ -186,7 +193,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
     step = 1
 
     # Metrics
-    train_metrics =[]
+    train_metrics = []
     val_metrics = []
 
     for ep in trange(epoch, epochs+1):
@@ -199,37 +206,42 @@ def train_model(train_config: dict, path_config: dict) -> None:
             'optimizer': optimizer,
             'save_path': None
         }
-        #TRAINING
+        # TRAINING
         train_epoch_metrics, tr_loss = training.run_epoch(epoch_context)
         train_metrics.append(train_epoch_metrics)
-        #VALIDATION
+        # VALIDATION
         with torch.no_grad():
             val_epoch_metrics, val_loss = validation.run_epoch(epoch_context)
         scheduler.step(val_loss)  # decay Learning Rate
         val_metrics.append(val_epoch_metrics)
-        log.info(f"epoch {ep}/{epochs}: train loss:{tr_loss:3f}; val loss:{val_loss:3f};")
-        #CHECKPOINT
-        best_acc = save_if_best(val_epoch_metrics, best_acc, checkpoint_dir, **epoch_context)
-    
-    save_metrics(train_metrics,metric_dir)
-    save_metrics(val_metrics,metric_dir)
-    
+        log.info(
+            f"epoch {ep}/{epochs}: train loss:{tr_loss:3f}; val loss:{val_loss:3f};")
+        # CHECKPOINT
+        best_acc = save_if_best(
+            val_epoch_metrics, best_acc, checkpoint_dir, **epoch_context)
+
+    save_metrics(train_metrics, metric_dir)
+    save_metrics(val_metrics, metric_dir)
+
     logger_train.flush()
     logger_train.close()
     logger_val.flush()
     logger_val.close()
     log.info('Done')
 
-def save_metrics(metrics,metric_dir):
+
+def save_metrics(metrics, metric_dir):
     """Save metrics in csv"""
     # save evalution metrics
     for epoch in range(len(metrics)):
-        for key,met in metrics[epoch].items():
+        for key, met in metrics[epoch].items():
             mode = "w" if not epoch > 0 else "a"
             header = not epoch > 0
-            met.to_csv(os.path.join(metric_dir, f'{key}.csv'),mode=mode,header=header, index=False)
+            met.to_csv(os.path.join(
+                metric_dir, f'{key}.csv'), mode=mode, header=header, index=False)
 
-def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer,**kwargs):
+
+def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer, **kwargs):
     """Compares f1_harmonic_mean from pixel level damage metrics and 
     f1_harmonic_mean from object level damage classification metrics and 
     saves the checkpoint as best model if needed"""
@@ -237,12 +249,13 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer,*
     # compute average accuracy across all classes to select the best model
     pixel_h_f1 = metrics_df["dmg_pixel_level"]["f1_harmonic_mean"].mean()
     obj_h_f1 = metrics_df["dmg_object_level"]["f1_harmonic_mean"].mean()
-    val_acc_avg = (pixel_h_f1,obj_h_f1)
+    val_acc_avg = (pixel_h_f1, obj_h_f1)
     is_best = val_acc_avg[0] >= best_acc[0] and val_acc_avg[1] >= best_acc[1]
     best_acc = val_acc_avg if is_best else best_acc
 
-    log.info(f'Saved checkpoint for epoch {epoch}. Highest f1 checkpoint so far: {is_best}\n')
-    
+    log.info(
+        f'Saved checkpoint for epoch {epoch}. Highest f1 checkpoint so far: {is_best}\n')
+
     model.save_checkpoint({
         'epoch': epoch,
         'state_dict': model.state_dict(),
@@ -251,7 +264,8 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer,*
         'best_f1': best_acc
     }, is_best, checkpoint_dir)
     return best_acc
-    
+
+
 if __name__ == "__main__":
     train_config = {
         'labels_dmg': [0, 1, 2, 3, 4],

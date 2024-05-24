@@ -1,39 +1,31 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
 
+from glob import glob
+from PIL import Image
+import numpy as np
+from torch.utils.data import Dataset
+from torchvision import transforms
+import torchvision.transforms.functional as TF
+import random
+import torch
 import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.visualization.logger import get_logger
-l = get_logger("delete_extra")
-
-import math
-import torch
-import random
-import cv2
-from os.path import join
-import torchvision.transforms.functional as TF
-from torchvision import transforms
-from torch.utils.data import Dataset, DataLoader
-from utils.common.files import read_json, is_dir
-from utils.pathManagers.slicedManager import SlicePathManager
-
 """Deletable"""
-import numpy as np
-from PIL import Image
-from glob import glob
-from skimage import transform
 
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+
+
 class TestDataset(Dataset):
 
     @classmethod
     def apply_transform(self, mask, pre_img, post_img, damage_class):
         '''
-        apply tranformation functions on PIL images 
+        apply tranformation functions on PIL images
         '''
         if random.random() > 0.5:
             # Resize
@@ -104,13 +96,17 @@ class TestDataset(Dataset):
         damage_class_file = glob(damage_class_file_name + '.*')
 
         assert len(mask_file) == 1, \
-            f'Either no mask or multiple masks found for the ID {idx}: {mask_file_name}'
+            f'Either no mask or multiple masks found for the \
+                ID {idx}: {mask_file_name}'
         assert len(pre_img_file) == 1, \
-            f'Either no image or multiple images found for the ID {idx}: {pre_img_file_name}'
+            f'Either no image or multiple images found for the \
+                ID {idx}: {pre_img_file_name}'
         assert len(post_img_file) == 1, \
-            f'Either no post disaster image or multiple images found for the ID {idx}: {post_img_file_name}'
+            f'Either no post disaster image or multiple images found for the \
+                ID {idx}: {post_img_file_name}'
         assert len(damage_class_file) == 1, \
-            f'Either no damage class image or multiple images found for the ID {idx}: {damage_class_file_name}'
+            f'Either no damage class image or multiple images found for the \
+                ID {idx}: {damage_class_file_name}'
 
         mask = Image.open(mask_file[0])
         pre_img = Image.open(pre_img_file[0])
@@ -118,11 +114,14 @@ class TestDataset(Dataset):
         damage_class = Image.open(damage_class_file[0])
 
         assert pre_img.size == mask.size, \
-            f'Image and building mask {idx} should be the same size, but are {pre_img.size} and {mask.size}'
+            f'Image and building mask {idx} should be the same size, but are \
+                {pre_img.size} and {mask.size}'
         assert pre_img.size == damage_class.size, \
-            f'Image and damage classes mask {idx} should be the same size, but are {pre_img.size} and {damage_class.size}'
+            f'Image and damage classes mask {idx} should be the same size, but are \
+                {pre_img.size} and {damage_class.size}'
         assert pre_img.size == post_img.size, \
-            f'Pre_ & _post disaster Images {idx} should be the same size, but are {pre_img.size} and {post_img.size}'
+            f'Pre_ & _post disaster Images {idx} should be the same size, but are \
+                {pre_img.size} and {post_img.size}'
 
         if self.transform is True:
             mask, pre_img, post_img, damage_class = self.apply_transform(
@@ -165,4 +164,11 @@ class TestDataset(Dataset):
         # replace non-classified pixels with background
         damage_class = np.where(damage_class == 5, 0, damage_class)
 
-        return {'pre_image': torch.from_numpy(pre_img).type(torch.FloatTensor), 'post_image': torch.from_numpy(post_img).type(torch.FloatTensor), 'building_mask': torch.from_numpy(mask).type(torch.LongTensor), 'damage_mask': torch.from_numpy(damage_class).type(torch.LongTensor), 'pre_image_orig': transforms.ToTensor()(pre_img_orig), 'post_image_orig': transforms.ToTensor()(post_img_orig), 'img_file_idx': imgs_dir[0:-1*(len(img_suffix))].split('/')[-1] + img_suffix, 'preds_img_dir': preds_dir}
+        return {'pre_image': torch.from_numpy(pre_img).type(torch.FloatTensor),
+                'post_image': torch.from_numpy(post_img).type(torch.FloatTensor),
+                'building_mask': torch.from_numpy(mask).type(torch.LongTensor),
+                'damage_mask': torch.from_numpy(damage_class).type(torch.LongTensor),
+                'pre_image_orig': transforms.ToTensor()(pre_img_orig),
+                'post_image_orig': transforms.ToTensor()(post_img_orig),
+                'img_file_idx': imgs_dir[0:-1*(len(img_suffix))].split('/')[-1] + img_suffix,
+                'preds_img_dir': preds_dir}
