@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from utils.common.files import read_json, is_json
 from torch.utils.data import Dataset
 import cv2

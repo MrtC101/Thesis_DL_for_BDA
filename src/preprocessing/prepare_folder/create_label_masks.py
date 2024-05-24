@@ -1,5 +1,17 @@
-# Copyright (c) Microsoft Corporation.
+# Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+#
+# Modificaciones (c) 2024 Martín Cogo Belver.
+# Martín Cogo Belver has rights reserved over this modifications.
+#
+# Modification Notes:
+# - Documentation added with docstrings for code clarity.
+# - Re-implementation of methods to enhance readability and efficiency.
+# - Re-implementation of features for improved functionality.
+# - Changes in the logic of implementation for better performance.
+# - Bug fixes in the code.
+#
+# See the LICENSE file in the root directory of this project for the full text of the MIT License.
 #################################################################################
 # xView2                                                                        #
 # Copyright 2019 Carnegie Mellon University.                                    #
@@ -17,7 +29,6 @@
 # use and distribution.                                                         #
 # DM19-0988                                                                     #
 #################################################################################
-
 import os
 import shutil
 import sys

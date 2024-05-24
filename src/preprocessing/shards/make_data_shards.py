@@ -1,3 +1,17 @@
+# Copyright (c) Microsoft Corporation. All rights reserved.
+# Licensed under the MIT License.
+#
+# Modificaciones (c) 2024 Martín Cogo Belver.
+# Martín Cogo Belver has rights reserved over this modifications.
+#
+# Modification Notes:
+# - Documentation added with docstrings for code clarity.
+# - Re-implementation of methods to enhance readability and efficiency.
+# - Re-implementation of features for improved functionality.
+# - Changes in the logic of implementation for better performance.
+# - Bug fixes in the code.
+#
+# See the LICENSE file in the root directory of this project for the full text of the MIT License.
 from PIL import Image
 from utils.common.files import clean_folder, dump_json, read_json, is_json
 from torchvision.transforms import transforms, RandomVerticalFlip, \

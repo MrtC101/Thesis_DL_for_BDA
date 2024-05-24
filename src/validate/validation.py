@@ -1,5 +1,21 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+#
+# Modificaciones (c) 2024 Martín Cogo Belver.
+# Martín Cogo Belver has rights reserved over this modifications.
+#
+# Modification Notes:
+# - Documentation added with docstrings for code clarity.
+# - Re-implementation of methods to enhance readability and efficiency.
+# - Re-implementation of features for improved functionality.
+# - Changes in the logic of implementation for better performance.
+# - Bug fixes in the code.
+#
+# See the LICENSE file in the root directory of this project for the full text of the MIT License.
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
 import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
@@ -8,11 +24,7 @@ from models.siames.end_to_end_Siam_UNet import SiamUnet
 from utils.common.files import dump_json, is_dir
 from utils.datasets.shard_datasets import ShardDataset
 from train.phase import Phase
-import os
-import sys
 from utils.common.logger import LoggerSingleton
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 
