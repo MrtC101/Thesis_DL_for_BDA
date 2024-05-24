@@ -12,23 +12,22 @@
 # - Bug fixes in the code.
 #
 # See the LICENSE file in the root directory of this project for the full text of the MIT License.
+import os
+import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from typing import Dict, List
 from utils.datasets.raw_datasets import TileDataset
 from utils.datasets.slice_datasets import PatchDataset
 from utils.common.files import clean_folder
-# from concurrent.futures import ThreadPoolExecutor
 from torchvision import transforms
 from tqdm import tqdm
 import math
 import numpy as np
 import random
 import argparse
-import os
-import sys
 from utils.common.logger import LoggerSingleton
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
 
 

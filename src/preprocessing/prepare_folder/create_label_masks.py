@@ -30,8 +30,11 @@
 # DM19-0988                                                                     #
 #################################################################################
 import os
-import shutil
 import sys
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
+import shutil
 import argparse
 import numpy as np
 from tqdm import tqdm
@@ -40,14 +43,12 @@ from shapely import wkt
 from shapely.geometry import mapping, Polygon
 from cv2 import fillPoly, imread, imwrite
 from utils.common.files import read_json, is_dir
-from utils.common.logger import LoggerSingleton, TqdmToLog
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.logger import LoggerSingleton
 log = LoggerSingleton()
 
 path = join(os.environ.get("DATA_PATH"), 'constants/xBD_label_map.json')
 LABEL_NAME_TO_NUM = read_json(path)['label_name_to_num']
+
 
 def get_shape(image_path: str) -> tuple:
     """Opens the image and retrieves its size."""
@@ -217,9 +218,9 @@ def create_masks(raw_path: str, border_width: int) -> None:
         images_dir = join(subset_path, 'images')
         labels_dir = join(subset_path, 'labels')
         is_dir(subset_path)
-        if(not os.path.exists(images_dir) or not os.path.exists(labels_dir)):
+        if (not os.path.exists(images_dir) or not os.path.exists(labels_dir)):
             log.info(f"Skiping folder {subset_path}, there is no folder 'images' or 'labels'.")
-            shutil.move(subset_path,join(raw_path,"..",subset))
+            shutil.move(subset_path, join(raw_path, "..", subset))
             continue
 
         targets_dir = join(subset_path, 'targets')
