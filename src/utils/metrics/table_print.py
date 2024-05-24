@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 """
     Methods used to print a cute table for metrics
 """
@@ -65,7 +67,18 @@ def class_metrics(table, df: pd.DataFrame, col_width, tot_col):
 
 
 def to_table(curr_type, df: pd.DataFrame, odd: bool, decim_digits: int) -> str:
-    """Prints metrics as a table"""
+    """
+    Prints metrics as a table.
+
+    Args:
+        curr_type: The type of metrics.
+        df: The DataFrame containing the metrics.
+        odd: A boolean indicating whether the number of columns is odd.
+        decim_digits: The number of decimal digits.
+
+    Returns:
+        str: The formatted table.
+    """    
     """ 
         \u2550 = '═'
         \u2551 = '║'
@@ -78,9 +91,6 @@ def to_table(curr_type, df: pd.DataFrame, odd: bool, decim_digits: int) -> str:
         \u2566 = '╦'
         \u2569 = '╩'
         \u256C = '╬'
-
-       |  epoch  | metric 1 |
-       | class 1 |   val    |
     """
     col_width = 20
     tot_col = len(df.columns) - 1

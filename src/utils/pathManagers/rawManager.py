@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from utils.common.files import is_dir, is_file
 from os.path import join
 import os

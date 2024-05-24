@@ -1,5 +1,17 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+#
+# Copyright (c) 2024 Martín Cogo Belver.
+# Martín Cogo Belver has rights reserved over this modifications.
+#
+# Modification Notes:
+# - Documentation added with docstrings for code clarity.
+# - Re-implementation of methods to enhance readability and efficiency.
+# - Re-implementation of features for improved functionality.
+# - Changes in the logic of implementation for better performance.
+# - Bug fixes in the code.
+#
+# See the LICENSE file in the root directory of this project for the full text of the MIT License.
 
 from collections import OrderedDict
 import os
@@ -7,12 +19,17 @@ import shutil
 from time import localtime, strftime
 import torch
 import torch.nn as nn
+import torch.utils
 from torch.utils.tensorboard import SummaryWriter
+import torch.utils.tensorboard
+import torch.utils.tensorboard.summary
 
 
 class SiamUnet(nn.Module):
+    """This class implements the architecture of the Siamese CNN used in this project."""
 
-    def __init__(self, in_channels=3, out_channels_s=2, out_channels_c=5, init_features=16):
+    def __init__(self, in_channels: int = 3, out_channels_s: int = 2, out_channels_c: int = 5,
+                 init_features: int = 16) -> None:
         super(SiamUnet, self).__init__()
 
         features = init_features
@@ -77,6 +94,8 @@ class SiamUnet(nn.Module):
 
         self.softmax = torch.nn.Softmax(dim=1)
 
+    """ 
+    #Used for debugging
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
         b = nn.Conv2d(3, 5, kernel_size=1)(x2)
@@ -87,10 +106,21 @@ class SiamUnet(nn.Module):
             b[:, c, :, :] = torch.mul(b[:, c, :, :], preds_seg_pre)
 
         return a, a, b
-
     """
-    def forward(self, x1, x2):
-        
+
+    def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
+            tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
+        """
+        Forward pass through the Siamese U-Net.
+
+        Args:
+            x1: The first input tensor.
+            x2: The second input tensor.
+
+        Returns:
+            tuple: A tuple containing the output segmentation and classification tensors.
+        """
+
         # UNet on x1
         enc1_1 = self.encoder1(x1)
         enc2_1 = self.encoder2(self.pool1(enc1_1))
@@ -111,7 +141,7 @@ class SiamUnet(nn.Module):
         dec1_1 = self.upconv1(dec2_1)
         dec1_1 = torch.cat((dec1_1, enc1_1), dim=1)
         dec1_1 = self.decoder1(dec1_1)
-        
+
         # UNet on x2
         enc1_2 = self.encoder1(x2)
         enc2_2 = self.encoder2(self.pool1(enc1_2))
@@ -132,44 +162,55 @@ class SiamUnet(nn.Module):
         dec1_2 = self.upconv1(dec2_2)
         dec1_2 = torch.cat((dec1_2, enc1_2), dim=1)
         dec1_2 = self.decoder1(dec1_2)
-        
+
         # Siamese
         dec1_c = bottleneck_2 - bottleneck_1
-        
-        dec1_c = self.upconv4_c(dec1_c) # features * 16 -> features * 8
-        diff_2 = enc4_2 - enc4_1 # features * 16 -> features * 8
-        dec2_c = torch.cat((diff_2, dec1_c), dim=1) #512
+
+        dec1_c = self.upconv4_c(dec1_c)  # features * 16 -> features * 8
+        diff_2 = enc4_2 - enc4_1  # features * 16 -> features * 8
+        dec2_c = torch.cat((diff_2, dec1_c), dim=1)  # 512
         dec2_c = self.conv4_c(dec2_c)
-        
-        dec2_c = self.upconv3_c(dec2_c) # 512->256
+
+        dec2_c = self.upconv3_c(dec2_c)  # 512->256
         diff_3 = enc3_2 - enc3_1
-        dec3_c = torch.cat((diff_3, dec2_c), dim=1) # ->512
+        dec3_c = torch.cat((diff_3, dec2_c), dim=1)  # ->512
         dec3_c = self.conv3_c(dec3_c)
 
-        dec3_c = self.upconv2_c(dec3_c) #512->256
+        dec3_c = self.upconv2_c(dec3_c)  # 512->256
         diff_4 = enc2_2 - enc2_1
-        dec4_c = torch.cat((diff_4, dec3_c), dim=1) #
+        dec4_c = torch.cat((diff_4, dec3_c), dim=1)
         dec4_c = self.conv2_c(dec4_c)
 
         dec4_c = self.upconv1_c(dec4_c)
         diff_5 = enc1_2 - enc1_1
         dec5_c = torch.cat((diff_5, dec4_c), dim=1)
         dec5_c = self.conv1_c(dec5_c)
-        
+
         out_seg_1 = self.conv_s(dec1_1)
         out_seg_2 = self.conv_s(dec1_2)
         out_class = self.conv_c(dec5_c)
-        
+
         # modify damage prediction based on UNet arm
         preds_seg_pre = torch.argmax(self.softmax(out_seg_1), dim=1)
-        for c in range(0,out_class.shape[1]):
-            out_class[:,c,:,:] = torch.mul(out_class[:,c,:,:], preds_seg_pre)
-        
-        return out_seg_1, out_seg_2, preds_cls
-    """
+        for c in range(0, out_class.shape[1]):
+            out_class[:, c, :, :] = torch.mul(
+                out_class[:, c, :, :], preds_seg_pre)
+
+        return out_seg_1, out_seg_2, out_class
 
     @staticmethod
-    def _block(in_channels, features, name):
+    def _block(in_channels: int, features: int, name: str) -> nn.Sequential:
+        """
+        Creates a block of layers.
+
+        Args:
+            in_channels: The number of input channels.
+            features: The number of features for the convolutional layers.
+            name: The base name for the layers.
+
+        Returns:
+            nn.Sequential: A sequential container of the layers.
+        """
         return nn.Sequential(
             OrderedDict(
                 [
@@ -202,6 +243,7 @@ class SiamUnet(nn.Module):
         )
 
     def freeze_model_param(self):
+        """Disables weights modification on each layer from the model"""
         for i in [0, 3]:
             self.encoder1[i].weight.requires_grad = False
             self.encoder2[i].weight.requires_grad = False
@@ -259,6 +301,7 @@ class SiamUnet(nn.Module):
         self.conv_s.bias.requires_grad = False
 
     def reinitialize_Siamese(self):
+        """initialize all layers from the model"""
         torch.nn.init.xavier_uniform_(self.upconv4_c.weight)
         torch.nn.init.xavier_uniform_(self.upconv3_c.weight)
         torch.nn.init.xavier_uniform_(self.upconv2_c.weight)
@@ -277,11 +320,24 @@ class SiamUnet(nn.Module):
         self.conv1_c.apply(SiamUnet.init_weights)
 
     def init_weights(m):
+        """Inits a weights of the current layer with xavier uniform"""
         if type(m) == nn.Linear:
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
 
-    def resume_from_checkpoint(self, checkpoint_path, tb_log_dir, config):
+    def resume_from_checkpoint(self, checkpoint_path: str, tb_log_dir: str, config: dict) -> \
+            tuple[torch.optim.Optimizer, int, float]:
+        """
+        Resumes the model from a checkpoint.
+
+        Args:
+            checkpoint_path : The path to the checkpoint file.
+            tb_log_dir : The directory for TensorBoard logs.
+            config : Configuration dictionary containing necessary parameters.
+
+        Returns:
+            tuple: A tuple containing the optimizer, starting epoch, and best accuracy.
+        """
 
         checkpoint = torch.load(checkpoint_path, map_location=config['device'])
         self.load_state_dict(checkpoint['state_dict'])
@@ -321,16 +377,18 @@ class SiamUnet(nn.Module):
         best_acc = checkpoint.get('best_f1', 0.0)
         return optimizer, starting_epoch, best_acc
 
-    def resume_from_scratch(self, config):
-        optimizer = torch.optim.Adam(self.parameters(),
-                                     lr=config['init_learning_rate'])
+    def resume_from_scratch(self, config: dict) -> tuple:
+        """Resumes model from scratch"""
+        optimizer = torch.optim.Adam(
+            self.parameters(), lr=config['init_learning_rate'])
         starting_epoch = 1
         best_acc = (0.0, 0.0)
         return optimizer, starting_epoch, best_acc
 
-    def save_checkpoint(self, state, is_best, checkpoint_dir='../checkpoints'):
+    def save_checkpoint(self, state: dict, is_best: bool,
+                        checkpoint_dir: str = '../checkpoints') -> None:
         """
-        checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far
+        checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far.
         """
         checkpoint_path = os.path.join(checkpoint_dir,
                                        f"checkpoint_epoch{state['epoch']}_"
@@ -340,7 +398,7 @@ class SiamUnet(nn.Module):
             shutil.copyfile(checkpoint_path, os.path.join(
                 checkpoint_dir, 'model_best.pth.tar'))
 
-    def print_network(self):
+    def print_network(self) -> None:
         print('model summary')
         for name, p in self.named_parameters():
             print(name)
