@@ -2,8 +2,8 @@
 # Licensed under the MIT License.
 """
 
-Input a set of raster model output files (same format as the masks) and original polygon JSON files, produces
-polygonized versions of the model output and compute metrics based on an IoU threshold.
+Input a set of raster model output files (same format as the masks) and original polygon JSON files,
+produces polygonized versions of the model output and compute metrics based on an IoU threshold.
 
 TODO: we need the outer loop to iterate over tiles, and to draw confusion matrices etc.
 
@@ -18,22 +18,22 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from preprocessing.prepare_folder.create_label_masks import get_feature_info
 from utils.common.files import read_json
 from collections import defaultdict
-import cv2
 import rasterio.features
 import numpy as np
 import shapely.geometry
-from shapely.geometry import mapping, Polygon
+from shapely.geometry import Polygon
 from PIL import Image
 
 
 all_classes = set([1, 2, 3, 4, 5])
-allowed_classes = set([1, 2, 3, 4])  # 5 is Unclassified, not used during evaluation
+# 5 is Unclassified, not used during evaluation
+allowed_classes = set([1, 2, 3, 4])
 
 
-def _evaluate_tile(pred_polygons_and_class: list, 
-                  label_polygons_and_class: list,
-                  allowed_classes,
-                  iou_threshold: float=0.5):
+def _evaluate_tile(pred_polygons_and_class: list,
+                   label_polygons_and_class: list,
+                   allowed_classes,
+                   iou_threshold: float = 0.5):
     """
     Method
     - For each predicted polygon, we find the maximum value of IoU it has with any ground truth
@@ -57,13 +57,13 @@ def _evaluate_tile(pred_polygons_and_class: list,
     the polygon it matched, or a "false negative" attribute.
 
     Args:
-        pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of the prediction,
-            and the predicted class
-        label_polygons_and_class: list of tuples of shapely Polygon representing the ground truth geometry,
-            and the class
+        pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of
+            the prediction, and the predicted class
+        label_polygons_and_class: list of tuples of shapely Polygon representing the ground
+            truth geometry, and the class
         allowed_classes: which classes should be evaluated
-        iou_threshold: Intersection over union threshold above which a predicted polygon is considered
-            true positive
+        iou_threshold: Intersection over union threshold above which a predicted polygon
+          is considered true positive
 
     Returns:
         results: a dict of dicts, keyed by the class number, and points to a dict with counts of
@@ -80,7 +80,8 @@ def _evaluate_tile(pred_polygons_and_class: list,
 
     for i_pred, (pred_poly, pred_class) in enumerate(pred_polygons_and_class):
 
-        # cannot skip pred_class if it's not in the allowed list, as the list above relies on their indices
+        # cannot skip pred_class if it's not in the allowed list, as the list above
+        # relies on their indices
 
         for i_label, (label_poly, label_class) in enumerate(label_polygons_and_class):
 
@@ -90,13 +91,15 @@ def _evaluate_tile(pred_polygons_and_class: list,
                 label_poly = label_poly.buffer(0)
 
             intersection = pred_poly.intersection(label_poly)
-            union = pred_poly.union(label_poly)  # they should not have zero area
+            # they should not have zero area
+            union = pred_poly.union(label_poly)
             iou = intersection.area / union.area
 
             if iou > pred_max_iou_w_label[i_pred][0]:
                 pred_max_iou_w_label[i_pred] = (iou, i_label)
 
-    results = defaultdict(lambda: defaultdict(int))  # class: {tp, fp, fn} counts
+    # class: {tp, fp, fn} counts
+    results = defaultdict(lambda: defaultdict(int))
     results[-1] = len(pred_polygons_and_class)
     i_label_polygons_matched = set()
     list_preds = []
@@ -111,14 +114,14 @@ def _evaluate_tile(pred_polygons_and_class: list,
 
         item = {
             'pred': pred_class,
-            'label': label_polygons_and_class[matched_i_label][1] if matched_i_label is not None else None
+            'label': label_polygons_and_class[matched_i_label][1]
+            if matched_i_label is not None else None
         }
 
         if matched_i_label is not None:
             list_labels.append(item)
-            
+
         list_preds.append(item)
-        
 
         if max_iou > iou_threshold and label_polygons_and_class[matched_i_label][1] == pred_class:
             # true positive
@@ -126,14 +129,16 @@ def _evaluate_tile(pred_polygons_and_class: list,
             results[pred_class]['tp'] += 1
             for cls in allowed_classes:
                 if cls != pred_class:
-                     results[cls]['tn'] += 1
+                    results[cls]['tn'] += 1
         else:
             # false positive - all other predictions
-            results[pred_class]['fp'] += 1  # note that it is a FP for the prediction's class
+            # note that it is a FP for the prediction's class
+            results[pred_class]['fp'] += 1
             # print(matched_i_label)
-            ##results[matched_i_label]['fn'] += 1  # note that it is a FP for the prediction's class
+            # results[matched_i_label]['fn'] += 1  # note that it is a FP for the prediction's class
 
-    # calculate the number of false negatives - how many label polygons are not matched by any predictions
+    # calculate the number of false negatives - how many label polygons are not matched
+    # by any predictions
     for i_label, (label_poly, label_class) in enumerate(label_polygons_and_class):
 
         if label_class not in allowed_classes:
@@ -156,14 +161,14 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
 
     Args:
         path_label_json: path to the label JSON file provided by xBD
-        path_pred_mask: path to the PNG or TIFF mask predicted by the model, where each pixel is one
-            of the allowed classes.
+        path_pred_mask: path to the PNG or TIFF mask predicted by the model,
+            where each pixel is one of the allowed classes.
 
     Returns:
-        pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of the prediction,
-            and the predicted class
-        label_polygons_and_class: list of tuples of shapely Polygon representing the ground truth geometry,
-            and the class
+        pred_polygons_and_class: list of tuples of shapely Polygon representing the
+            geometry of the prediction, and the predicted class
+        label_polygons_and_class: list of tuples of shapely Polygon representing the
+            ground truth geometry, and the class
     """
     assert path_label_json.endswith('.json')
 
@@ -172,7 +177,8 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
     label_json = read_json(path_label_json)
     polys = get_feature_info(label_json)
 
-    label_polygons_and_class = []  # tuples of (shapely polygon, damage_class_num)
+    # tuples of (shapely polygon, damage_class_num)
+    label_polygons_and_class = []
 
     for uid, tup in polys.items():
         poly, damage_class_num = tup  # poly is a np.ndarray
@@ -189,35 +195,41 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
     pred_dmg_mask = np.asarray(Image.open(path_pred_mask))
     assert len(pred_dmg_mask.shape) == 2, 'mask should be 2D only.'
 
-    background_and_others_mask = np.where(pred_dmg_mask > 0, 1, 0).astype(np.int16)  # all non-background classes become 1
+    background_and_others_mask = np.where(pred_dmg_mask > 0, 1, 0).astype(
+        np.int16)  # all non-background classes become 1
 
     # rasterio.features.shapes:
-    # default is 4-connected for connectivity - see https://www.mathworks.com/help/images/pixel-connectivity.html
+    # default is 4-connected for connectivity
+    # see https://www.mathworks.com/help/images/pixel-connectivity.html
     # specify the `mask` parameter, otherwise the background will be returned as a shape
-    connected_components = rasterio.features.shapes(background_and_others_mask, mask=pred_dmg_mask > 0)
+    connected_components = rasterio.features.shapes(
+        background_and_others_mask, mask=pred_dmg_mask > 0)
 
     polygons = []
     for component_geojson, pixel_val in connected_components:
         # reference: https://shapely.readthedocs.io/en/stable/manual.html#python-geo-interface
         shape = shapely.geometry.shape(component_geojson)
         assert isinstance(shape, Polygon)
-        if shape.area >20:
+        if shape.area > 20:
             polygons.append(shape)
 
-    # 2. The majority class for each building blob is assigned to be that building's predicted class.
+    # 2. The majority class for each building blob is assigned to be
+    # that building's predicted class.
     polygons_by_class = []
 
     for c in all_classes:
 
         # default is 4-connected for connectivity
-        shapes = rasterio.features.shapes(pred_dmg_mask, mask=pred_dmg_mask == c)
+        shapes = rasterio.features.shapes(
+            pred_dmg_mask, mask=pred_dmg_mask == c)
 
         for shape_geojson, pixel_val in shapes:
             shape = shapely.geometry.shape(shape_geojson)
             assert isinstance(shape, Polygon)
             polygons_by_class.append((shape, int(pixel_val)))
 
-    # we take the class of the shape with the maximum overlap with the building polygon to be the class of the building - majority vote
+    # we take the class of the shape with the maximum overlap with the building polygon to
+    # be the class of the building - majority vote
     polygons_max_overlap = [0.0] * len(polygons)  # indexed by polygon_i
     polygons_max_overlap_class = [None] * len(polygons)
 
@@ -236,11 +248,13 @@ def get_label_and_pred_polygons_for_tile_json_input(path_label_json, path_pred_m
 
     pred_polygons_and_class = []  # include all classes
 
-    for polygon_i, (max_overlap_area, clss) in enumerate(zip(polygons_max_overlap, polygons_max_overlap_class)):
+    for polygon_i, (max_overlap_area, clss) in enumerate(
+            zip(polygons_max_overlap, polygons_max_overlap_class)):
         pred_polygons_and_class.append(
             (polygons[polygon_i], clss)
         )
     return pred_polygons_and_class, label_polygons_and_class
+
 
 def get_label_and_pred_polygons_for_tile_mask_input(pred_dmg_mask, true_dmg_mask):
     """
@@ -249,27 +263,28 @@ def get_label_and_pred_polygons_for_tile_mask_input(pred_dmg_mask, true_dmg_mask
     Args:
 
     Returns:
-        pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of the prediction,
-            and the predicted class
-        label_polygons_and_class: list of tuples of shapely Polygon representing the ground truth geometry,
-            and the class
+        pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of
+          the prediction, and the predicted class
+        label_polygons_and_class: list of tuples of shapely Polygon representing the ground
+            truth geometry, and the class
     """
     for i in pred_dmg_mask.shape[0]:
-        pred_dmg_mask = np.array(pred_dmg_mask[i,:,:,:]).astype(np.uint8)
-        true_dmg_mask = np.array(true_dmg_mask[i,:,:,:]).astype(np.uint8)
+        pred_dmg_mask = np.array(pred_dmg_mask[i, :, :, :]).astype(np.uint8)
+        true_dmg_mask = np.array(true_dmg_mask[i, :, :, :]).astype(np.uint8)
     # polygonize the label mask
     # mask_label = np.asarray(Image.open(path_label_mask))
-    label_polygons_and_class = []  # tuples of (shapely polygon, damage_class_num)
+    # tuples of (shapely polygon, damage_class_num)
+    label_polygons_and_class = []
     for c in all_classes:
 
         # default is 4-connected for connectivity
-        shapes = rasterio.features.shapes(pred_dmg_mask, mask=pred_dmg_mask == c)
+        shapes = rasterio.features.shapes(
+            pred_dmg_mask, mask=pred_dmg_mask == c)
 
         for shape_geojson, pixel_val in shapes:
             shape = shapely.geometry.shape(shape_geojson)
             assert isinstance(shape, Polygon)
             label_polygons_and_class.append((shape, int(pixel_val)))
-
 
     # polygonize the prediction mask
 
@@ -282,35 +297,41 @@ def get_label_and_pred_polygons_for_tile_mask_input(pred_dmg_mask, true_dmg_mask
     # print('pred_dmg_mask')
     # print(pred_dmg_mask.shape)
 
-    background_and_others_mask = np.where(pred_dmg_mask > 0, 1, 0).astype(np.int16)  # all non-background classes become 1
+    background_and_others_mask = np.where(pred_dmg_mask > 0, 1, 0).astype(
+        np.int16)  # all non-background classes become 1
 
     # rasterio.features.shapes:
-    # default is 4-connected for connectivity - see https://www.mathworks.com/help/images/pixel-connectivity.html
+    # default is 4-connected for connectivity
+    # see https://www.mathworks.com/help/images/pixel-connectivity.html
     # specify the `mask` parameter, otherwise the background will be returned as a shape
-    connected_components = rasterio.features.shapes(background_and_others_mask, mask=pred_dmg_mask > 0)
+    connected_components = rasterio.features.shapes(
+        background_and_others_mask, mask=pred_dmg_mask > 0)
 
     polygons = []
     for component_geojson, pixel_val in connected_components:
         # reference: https://shapely.readthedocs.io/en/stable/manual.html#python-geo-interface
         shape = shapely.geometry.shape(component_geojson)
         assert isinstance(shape, Polygon)
-        if shape.area >20:
+        if shape.area > 20:
             polygons.append(shape)
 
-    # 2. The majority class for each building blob is assigned to be that building's predicted class.
+    # 2. The majority class for each building blob is assigned
+    # to be that building's predicted class.
     polygons_by_class = []
 
     for c in all_classes:
 
         # default is 4-connected for connectivity
-        shapes = rasterio.features.shapes(pred_dmg_mask, mask=pred_dmg_mask == c)
+        shapes = rasterio.features.shapes(
+            pred_dmg_mask, mask=pred_dmg_mask == c)
 
         for shape_geojson, pixel_val in shapes:
             shape = shapely.geometry.shape(shape_geojson)
             assert isinstance(shape, Polygon)
             polygons_by_class.append((shape, int(pixel_val)))
 
-    # we take the class of the shape with the maximum overlap with the building polygon to be the class of the building - majority vote
+    # we take the class of the shape with the maximum overlap with the building polygon
+    # to be the class of the building - majority vote
     polygons_max_overlap = [0.0] * len(polygons)  # indexed by polygon_i
     polygons_max_overlap_class = [None] * len(polygons)
 
@@ -329,7 +350,8 @@ def get_label_and_pred_polygons_for_tile_mask_input(pred_dmg_mask, true_dmg_mask
 
     pred_polygons_and_class = []  # include all classes
 
-    for polygon_i, (max_overlap_area, clss) in enumerate(zip(polygons_max_overlap, polygons_max_overlap_class)):
+    for polygon_i, (max_overlap_area, clss) in enumerate(
+            zip(polygons_max_overlap, polygons_max_overlap_class)):
         pred_polygons_and_class.append(
             (polygons[polygon_i], clss)
         )

@@ -18,23 +18,33 @@ class MetricManager:
      A class to manage metrics for building and damage classification.
 
     This class initializes metric computers for pixel and object-level metrics
-    for both building and damage labels. It provides methods to get confusion 
-    matrices and compute metrics for different levels (pixel or object) and 
+    for both building and damage labels. It provides methods to get confusion
+    matrices and compute metrics for different levels (pixel or object) and
     types (building or damage).
     """
+
     def __init__(self, phase_context, static_context) -> None:
         self.bld_labels = static_context['labels_set_bld']
         self.dmg_labels = static_context['labels_set_dmg']
-        self.px_dmg_metric = MetricComputer(Level.PX_BLD,self.dmg_labels, phase_context, static_context)
-        self.px_bld_metric = MetricComputer(Level.PX_DMG,self.bld_labels, phase_context, static_context)
-        self.obj_dmg_metric = MetricComputer(Level.OBJ_BLD,self.dmg_labels, phase_context, static_context)
-        self.obj_bld_metric = MetricComputer(Level.OBJ_DMG,self.bld_labels, phase_context, static_context)
+        self.px_dmg_metric = \
+            MetricComputer(Level.PX_BLD, self.dmg_labels,
+                           phase_context, static_context)
+        self.px_bld_metric = \
+            MetricComputer(Level.PX_DMG, self.bld_labels,
+                           phase_context, static_context)
+        self.obj_dmg_metric = \
+            MetricComputer(Level.OBJ_BLD, self.dmg_labels,
+                           phase_context, static_context)
+        self.obj_bld_metric = \
+            MetricComputer(Level.OBJ_DMG, self.bld_labels,
+                           phase_context, static_context)
 
-    def get_confusion_matrices_for(self, level: Level, args : dict):
+    def get_confusion_matrices_for(self, level: Level, args: dict):
         """Gets confusion matrices for a given level.
 
         Args:
-            level (Level): The level for which to get confusion matrices (e.g., PX_BLD, PX_DMG, OBJ_BLD, OBJ_DMG).
+            level (Level): The level for which to get confusion matrices
+            (e.g., PX_BLD, PX_DMG, OBJ_BLD, OBJ_DMG).
             *args: Additional arguments required for computing confusion matrices.
         """
         if (level == Level.PX_BLD):
@@ -43,7 +53,7 @@ class MetricManager:
             return MatrixComputer.conf_mtrx_for_px_level(level, self.dmg_labels, **args)
         elif (level == Level.OBJ_BLD):
             return MatrixComputer.conf_mtrx_for_obj_level(level, self.bld_labels, 3, **args)
-        elif(level == Level.OBJ_DMG):
+        elif (level == Level.OBJ_DMG):
             return MatrixComputer.conf_mtrx_for_obj_level(level, self.dmg_labels, 3, **args)
         else:
             raise Exception(f"{level} Not Implemented")
@@ -52,7 +62,8 @@ class MetricManager:
         """Computes metrics for a given level.
 
         Args:
-            level (Level): The level for which to compute metrics (e.g., PX_BLD, PX_DMG, OBJ_BLD, OBJ_DMG).
+            level (Level): The level for which to compute metrics
+            (e.g., PX_BLD, PX_DMG, OBJ_BLD, OBJ_DMG).
             *args: Additional arguments required for computing metrics.
         """
         if (level == Level.PX_BLD):
@@ -60,65 +71,65 @@ class MetricManager:
         elif (level == Level.PX_DMG):
             return self.px_dmg_metric.compute_metrics(conf_df)
         elif (level == Level.OBJ_BLD):
-            return  self.obj_bld_metric.compute_metrics(conf_df)
+            return self.obj_bld_metric.compute_metrics(conf_df)
         elif (level == Level.OBJ_DMG):
-            return  self.obj_dmg_metric.compute_metrics(conf_df)
+            return self.obj_dmg_metric.compute_metrics(conf_df)
         else:
             raise Exception(f"{level} Not Implemented")
-        
-    
+
     def log_metrics(self, phase, tb_log, metrics: dict[pd.DataFrame]):
         """Logs evaluation metrics using the provided logger."""
-        metric_df : pd.DataFrame
+        metric_df: pd.DataFrame
         log = LoggerSingleton()
-        log.info(f"--{phase.upper()} METRICS--") 
+        log.info(f"--{phase.upper()} METRICS--")
         for key, metric_df in metrics.items():
-            log.info(to_table(curr_type=key,df=metric_df,odd=True,decim_digits=5))
+            log.info(to_table(curr_type=key, df=metric_df,
+                     odd=True, decim_digits=5))
             for index, row in metric_df.iterrows():
                 msg = f"{phase}/{key}_metrics"
                 tb_log.add_scalars(msg, dict(row), int(row["epoch"]))
 
-    def compute_epoch_metrics(self, phase, tb_log, epoch, confusion_matrices_df : pd.DataFrame):
-        """Computes metrics for damage and building classification 
+    def compute_epoch_metrics(self, phase, tb_log, epoch, confusion_matrices_df: pd.DataFrame):
+        """Computes metrics for damage and building classification
         for the current phase in the current epoch.
-        
+
         Args:
-            confusion_matrices (dict): Dictionary containing confusion matrices. 
+            confusion_matrices (dict): Dictionary containing confusion matrices.
             epoch (int): The current epoch number.
 
         Returns:
             dict: Dictionary containing computed metrics for damage and building classification.
         """
         metrics_keys = ["dmg_pixel_level", "bld_pixel_level",
-                         "dmg_object_level", "bld_object_level"]
+                        "dmg_object_level", "bld_object_level"]
         levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
         matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
-                          "obj_dmg_matrices", "obj_bld_matrices"]
-        
+                         "obj_dmg_matrices", "obj_bld_matrices"]
+
         def compute_metrics_for_level(lvl, mtrx):
             matrix = self.compute_metrics_for(lvl, confusion_matrices_df[mtrx])
-            matrix.insert(0,"epoch",epoch)
+            matrix.insert(0, "epoch", epoch)
             return matrix
-        
+
         metrics = {}
         with concurrent.futures.ThreadPoolExecutor() as executor:
             future_to_key_lvl = {
-                executor.submit(compute_metrics_for_level, lvl, mtrx) :
-                (key, lvl, mtrx) for key, lvl, mtrx in zip(metrics_keys,levels,matrices_keys)
+                executor.submit(compute_metrics_for_level, lvl, mtrx):
+                (key, lvl, mtrx) for key, lvl, mtrx in zip(metrics_keys, levels, matrices_keys)
             }
             for future in concurrent.futures.as_completed(future_to_key_lvl):
-                key, _ , _ = future_to_key_lvl[future]
+                key, _, _ = future_to_key_lvl[future]
                 metrics[key] = future.result()
 
-        self.log_metrics(phase=phase,tb_log=tb_log,metrics=metrics)
+        self.log_metrics(phase=phase, tb_log=tb_log, metrics=metrics)
         return metrics
 
-    def compute_confusion_matrices(self, y_seg: torch.Tensor, y_cls: torch.Tensor, 
-                                    pred_y_seg: torch.Tensor, pred_y_cls: torch.Tensor,
-                                    batch_idx: int, *kwargs ) -> dict:
+    def compute_confusion_matrices(self, y_seg: torch.Tensor, y_cls: torch.Tensor,
+                                   pred_y_seg: torch.Tensor, pred_y_cls: torch.Tensor,
+                                   batch_idx: int,paralelism=False, *kwargs) -> dict:
         """
         Computes confusion matrices for damage and building classification at different levels.
-        
+
         Args:
             y_seg (torch.Tensor): Ground truth segmentation tensor.
             y_cls (torch.Tensor): Ground truth classification tensor.
@@ -135,21 +146,25 @@ class MetricManager:
             matrix = self.get_confusion_matrices_for(lvl, data)
             matrix.insert(0, "batch_id", batch_idx)
             return matrix
-        
+
         levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
         matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
-                          "obj_dmg_matrices", "obj_bld_matrices"]
-        data = {"pred_bld_mask":pred_y_seg,
-                "pred_dmg_mask":pred_y_cls,
-                "y_bld_mask":y_seg,
-                "y_dmg_mask":y_cls}
+                         "obj_dmg_matrices", "obj_bld_matrices"]
+        data = {"pred_bld_mask": pred_y_seg,
+                "pred_dmg_mask": pred_y_cls,
+                "y_bld_mask": y_seg,
+                "y_dmg_mask": y_cls}
         matrices = {}
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future_to_key_lvl = {
-                executor.submit(get_confusion_matrix_for_level, lvl, data, batch_idx) :
-                (key, lvl) for key, lvl in zip(matrices_keys, levels)
-            }
-            for future in concurrent.futures.as_completed(future_to_key_lvl):
-                key, _ = future_to_key_lvl[future]
-                matrices[key] = future.result()
+        if paralelism:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future_to_key_lvl = {
+                    executor.submit(get_confusion_matrix_for_level, lvl, data, batch_idx):
+                    (key, lvl) for key, lvl in zip(matrices_keys, levels)
+                }
+                for future in concurrent.futures.as_completed(future_to_key_lvl):
+                    key, _ = future_to_key_lvl[future]
+                    matrices[key] = future.result()
+        else:
+            for key, lvl in zip(matrices_keys, levels):
+                matrices[key] = get_confusion_matrix_for_level(lvl, data, batch_idx)
         return matrices

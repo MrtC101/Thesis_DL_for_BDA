@@ -18,24 +18,24 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 log = LoggerSingleton()
 
 
-def slice_tile(n: int, random_c :bool, pre_image: np.ndarray, post_image: np.ndarray,
-               pre_mask: np.ndarray, post_mask: np.ndarray
+def slice_tile(n: int, random_c: bool, pre_img: np.ndarray, post_img: np.ndarray,
+               bld_mask: np.ndarray, dmg_mask: np.ndarray
                ) -> List[Dict[str, np.ndarray]]:
     """Slices each tile into `n` equal parts and creates patches.
 
     Args:
         n: Number of equal parts to slice the tile into.
         random_c: if create 4 more patches with random crop.
-        pre_image: Pre-disaster image.
-        post_image: Post-disaster image.
-        pre_mask: Pre-disaster semantic mask.
-        post_mask: Post-disaster class mask.
+        pre_img: Pre-disaster image.
+        post_img: Post-disaster image.
+        bld_mask: Pre-disaster semantic mask.
+        dmg_mask: Post-disaster class mask.
 
     Returns:
         List[Dict[str, np.ndarray]]: List of dictionaries containing patches
           for each image.
     """
-    tile_h, tile_w = pre_image.shape[:2]
+    tile_h, tile_w = pre_img.shape[:2]
 
     assert tile_h % n == 0 and n > 0, \
         f"Can't crop image into {n}x{n} equal parts."
@@ -47,8 +47,8 @@ def slice_tile(n: int, random_c :bool, pre_image: np.ndarray, post_image: np.nda
     patch_h = math.floor(tile_h / n)
     patch_w = math.floor(tile_w / n)
 
-    imgs = [pre_image, post_image, pre_mask, post_mask]
-    keys = ["pre-image", "post-image", "semantic-mask", "class-mask"]
+    imgs = [pre_img, post_img, bld_mask, dmg_mask]
+    keys = ["pre-img", "post-img", "bld-mask", "dmg-mask"]
 
     def create_crop(i, j):
         crop = transforms.Compose([
@@ -71,7 +71,7 @@ def slice_tile(n: int, random_c :bool, pre_image: np.ndarray, post_image: np.nda
             crop_transform = create_crop(i, j)
             create_patch(patch_list, crop_transform)
 
-    if(random_c):
+    if (random_c):
         # pick 4 random slices from each tile
         for _ in range(0, 4):
             i = random.randint(5, h_idx[-1]-5)
@@ -106,12 +106,10 @@ def slice_dataset(splits_json_path: str, output_path: str) -> None:
         split_folder = os.path.join(output_path, split_name)
 
         for dis_id, tile_id, data in tqdm(iter(dataset), total=num_tile):
-            patch_list = slice_tile(4,split_name != "test", **data)
-            PatchDataset.save_patches(
-                dis_id, tile_id, patch_list, split_folder)
-        length = 16*num_tile if split_name == "test" else 20*num_tile
-        log.info(f'Done slicing for {split_name},\
-                 length after cropping: {length}.')
+            patch_list = slice_tile(4, split_name != "test", **data)
+            PatchDataset.save_patches(dis_id, tile_id, patch_list, split_folder)
+        length = 16 * num_tile if split_name == "test" else 20 * num_tile
+        log.info(f'Done slicing for {split_name}, length after cropping: {length}.')
 
     # could be parallelized
     iterate_and_slice("train")

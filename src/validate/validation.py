@@ -1,19 +1,19 @@
 # Copyright (c) Microsoft Corporation. All rights reserved.
 # Licensed under the MIT License.
+import torch
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
+from models.siames.end_to_end_Siam_UNet import SiamUnet
+from utils.common.files import dump_json, is_dir
+from utils.datasets.shard_datasets import ShardDataset
+from train.phase import Phase
 import os
 import sys
 from utils.common.logger import LoggerSingleton
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 log = LoggerSingleton()
-from train.phase import Phase
-from utils.datasets.shard_datasets import ShardDataset
-from utils.common.files import dump_json, is_dir
-from models.siames.end_to_end_Siam_UNet import SiamUnet
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader
-import torch.nn as nn
-import torch
 
 
 def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
@@ -54,6 +54,7 @@ def output_directories(out_dir, exp_name):
 
     return c_logger_dir, tb_logger_dir, evals_dir, output_dir, config_dir
 
+
 def test_model(test_config, path_config):
     """Test the model using the provided configuration and paths.
     Args:
@@ -83,7 +84,7 @@ def test_model(test_config, path_config):
     dump_json(os.path.join(config_dir, 'test_path_config.txt'), path_config)
 
     logger_test = SummaryWriter(log_dir=tb_logger_dir)
-    log = LoggerSingleton("Testing Model",c_log_dir)
+    log = LoggerSingleton("Testing Model", c_log_dir)
 
     # torch device
     log.info(f'Using PyTorch version {torch.__version__}.')
@@ -103,7 +104,8 @@ def test_model(test_config, path_config):
                              pin_memory=False)
 
     log.info('Get sample chips from test set...')
-    sample_test_ids = xBD_test.get_sample_images(test_config['num_chips_to_viz'])
+    sample_test_ids = xBD_test.get_sample_images(
+        test_config['num_chips_to_viz'])
 
     # TEST CONFIG
 
@@ -112,7 +114,7 @@ def test_model(test_config, path_config):
     log.info(model.model_summary())
 
     # resume from a checkpoint if provided
-    epoch = resume_model(model,path_config['starting_checkpoint_path'],
+    epoch = resume_model(model, path_config['starting_checkpoint_path'],
                          tb_logger_dir, test_config)
 
     # define loss functions and weights on classes
@@ -121,9 +123,12 @@ def test_model(test_config, path_config):
     weights_loss = test_config['weights_loss']
 
     # loss functions
-    criterion_seg_1 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_seg_2 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
-    criterion_damage = nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
+    criterion_seg_1 = nn.CrossEntropyLoss(
+        weight=weights_seg_tf).to(device=device)
+    criterion_seg_2 = nn.CrossEntropyLoss(
+        weight=weights_seg_tf).to(device=device)
+    criterion_damage = nn.CrossEntropyLoss(
+        weight=weights_damage_tf).to(device=device)
 
     static_context = {
         'crit_seg_1': criterion_seg_1,
@@ -147,7 +152,7 @@ def test_model(test_config, path_config):
     # TEST STEP
     test = Phase(test_context, static_context)
 
-    #last epoch
+    # last epoch
     epoch_context = {
         'epoch': epoch,
         'epochs': epoch,
@@ -163,13 +168,14 @@ def test_model(test_config, path_config):
     log.info(f"test loss:{test_loss};")
 
     # save evalution metrics
-    for key,met in test_metrics.items():
+    for key, met in test_metrics.items():
         met.to_csv(os.path.join(evals_dir, f'{key}.csv'), index=False)
-    
+
     logger_test.flush()
     logger_test.close()
     log.info('Done')
-    
+
+
 if __name__ == "__main__":
     test_config = {
         'labels_dmg': [0, 1, 2, 3, 4],
@@ -187,8 +193,10 @@ if __name__ == "__main__":
     path_config = {
         'exp_name': 'train_UNet',  # train_dmg
         'out_dir': '/home/mrtc101/Desktop/tesina/repo/my_siames/out',
-        'shard_splits_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json',
-        'label_map_json': '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
+        'shard_splits_json': \
+                    '/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/splits/shard_splits.json',
+        'label_map_json': \
+                    '/home/mrtc101/Desktop/tesina/repo/my_siames/data/constants/xBD_label_map.json',
         'starting_checkpoint_path': None
     }
     test_model(test_config, path_config)

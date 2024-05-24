@@ -202,25 +202,25 @@ class RasterLabelVisualizer(object):
         im = Image.open(buf)
         return im, buf
 
-    def tb_log_images(self, tb_log: torch.utils.tensorboard.SummaryWriter , phase, dataset, sample_ids, model,
-                        epoch, device):
+    def tb_log_images(self, tb_log: torch.utils.tensorboard.SummaryWriter, phase, dataset,
+                      sample_ids, model, epoch, device):
         """This method creates logging image files for tensorboard visualization"""
-        
+
         for index in sample_ids:
             data = dataset[index]
-            c, h, w = data['pre_image'].size()
-            pre = data['pre_image'].reshape(1, c, h, w)
-            post = data['post_image'].reshape(1, c, h, w)
+            c, h, w = data['pre_img'].size()
+            pre = data['pre_img'].reshape(1, c, h, w)
+            post = data['post_img'].reshape(1, c, h, w)
 
             scores = model(pre.to(device=device), post.to(device=device))
 
             if (epoch == 1):
                 # Log ground truth images onece
                 gt = {}
-                gt['pre_img'] = data["pre_image"]
-                gt['post_img'] = data["post_image"]
-                gt['bld_mask'] = data["building_mask"].reshape(1, h, w)
-                true_dmg_mask = data["damage_mask"]
+                gt['pre_img'] = data["pre_img"]
+                gt['post_img'] = data["post_img"]
+                gt['bld_mask'] = data["bld_mask"].reshape(1, h, w)
+                true_dmg_mask = data["dmg_mask"]
                 im, _ = self.show_label_raster(np.array(true_dmg_mask), size=(5, 5))
                 gt['dmg_mask'] = \
                     transforms.ToTensor()(transforms.ToPILImage()(np.array(im)).convert("RGB"))
@@ -232,7 +232,7 @@ class RasterLabelVisualizer(object):
             # compute predictions & confusion metrics
             softmax = torch.nn.Softmax(dim=1)
             tp['bld_mask'] = torch.argmax(softmax(scores[0]), dim=1)
-            #tp['post_img'] = torch.argmax(softmax(scores[1]), dim=1)
+            # tp['post_img'] = torch.argmax(softmax(scores[1]), dim=1)
             preds_cls = torch.argmax(softmax(scores[2]), dim=1)
             im, _ = self.show_label_raster(
                 preds_cls.cpu().numpy(), size=(5, 5))

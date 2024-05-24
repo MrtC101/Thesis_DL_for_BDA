@@ -94,8 +94,8 @@ def shard_patches(dataset: PatchDataset, split_name: str,
         image_patches = defaultdict(lambda: [])
         for idx in range(begin_idx, end_idx):
             dis_id, tile_id, patch_id, data = dataset[idx]
-            image_patches["pre-orig"].append(deepcopy(data["pre_image"]))
-            image_patches["post-orig"].append(deepcopy(data["post_image"]))
+            image_patches["pre-org"].append(deepcopy(data["pre_img"]))
+            image_patches["post-org"].append(deepcopy(data["post_img"]))
 
             # transformations
             if transform:
@@ -103,16 +103,16 @@ def shard_patches(dataset: PatchDataset, split_name: str,
 
             # color normalization
             pre_img, post_img = apply_norm(
-                data["pre_image"], data["post_image"], dis_id, tile_id,
+                data["pre_img"], data["post_img"], dis_id, tile_id,
                 normalize, mean_stddev_json)
 
             # replace non-classified pixels with background
-            dmg_mask = np.where(data["post_mask"] == 5, 0, data["post_mask"])
+            dmg_mask = np.where(data["dmg_mask"] == 5, 0, data["dmg_mask"])
 
-            image_patches["pre-image"].append(pre_img)
-            image_patches["post-image"].append(post_img)
-            image_patches["semantic-mask"].append(data["pre_mask"])
-            image_patches["class-mask"].append(dmg_mask)
+            image_patches["pre-img"].append(pre_img)
+            image_patches["post-img"].append(post_img)
+            image_patches["bld-mask"].append(data["bld_mask"])
+            image_patches["dmg-mask"].append(dmg_mask)
 
         # save n shards
         log.info(f"SHARD {i}/{num_shards}")

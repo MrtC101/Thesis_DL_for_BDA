@@ -184,6 +184,5 @@ class RawPathManager:
 
 
 if __name__ == "__main__":
-    XBD = RawPathManager.load_dataset(
-        "/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/raw/")
+    XBD = RawPathManager.load_dataset("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/raw/")
     XBD.to_dict()

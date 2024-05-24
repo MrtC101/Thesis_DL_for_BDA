@@ -6,8 +6,8 @@ packages, to implement the data preprocessing,
 model training and testing pipeline for this project.
 """
 import os
-from os.path import join
 import sys
+from os.path import join
 # Paths to change in production
 os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/my_siames"
 os.environ["SRC_PATH"] = join(os.environ["PROJ_PATH"], "src")
@@ -17,23 +17,25 @@ os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from preprocessing.shards.make_data_shards import create_shards
-from preprocessing.shards.split_shard_dataset import split_shard_dataset
-from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
-from preprocessing.sliced.make_smaller_tiles import slice_dataset
-from preprocessing.raw.split_raw_dataset import split_dataset
-from preprocessing.raw.data_stdv_mean import create_data_dicts
-from preprocessing.prepare_folder.delete_extra import leave_only_n
-from preprocessing.prepare_folder.create_label_masks import create_masks
-from preprocessing.prepare_folder.clean_folder import delete_not_in
-from utils.common.logger import LoggerSingleton
-from train.training import train_model
 from validate.validation import test_model
+from train.training import train_model
+from utils.common.logger import LoggerSingleton
+from preprocessing.prepare_folder.clean_folder import delete_not_in
+from preprocessing.prepare_folder.create_label_masks import create_masks
+from preprocessing.prepare_folder.delete_extra import leave_only_n
+from preprocessing.raw.data_stdv_mean import create_data_dicts
+from preprocessing.raw.split_raw_dataset import split_dataset
+from preprocessing.sliced.make_smaller_tiles import slice_dataset
+from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
+from preprocessing.shards.split_shard_dataset import split_shard_dataset
+from preprocessing.shards.make_data_shards import create_shards
+
+
 
 pre_config = {
     "disaster_num": 10,
-    "border_with":1,
-    "shard_num":2
+    "border_with": 1,
+    "shard_num": 2
 }
 
 model_config = {
@@ -48,25 +50,27 @@ model_config = {
     'epochs': 1,  # 1500,
     'batch_size': 120,
     'num_chips_to_viz': 1,
-    'torch_threads':1,
-    'torch_op_threads':1,
-    'batch_workers':1,
+    'torch_threads': 1,
+    'torch_op_threads': 1,
+    'batch_workers': 1,
 }
 path_config = {
     'exp_name': 'train_UNet',  # train_dmg
     'out_dir': os.environ["OUT_PATH"],
     'shard_splits_json': "",
     'label_map_json': join(os.environ["DATA_PATH"], "constants",
-                            "xBD_label_map.json"),
+                           "xBD_label_map.json"),
     'starting_checkpoint_path': None
 }
 
-def log_Title(title : str):
+
+def log_Title(title: str):
     log.info("="*50)
     log.info(f"{title.upper()}...")
     log.info("="*50)
 
-def preprocess(disaster_num,border_with,shard_num):
+
+def preprocess(disaster_num, border_with, shard_num):
     """Pipeline sequence for data preprocessing."""
     xbd_path = join(os.environ["DATA_PATH"], "xBD")
     raw_path = join(xbd_path, "raw")
@@ -87,8 +91,7 @@ def preprocess(disaster_num,border_with,shard_num):
     sliced_path = join(xbd_path, "sliced")
     slice_dataset(split_json_path, sliced_path)
     log_Title("split patches")
-    split_sliced_json_path = split_sliced_dataset(
-        sliced_path, split_json_path, xbd_path)
+    split_sliced_json_path = split_sliced_dataset(sliced_path, split_json_path, xbd_path)
     # Sharded
     log_Title("creating data shards")
     mean_stddev_json = join(data_dicts_path, "all_tiles_mean_stddev.json")
@@ -98,10 +101,11 @@ def preprocess(disaster_num,border_with,shard_num):
     split_shard_json_path = split_shard_dataset(shards_path, xbd_path)
     return split_shard_json_path
 
+
 if __name__ == "__main__":
     # FIRST AND UNIQUE LOGGER FROM ALL TRAINING PIPELINE
     log = LoggerSingleton("Training Pipeline",
-                          folder_path=join(os.environ["OUT_PATH"],"console_logs"))
+                          folder_path=join(os.environ["OUT_PATH"], "console_logs"))
     #split_shard_json_path = preprocess(**pre_config)
     split_shard_json_path = join(os.environ["DATA_PATH"], "xBD", "splits", "shard_splits.json")
     path_config["shard_splits_json"] = split_shard_json_path

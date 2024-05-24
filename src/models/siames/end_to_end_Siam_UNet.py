@@ -14,58 +14,78 @@ class SiamUnet(nn.Module):
 
     def __init__(self, in_channels=3, out_channels_s=2, out_channels_c=5, init_features=16):
         super(SiamUnet, self).__init__()
-        
+
         features = init_features
-        
+
         # UNet layers
         self.encoder1 = SiamUnet._block(in_channels, features, name="enc1")
         self.pool1 = nn.MaxPool2d(kernel_size=2, stride=2)
         self.encoder2 = SiamUnet._block(features, features * 2, name="enc2")
         self.pool2 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.encoder3 = SiamUnet._block(features * 2, features * 4, name="enc3")
+        self.encoder3 = SiamUnet._block(
+            features * 2, features * 4, name="enc3")
         self.pool3 = nn.MaxPool2d(kernel_size=2, stride=2)
-        self.encoder4 = SiamUnet._block(features * 4, features * 8, name="enc4")
+        self.encoder4 = SiamUnet._block(
+            features * 4, features * 8, name="enc4")
         self.pool4 = nn.MaxPool2d(kernel_size=2, stride=2)
 
-        self.bottleneck = SiamUnet._block(features * 8, features * 16, name="bottleneck")
+        self.bottleneck = SiamUnet._block(
+            features * 8, features * 16, name="bottleneck")
 
-        self.upconv4 = nn.ConvTranspose2d(features * 16, features * 8, kernel_size=2, stride=2)
-        self.decoder4 = SiamUnet._block((features * 8) * 2, features * 8, name="dec4")
-        self.upconv3 = nn.ConvTranspose2d(features * 8, features * 4, kernel_size=2, stride=2)
-        self.decoder3 = SiamUnet._block((features * 4) * 2, features * 4, name="dec3")
-        self.upconv2 = nn.ConvTranspose2d(features * 4, features * 2, kernel_size=2, stride=2)
-        self.decoder2 = SiamUnet._block((features * 2) * 2, features * 2, name="dec2")
-        self.upconv1 = nn.ConvTranspose2d(features * 2, features, kernel_size=2, stride=2)
+        self.upconv4 = nn.ConvTranspose2d(
+            features * 16, features * 8, kernel_size=2, stride=2)
+        self.decoder4 = SiamUnet._block(
+            (features * 8) * 2, features * 8, name="dec4")
+        self.upconv3 = nn.ConvTranspose2d(
+            features * 8, features * 4, kernel_size=2, stride=2)
+        self.decoder3 = SiamUnet._block(
+            (features * 4) * 2, features * 4, name="dec3")
+        self.upconv2 = nn.ConvTranspose2d(
+            features * 4, features * 2, kernel_size=2, stride=2)
+        self.decoder2 = SiamUnet._block(
+            (features * 2) * 2, features * 2, name="dec2")
+        self.upconv1 = nn.ConvTranspose2d(
+            features * 2, features, kernel_size=2, stride=2)
         self.decoder1 = SiamUnet._block(features * 2, features, name="dec1")
-        
-        self.conv_s = nn.Conv2d(in_channels=features, out_channels=out_channels_s, kernel_size=1)
-        
+
+        self.conv_s = nn.Conv2d(in_channels=features,
+                                out_channels=out_channels_s, kernel_size=1)
+
         # Siamese classifier layers
-        self.upconv4_c = nn.ConvTranspose2d(features * 16, features * 8, kernel_size=2, stride=2)
-        self.conv4_c = SiamUnet._block(features * 16, features * 16, name="conv4")
+        self.upconv4_c = nn.ConvTranspose2d(
+            features * 16, features * 8, kernel_size=2, stride=2)
+        self.conv4_c = SiamUnet._block(
+            features * 16, features * 16, name="conv4")
 
-        self.upconv3_c = nn.ConvTranspose2d(features * 16, features * 4, kernel_size=2, stride=2)
-        self.conv3_c = SiamUnet._block(features * 8, features * 8, name="conv3")
+        self.upconv3_c = nn.ConvTranspose2d(
+            features * 16, features * 4, kernel_size=2, stride=2)
+        self.conv3_c = SiamUnet._block(
+            features * 8, features * 8, name="conv3")
 
-        self.upconv2_c = nn.ConvTranspose2d(features * 8, features * 2, kernel_size=2, stride=2)
-        self.conv2_c = SiamUnet._block(features * 4, features * 4, name="conv2")
+        self.upconv2_c = nn.ConvTranspose2d(
+            features * 8, features * 2, kernel_size=2, stride=2)
+        self.conv2_c = SiamUnet._block(
+            features * 4, features * 4, name="conv2")
 
-        self.upconv1_c = nn.ConvTranspose2d(features * 4, features, kernel_size=2, stride=2)
-        self.conv1_c = SiamUnet._block(features * 2, features * 2, name="conv1")
+        self.upconv1_c = nn.ConvTranspose2d(
+            features * 4, features, kernel_size=2, stride=2)
+        self.conv1_c = SiamUnet._block(
+            features * 2, features * 2, name="conv1")
 
-        self.conv_c = nn.Conv2d(in_channels=features * 2, out_channels=out_channels_c, kernel_size=1)
-        
+        self.conv_c = nn.Conv2d(in_channels=features * 2,
+                                out_channels=out_channels_c, kernel_size=1)
+
         self.softmax = torch.nn.Softmax(dim=1)
-        
+
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
         b = nn.Conv2d(3, 5, kernel_size=1)(x2)
-        
+
         # modify damage prediction based on UNet arm
         preds_seg_pre = torch.argmax(self.softmax(a), dim=1)
-        for c in range(0,b.shape[1]):
-            b[:,c,:,:] = torch.mul(b[:,c,:,:], preds_seg_pre)
-            
+        for c in range(0, b.shape[1]):
+            b[:, c, :, :] = torch.mul(b[:, c, :, :], preds_seg_pre)
+
         return a, a, b
 
     """
@@ -183,7 +203,7 @@ class SiamUnet(nn.Module):
 
     def freeze_model_param(self):
         for i in [0, 3]:
-            self.encoder1[i].weight.requires_grad = False 
+            self.encoder1[i].weight.requires_grad = False
             self.encoder2[i].weight.requires_grad = False
             self.encoder3[i].weight.requires_grad = False
             self.encoder4[i].weight.requires_grad = False
@@ -194,10 +214,10 @@ class SiamUnet(nn.Module):
             self.decoder3[i].weight.requires_grad = False
             self.decoder2[i].weight.requires_grad = False
             self.decoder1[i].weight.requires_grad = False
-        
+
         for i in [1, 4]:
-            self.encoder1[i].weight.requires_grad = False 
-            self.encoder1[i].bias.requires_grad = False 
+            self.encoder1[i].weight.requires_grad = False
+            self.encoder1[i].bias.requires_grad = False
 
             self.encoder2[i].weight.requires_grad = False
             self.encoder2[i].bias.requires_grad = False
@@ -222,7 +242,6 @@ class SiamUnet(nn.Module):
 
             self.decoder1[i].weight.requires_grad = False
             self.decoder1[i].bias.requires_grad = False
-
 
         self.upconv4.weight.requires_grad = False
         self.upconv4.bias.requires_grad = False
@@ -261,9 +280,9 @@ class SiamUnet(nn.Module):
         if type(m) == nn.Linear:
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
-    
-    def resume_from_checkpoint(self,checkpoint_path,tb_log_dir,config):
-    
+
+    def resume_from_checkpoint(self, checkpoint_path, tb_log_dir, config):
+
         checkpoint = torch.load(checkpoint_path, map_location=config['device'])
         self.load_state_dict(checkpoint['state_dict'])
 
@@ -279,34 +298,34 @@ class SiamUnet(nn.Module):
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')
                 logger_model.add_histogram(tag, value.data.cpu().numpy(),
-                                            global_step=0)
-            
+                                           global_step=0)
+
             self.reinitialize_Siamese()
-            
+
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')
                 logger_model.add_histogram(tag, value.data.cpu().numpy(),
-                                            global_step=1)
+                                           global_step=1)
 
             logger_model.flush()
             logger_model.close()
             optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad,
                                                 self.parameters()),
-                                            lr=config['init_learning_rate'])
+                                         lr=config['init_learning_rate'])
         else:
             optimizer = torch.optim.Adam(self.parameters(),
-                                          lr=config['init_learning_rate'])
+                                         lr=config['init_learning_rate'])
 
-        starting_epoch = checkpoint['epoch'] + 1  
+        starting_epoch = checkpoint['epoch'] + 1
         # we did not increment epoch before saving it, so can just start here
         best_acc = checkpoint.get('best_f1', 0.0)
         return optimizer, starting_epoch, best_acc
 
-    def resume_from_scratch(self,config):
+    def resume_from_scratch(self, config):
         optimizer = torch.optim.Adam(self.parameters(),
-                                      lr=config['init_learning_rate'])
+                                     lr=config['init_learning_rate'])
         starting_epoch = 1
-        best_acc = (0.0,0.0)
+        best_acc = (0.0, 0.0)
         return optimizer, starting_epoch, best_acc
 
     def save_checkpoint(self, state, is_best, checkpoint_dir='../checkpoints'):
@@ -314,18 +333,19 @@ class SiamUnet(nn.Module):
         checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far
         """
         checkpoint_path = os.path.join(checkpoint_dir,
-                                    f"checkpoint_epoch{state['epoch']}_"
-                                    f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
+                                       f"checkpoint_epoch{state['epoch']}_"
+                                       f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
         torch.save(state, checkpoint_path)
         if is_best:
-            shutil.copyfile(checkpoint_path, os.path.join(checkpoint_dir, 'model_best.pth.tar'))
-            
+            shutil.copyfile(checkpoint_path, os.path.join(
+                checkpoint_dir, 'model_best.pth.tar'))
+
     def print_network(self):
         print('model summary')
         for name, p in self.named_parameters():
             print(name)
             print(p.requires_grad)
-            
+
     def model_summary(self) -> str:
         """
             Returns an string that contains a summary of the model total weights
@@ -336,14 +356,15 @@ class SiamUnet(nn.Module):
 
         lay_n = 0
         total_params = 0
-        model_params = [layer for layer in self.parameters() if layer.requires_grad]
+        model_params = [layer for layer in self.parameters()
+                        if layer.requires_grad]
         layers = [child for child in self.children()]
         lay_t = Text("")
         for layer in layers:
             lay_n_params = model_params[lay_n].numel()
             lay_n += 1
-            if hasattr(layer,"bias"):
-                if(layer.bias is not None):
+            if hasattr(layer, "bias"):
+                if (layer.bias is not None):
                     lay_n_params += model_params[lay_n].numel()
                     lay_n += 1
             total_params += lay_n_params

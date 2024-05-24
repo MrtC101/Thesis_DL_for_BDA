@@ -5,6 +5,7 @@ class AverageMeter(object):
     """Computes and stores the average and current value
     https://github.com/pytorch/examples/blob/master/imagenet/main.py
     """
+
     def __init__(self):
         self.reset()
 
@@ -22,9 +23,10 @@ class AverageMeter(object):
             n: mini-batch size
         """
         self.val = val
-        self.sum += val 
+        self.sum += val
         self.count += n
         self.avg = self.sum / self.count
+
 
 class Level(enum.Enum):
     PX_BLD = 0
