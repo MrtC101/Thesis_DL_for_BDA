@@ -20,7 +20,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from typing import Dict, List
 from utils.datasets.raw_datasets import TileDataset
 from utils.datasets.slice_datasets import PatchDataset
-from utils.common.files import clean_folder
+from utils.common.files import clean_folder, read_json
 from torchvision import transforms
 from tqdm import tqdm
 import math
@@ -84,14 +84,6 @@ def slice_tile(n: int, random_c: bool, pre_img: np.ndarray, post_img: np.ndarray
             crop_transform = create_crop(i, j)
             create_patch(patch_list, crop_transform)
 
-    if (random_c):
-        # pick 4 random slices from each tile
-        for _ in range(0, 4):
-            i = random.randint(5, h_idx[-1]-5)
-            j = random.randint(5, w_idx[-1]-5)
-            crop_transform = create_crop(i, j)
-            create_patch(patch_list, crop_transform)
-
     return patch_list
 
 
@@ -121,13 +113,13 @@ def slice_dataset(splits_json_path: str, output_path: str) -> None:
         for dis_id, tile_id, data in tqdm(iter(dataset), total=num_tile):
             patch_list = slice_tile(4, split_name != "test", **data)
             PatchDataset.save_patches(dis_id, tile_id, patch_list, split_folder)
-        length = 16 * num_tile if split_name == "test" else 20 * num_tile
+        length = 16 * num_tile
         log.info(f'Done slicing for {split_name}, length after cropping: {length}.')
 
-    # could be parallelized
-    iterate_and_slice("train")
-    iterate_and_slice("val")
-    iterate_and_slice("test")
+    splits_all_disasters = read_json(splits_json_path)
+    for setName in splits_all_disasters.keys():
+        # could be parallelized
+        iterate_and_slice(setName)
 
     log.info('Done')
 

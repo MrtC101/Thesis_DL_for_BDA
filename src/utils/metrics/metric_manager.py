@@ -5,7 +5,6 @@ import sys
 
 import pandas as pd
 import torch
-
 from utils.common.logger import LoggerSingleton
 from utils.metrics.common import Level
 from utils.metrics.metric_computer import MetricComputer
@@ -14,6 +13,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 import concurrent.futures
 from utils.metrics.matrix_computer import MatrixComputer
+
 
 class MetricManager:
     """
@@ -91,7 +91,9 @@ class MetricManager:
                 msg = f"{phase}/{key}_metrics"
                 tb_log.add_scalars(msg, dict(row), int(row["epoch"]))
 
-    def compute_epoch_metrics(self, phase, tb_log, epoch, confusion_matrices_df: pd.DataFrame):
+    def compute_epoch_metrics(self, phase, tb_log, epoch, confusion_matrices_df: pd.DataFrame,
+                              levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD],
+                              paralelism=False):
         """Computes metrics for damage and building classification
         for the current phase in the current epoch.
 
@@ -102,33 +104,34 @@ class MetricManager:
         Returns:
             dict: Dictionary containing computed metrics for damage and building classification.
         """
-        metrics_keys = ["dmg_pixel_level", "bld_pixel_level",
-                        "dmg_object_level", "bld_object_level"]
-        levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
-        matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
-                         "obj_dmg_matrices", "obj_bld_matrices"]
-
+  
         def compute_metrics_for_level(lvl, mtrx):
             matrix = self.compute_metrics_for(lvl, confusion_matrices_df[mtrx])
             matrix.insert(0, "epoch", epoch)
             return matrix
 
         metrics = {}
-        with concurrent.futures.ThreadPoolExecutor() as executor:
-            future_to_key_lvl = {
-                executor.submit(compute_metrics_for_level, lvl, mtrx):
-                (key, lvl, mtrx) for key, lvl, mtrx in zip(metrics_keys, levels, matrices_keys)
-            }
-            for future in concurrent.futures.as_completed(future_to_key_lvl):
-                key, _, _ = future_to_key_lvl[future]
-                metrics[key] = future.result()
-
+        if paralelism:
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                future_to_key_lvl = {
+                    executor.submit(compute_metrics_for_level, lvl,  lvl.value["matrix_key"]):
+                    (lvl) for lvl in levels
+                }
+                for future in concurrent.futures.as_completed(future_to_key_lvl):
+                    lvl = future_to_key_lvl[future]
+                    metrics[lvl.value["metric_key"]] = future.result()
+        else:
+            for lvl in levels:
+                metrics[lvl.value["metric_key"]] = \
+                    compute_metrics_for_level(lvl, lvl.value["matrix_key"])
         self.log_metrics(phase=phase, tb_log=tb_log, metrics=metrics)
         return metrics
 
     def compute_confusion_matrices(self, y_seg: torch.Tensor, y_cls: torch.Tensor,
                                    pred_y_seg: torch.Tensor, pred_y_cls: torch.Tensor,
-                                   batch_idx: int,paralelism=False, *kwargs) -> dict:
+                                   batch_idx: int,levels : list[Level] = \
+                                   [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD],
+                                   paralelism=False, *kwargs) -> dict:
         """
         Computes confusion matrices for damage and building classification at different levels.
 
@@ -149,9 +152,6 @@ class MetricManager:
             matrix.insert(0, "batch_id", batch_idx)
             return matrix
 
-        levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]
-        matrices_keys = ["px_dmg_matrices", "px_bld_matrices",
-                         "obj_dmg_matrices", "obj_bld_matrices"]
         data = {"pred_bld_mask": pred_y_seg,
                 "pred_dmg_mask": pred_y_cls,
                 "y_bld_mask": y_seg,
@@ -161,12 +161,12 @@ class MetricManager:
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 future_to_key_lvl = {
                     executor.submit(get_confusion_matrix_for_level, lvl, data, batch_idx):
-                    (key, lvl) for key, lvl in zip(matrices_keys, levels)
+                    (lvl) for lvl in levels
                 }
                 for future in concurrent.futures.as_completed(future_to_key_lvl):
-                    key, _ = future_to_key_lvl[future]
-                    matrices[key] = future.result()
+                    lvl = future_to_key_lvl[future]
+                    matrices[lvl.value["matrix_key"]] = future.result()
         else:
-            for key, lvl in zip(matrices_keys, levels):
-                matrices[key] = get_confusion_matrix_for_level(lvl, data, batch_idx)
+            for lvl in levels:
+                matrices[lvl.value["matrix_key"]] = get_confusion_matrix_for_level(lvl, data, batch_idx)
         return matrices

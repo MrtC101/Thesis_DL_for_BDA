@@ -218,7 +218,7 @@ class RasterLabelVisualizer(object):
         """This method creates logging image files for tensorboard visualization"""
 
         for index in sample_ids:
-            data = dataset[index]
+            data = dataset[index][3]
             c, h, w = data['pre_img'].size()
             pre = data['pre_img'].reshape(1, c, h, w)
             post = data['post_img'].reshape(1, c, h, w)

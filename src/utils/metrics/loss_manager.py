@@ -22,8 +22,7 @@ class LossManager():
                      y_seg: torch.Tensor, y_mask: torch.Tensor) -> torch.nn.CrossEntropyLoss:
         """Computes loss function"""
         true_masks = [y_seg, y_seg, y_mask]
-        losses = [c(pm, tm) for c, pm, tm in zip(
-            self.criterions, pred_masks, true_masks)]
+        losses = [c(pm, tm) for c, pm, tm in zip(self.criterions, pred_masks, true_masks)]
         combined_loss = sum(weight * loss for weight,
                             loss in zip(self.weights, losses))
         self.update_losses(combined_loss, losses, x_pre.size(0))

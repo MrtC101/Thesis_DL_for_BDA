@@ -1,5 +1,6 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
-# Licensed under the MIT License.import os
+# Licensed under the MIT License.
+import os
 import sys
 import pandas as pd
 
@@ -67,6 +68,7 @@ class MetricComputer:
                                  'accuracy': accuracy})
             # F1_harmonico
             f1_harmonic_mean += 1.0 / (f1) if f1 > 0.0 else 0.0
+            
 
         f1_harmonic_mean = len(self.labels_set) / \
             f1_harmonic_mean if f1_harmonic_mean > 0.0 else 0.0

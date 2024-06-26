@@ -12,7 +12,6 @@
 # - Bug fixes in the code.
 #
 # See the LICENSE file in the root directory of this project for the full text of the MIT License.
-import enum
 
 class AverageMeter(object):
     """Computes and stores the average and current value
@@ -40,9 +39,11 @@ class AverageMeter(object):
         self.count += n
         self.avg = self.sum / self.count
 
+import enum
 
 class Level(enum.Enum):
-    PX_BLD = 0
-    PX_DMG = 1
-    OBJ_BLD = 2
-    OBJ_DMG = 3
+    """lvl = {"matrix_key":"","metric_key":""}"""
+    PX_BLD = {"matrix_key":"px_bld_matrices","metric_key":"bld_pixel_level"}
+    PX_DMG = {"matrix_key":"px_dmg_matrices","metric_key":"dmg_pixel_level"}
+    OBJ_BLD = {"matrix_key":"obj_bld_matrices","metric_key":"bld_object_level"}
+    OBJ_DMG = {"matrix_key":"obj_dmg_matrices","metric_key":"dmg_object_level"}

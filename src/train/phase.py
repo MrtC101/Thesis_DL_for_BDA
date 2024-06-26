@@ -1,5 +1,6 @@
 import os
 import sys
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 import cv2
@@ -8,7 +9,8 @@ from tqdm import tqdm
 import torch
 from datetime import datetime
 from utils.common.logger import LoggerSingleton
-from utils.metrics.metric_manager import MetricManager
+from utils.metrics.metric_manager import Level, MetricManager
+from utils.datasets.train_dataset import TrainDataset
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 from models.siames.end_to_end_Siam_UNet import SiamUnet
 from utils.metrics.loss_manager import LossManager
@@ -27,7 +29,7 @@ class Phase:
         self.viz = RasterLabelVisualizer(
             label_map=static_context['label_map_json'])
 
-    def __init_phase_context__(self, logger, phase, loader, dataset,
+    def __init_phase_context__(self, logger, phase, loader , dataset,
                                sample_ids, **kwargs):
         self.logger = logger
         self.phase = phase
@@ -40,17 +42,6 @@ class Phase:
         self.device = device
         self.criterions = [crit_seg_1, crit_seg_2, crit_dmg]
         self.weights_loss = weights_loss
-
-    def save_pred(self, pred_dmg_mask: np.ndarray, batch_id, path: str) -> None:
-        """Saves current prediction image"""
-        log = LoggerSingleton()
-        log.info('save png image for damage level predictions: ' + path)
-        os.makedirs(path, exist_ok=True)
-        for i in range(pred_dmg_mask.shape[0]):
-            file = os.path.join(path, f"batch_{batch_id}_{i}_dmg_mask.png")
-            arr = np.array(pred_dmg_mask[i, :, :]).astype(np.uint8)
-            cv2.imwrite(file, arr)
-        log.info(f'saved image size: {pred_dmg_mask.size()}')
 
     def logging_wrapper(func):
         """Wrapper applied to the epoch_iteration method
@@ -102,14 +93,14 @@ class Phase:
 
         loss_manager = LossManager(self.weights_loss, self.criterions)
 
-        for batch_idx, data in enumerate(tqdm(self.loader)):
-            log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
+        for batch_idx, (dis_id,tile_id,patch_id,patch) in enumerate(tqdm(self.loader,desc="Step")):
             # STEP
+            log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
             # move to device, e.g. GPU
-            x_pre = data['pre_img'].to(device=self.device)
-            x_post = data['post_img'].to(device=self.device)
-            y_seg = data['bld_mask'].to(device=self.device)
-            y_cls = data['dmg_mask'].to(device=self.device)
+            x_pre = patch['pre_img'].to(device=self.device)
+            x_post = patch['post_img'].to(device=self.device)
+            y_seg = patch['bld_mask'].to(device=self.device)
+            y_cls = patch['dmg_mask'].to(device=self.device)
 
             if (self.phase == "train"):
                 model.train()
@@ -128,15 +119,19 @@ class Phase:
             # Compute predictions
             softmax = torch.nn.Softmax(dim=1)
             pred_masks = [torch.argmax(softmax(logit_mask), dim=1)
-                          for logit_mask in logit_masks]
+                        for logit_mask in logit_masks]
 
-            step_matrices = self.metric_manager.\
-                compute_confusion_matrices(
-                    y_seg, y_cls, pred_masks[0], pred_masks[2], batch_idx)
+            step_matrices = self.metric_manager.compute_confusion_matrices(
+                    y_seg, y_cls, pred_masks[0], pred_masks[2], batch_idx,
+                    levels=[Level.PX_DMG, Level.PX_BLD])
             confusion_matrices.append(step_matrices)
 
             if (self.phase == "test"):
-                self.save_pred(pred_masks[2], batch_idx, save_path)
+                log = LoggerSingleton()
+                log.info('save png image for damage level predictions: ' + save_path)
+                self.dataset.\
+                    save_pred_patch(pred_masks[2], batch_idx, dis_id,tile_id, patch_id, save_path)
+                log.info(f'saved image size: {pred_masks[2].size()}')
 
         loss_manager.log_losses(self.logger, self.phase, epoch)
 
@@ -145,5 +140,6 @@ class Phase:
 
         confusion_matrices_df = pd.DataFrame(confusion_matrices)
         metrics = self.metric_manager.compute_epoch_metrics(self.phase, self.logger,
-                                                            epoch, confusion_matrices_df)
+                                                            epoch, confusion_matrices_df,
+                                                            levels=[Level.PX_DMG, Level.PX_BLD])
         return metrics, loss_manager.combined_losses.avg

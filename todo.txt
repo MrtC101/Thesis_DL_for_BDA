@@ -1,0 +1,9 @@
+1. Crear un nuevo dataset que lea tanto datos aumentados como datos originales.
+2. Aplicar normalización para la imagen "online"
+3. Este dataset va a devolver un nuevo objeto disasterCropper que tienen el método __iter__() y
+el método __next()__ para iterar sobre la representación en forma de tensor de una imagen.
+Y va a devolver un diccionario con parches de 256x256 de la imagen para pasar por la red.
+4. Modificar el entrenamiento para realizar un step despues de pasar un iterator. 
+5. Mergemasks para crear una función que junte todas las salidas de una red y
+ genere la imagen de salida.
+6. Quitar la métrica a nivel de objeto del entrenamiento.

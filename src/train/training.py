@@ -1,9 +1,10 @@
 import os
 import sys
+
+from utils.datasets.train_dataset import TrainDataset
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.datasets.shard_datasets import ShardDataset
 from utils.common.files import is_dir, dump_json
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from models.siames.end_to_end_Siam_UNet import SiamUnet
@@ -109,10 +110,10 @@ def train_model(train_config: dict, path_config: dict) -> None:
 
     # DATA
     # Load datasets
-    xBD_train = ShardDataset('train', path_config['shard_splits_json'])
+    xBD_train = TrainDataset('train', path_config['dataset_path'], path_config['statistics_path'])
     log.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
 
-    xBD_val = ShardDataset('val', path_config['shard_splits_json'])
+    xBD_val = TrainDataset('val', path_config['dataset_path'], path_config['statistics_path'])
     log.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
 
     train_loader = DataLoader(xBD_train, batch_size=train_config['batch_size'], shuffle=True,
@@ -193,7 +194,7 @@ def train_model(train_config: dict, path_config: dict) -> None:
     train_metrics = []
     val_metrics = []
 
-    for ep in trange(epoch, epochs+1):
+    for ep in trange(epoch, epochs+1, desc=f"Epoch"):
         # epochs
         epoch_context = {
             'epoch': ep,
@@ -245,10 +246,8 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer, 
     # saves the model with the highest f1_score for damage classification
     # compute average accuracy across all classes to select the best model
     pixel_h_f1 = metrics_df["dmg_pixel_level"]["f1_harmonic_mean"].mean()
-    obj_h_f1 = metrics_df["dmg_object_level"]["f1_harmonic_mean"].mean()
-    val_acc_avg = (pixel_h_f1, obj_h_f1)
-    is_best = val_acc_avg[0] >= best_acc[0] and val_acc_avg[1] >= best_acc[1]
-    best_acc = val_acc_avg if is_best else best_acc
+    is_best = pixel_h_f1 >= best_acc
+    best_acc = pixel_h_f1 if is_best else best_acc
 
     log.info(
         f'Saved checkpoint for epoch {epoch}. Highest f1 checkpoint so far: {is_best}\n')
@@ -257,7 +256,7 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer, 
         'epoch': epoch,
         'state_dict': model.state_dict(),
         'optimizer': optimizer.state_dict(),
-        'val_f1_avg': val_acc_avg,
+        'val_f1_avg': pixel_h_f1,
         'best_f1': best_acc
     }, is_best, checkpoint_dir)
     return best_acc
