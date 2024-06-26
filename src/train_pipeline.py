@@ -91,8 +91,7 @@ def preprocess(disaster_num, border_with):
     # Raw data
     log_Title("split disasters")
     split_json_path = split_dataset(raw_path, xbd_path,{
-        "train": 0.8,
-        "val": 0.1,
+        "train": 0.9,
         "test": 0.1
     })
 
@@ -128,8 +127,7 @@ if __name__ == "__main__":
     path_config["statistics_path"] = statistics_path
     log_Title("training and validating model")
     train_model(model_config, path_config)
-    #test_model(model_config, path_config)
-    
+
     #hiper_tuning(){
     #   dataset_path = preprocess(**pre_config)
     #   cross_validation(model_config, path_config){
