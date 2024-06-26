@@ -30,18 +30,22 @@ def leave_only_n(data_path: dict, n: int) -> None:
     log.name = "Delete Extra"
     data = RawPathManager.load_paths(data_path)
 
-    tiles = [tile for tiles in data.values() for tile in tiles.values()]
-    total_tiles = len(tiles)
+    tot_tiles = [tile for tiles in data.values() for tile in tiles.values()]
+    total_tiles = len(tot_tiles)
     if (total_tiles > n):
         log.info(f"Deleting {total_tiles-n} tiles of {total_tiles} total tiles.")
 
         ids = [random.randint(0, total_tiles) for _ in range(n)]
         for i in tqdm(range(total_tiles), file=TqdmToLog(log)):
             if (i not in ids):
-                files_to_remove = [file for time in tiles[i].values() for file in time.values()]
+                files_to_remove = [file for time in tot_tiles[i].values() for file in time.values()]
                 for file in files_to_remove:
                     os.remove(file)
-        log.info("Files removed.")
+        log.info(f"Files {total_tiles-n}  removed. {n} tiles left.")
+    else:
+        log.info(f"There are {total_tiles} total tiles. From {int(total_tiles/2)} disasters.\
+                  Skipped..")
+
 
 
 if __name__ == "__main__":

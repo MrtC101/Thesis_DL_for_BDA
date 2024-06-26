@@ -17,6 +17,7 @@ from collections import OrderedDict
 import os
 import shutil
 from time import localtime, strftime
+import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils
@@ -94,7 +95,7 @@ class SiamUnet(nn.Module):
 
         self.softmax = torch.nn.Softmax(dim=1)
 
-    """ 
+    
     #Used for debugging
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
@@ -106,11 +107,12 @@ class SiamUnet(nn.Module):
             b[:, c, :, :] = torch.mul(b[:, c, :, :], preds_seg_pre)
 
         return a, a, b
-    """
+    
 
-    def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
+    """
+     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
             tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        """
+        \"""
         Forward pass through the Siamese U-Net.
 
         Args:
@@ -119,7 +121,7 @@ class SiamUnet(nn.Module):
 
         Returns:
             tuple: A tuple containing the output segmentation and classification tensors.
-        """
+        \"""
 
         # UNet on x1
         enc1_1 = self.encoder1(x1)
@@ -197,7 +199,7 @@ class SiamUnet(nn.Module):
                 out_class[:, c, :, :], preds_seg_pre)
 
         return out_seg_1, out_seg_2, out_class
-
+    """
     @staticmethod
     def _block(in_channels: int, features: int, name: str) -> nn.Sequential:
         """
@@ -382,7 +384,7 @@ class SiamUnet(nn.Module):
         optimizer = torch.optim.Adam(
             self.parameters(), lr=config['init_learning_rate'])
         starting_epoch = 1
-        best_acc = (0.0, 0.0)
+        best_acc = 0.0
         return optimizer, starting_epoch, best_acc
 
     def save_checkpoint(self, state: dict, is_best: bool,

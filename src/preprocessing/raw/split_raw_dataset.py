@@ -9,21 +9,24 @@ import argparse
 import math
 from tqdm import tqdm
 from random import shuffle
+from collections import defaultdict
 from utils.common.files import dump_json
 from utils.pathManagers.rawManager import RawPathManager, DisasterDict
 from utils.common.logger import LoggerSingleton
 log = LoggerSingleton()
 
+def split_dataset(raw_path: str, out_path: str,sets :dict) -> str:
+    """Creates a dictionary representing the splits of the xBD dataset.
+        The dictionary is saved in a new json file\
+        `raw_splits.json` inside `out_path/splits` folder.
+        The splits are made based on `sets` dictionary.
 
-def split_dataset(raw_path: str, out_path: str) -> str:
-    """Creates a dictionary representing the splits (train 80%,val 10%,\
-      test 10%) of the xBD dataset. The dictionary is saved in a new json file\
-      `raw_splits.json` inside `out_path/splits` folder.
-
-    Args :
+    Args:
         raw_path: Path to the folder containing subsets from the xBD dataset.
         out_path: Path to the folder where the new JSON file will be saved.
-
+        sets: Dictionary of pairs (key,value) where the key is the split set's name and 
+        it's value is the proportion of the dataset. 
+    
     Return:
         str: Path to the new `raw_splits.json` file.
 
@@ -39,42 +42,37 @@ def split_dataset(raw_path: str, out_path: str) -> str:
     xbd_raw: DisasterDict = RawPathManager.load_paths(raw_path)
     tiles_file = os.path.join(split_path, "all_disaster.json")
     dump_json(tiles_file, xbd_raw)
+ 
+    total = sum([val for val in sets.values()])
+    assert total == 1.0, f"Sets proportions must sum 1.0, the current total is {total}"
 
-    splits_dict = {
-        "train": {},
-        "val": {},
-        "test": {}
-    }
+    splits_dict = defaultdict(lambda : defaultdict(lambda : {}))
     for disaster_name, tiles_dict in tqdm(xbd_raw.items()):
 
         tiles_ids = list(tiles_dict.keys())
         shuffle(tiles_ids)
 
-        if(len(tiles_ids) < 3):
-            raise Exception(f"{disaster_name} disasters are less than 3.")
-        elif(len(tiles_ids) < 10):
-            train_top = len(tiles_ids) -2
-            val_top = len(tiles_ids) -1
-        else:
-            # works fine if len(tiles_ids) >= 10 for each disaster
-            train_top = math.ceil(0.8 * len(tiles_ids))
-            val_top = train_top + math.floor(0.1 * len(tiles_ids))
-
-        ids = {
-            "train": sorted(tiles_ids[0:train_top]),
-            "val": sorted(tiles_ids[train_top:val_top]),
-            "test": sorted(tiles_ids[val_top:])
-        }
-
-        for set in ["train", "val", "test"]:
-            splits_dict[set][disaster_name] = {}
+        if(len(tiles_ids) < len(sets)):
+            raise Exception(f"{disaster_name} disaster number must be more than {len(sets)}.")
+        
+        # works fine if len(tiles_ids) >= 10 for each disaster
+        ids = {}
+        last_top = 0
+        for i, (name, proportion) in enumerate(sets.items()):
+            current_top = last_top + math.floor(proportion * len(tiles_ids))
+            if(i < len(sets)-1):
+                ids[name] = sorted(tiles_ids[last_top:current_top])
+            else:
+                ids[name] = sorted(tiles_ids[last_top:])
+            last_top = current_top
+    
+        msg = f"{disaster_name} length {len(tiles_ids)}, "
+        for set in sets.keys():
             for id in ids[set]:
                 splits_dict[set][disaster_name][id] = tiles_dict[id]
-
-        log.info(f"{disaster_name} length {len(tiles_ids)},\
-                 train {len(ids['train'])},\
-                 val {len(ids['val'])},\
-                 test {len(ids['test'])}")
+            msg+=f"{set} {len(ids[set])} " #For loggin strings
+        
+        log.info(msg)
 
     split_file = os.path.join(split_path, "raw_splits.json")
     dump_json(split_file, splits_dict)
