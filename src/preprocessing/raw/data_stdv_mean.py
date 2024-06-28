@@ -18,7 +18,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 import numpy as np
-from utils.common.files import dump_json, is_dir
+from utils.common.files import dump_json, is_dir, read_json
 from utils.datasets.raw_datasets import RawDataset
 from collections import defaultdict
 from shapely import wkt
@@ -91,7 +91,7 @@ def count_by_disaster(count: dict) -> dict:
     return c_by_d
 
 
-def create_data_dicts(splits_json_path: str, out_path: str) -> str:
+def create_data_dicts(splits_json_path : str, out_path : str) -> str:
     """Creates three JSON files and stores them in a folder named \
         `dataset_statistics` inside the specified `out_path`.
 
@@ -119,13 +119,13 @@ def create_data_dicts(splits_json_path: str, out_path: str) -> str:
     is_dir(out_path)
     dicts_path = os.path.join(out_path, "dataset_statistics")
     os.makedirs(dicts_path, exist_ok=True)
+    splits = list(read_json(splits_json_path).keys())
 
     mean = defaultdict(lambda: {})
     count = defaultdict(lambda: {})
-
-    for split_name in ["train", "val"]:
+    for split_name in splits:
         dataset = RawDataset(split_name=split_name,
-                             splits_json_path=splits_json_path)
+                                splits_json_path=splits_json_path)
         log.info(f'Counting {split_name} subset with length: {len(dataset)}')
         psb = tqdm(iter(dataset), total=len(dataset))
         for dis_id, tile_id, data in psb:

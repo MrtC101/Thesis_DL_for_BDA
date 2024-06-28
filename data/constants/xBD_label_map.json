@@ -16,10 +16,10 @@
     },
     "num_to_color": {
         "0": "black",
-        "1": "limegreen",
-        "2": "orange",
-        "3": "mediumslateblue",
-        "4": "mediumvioletred",
-        "5": "lightgray"
+        "1": "gray",
+        "2": "limegreen",
+        "3": "orange",
+        "4": "red",
+        "5": "white"
     }
 }

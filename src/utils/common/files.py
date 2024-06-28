@@ -1,10 +1,13 @@
 import os
 import json
+import threading
 
+lock = threading.Lock()
 
 def read_json(json_path: str) -> dict:
-    with open(json_path) as f:
-        j = json.load(f)
+    with lock:
+        with open(json_path) as f:
+            j = json.load(f)
     return j
 
 

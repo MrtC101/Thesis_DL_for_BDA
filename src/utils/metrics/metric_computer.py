@@ -22,13 +22,9 @@ class MetricComputer:
           information.
     """
 
-    def __init__(self, level, labels_set, phase_context, static_context):
-        self.level = level
+    def __init__(self, labels_set):
         self.labels_set = labels_set
-        phase_context, static_context
-        self.logger = phase_context['logger']
-        self.phase = phase_context['phase']
-
+        
     # Compute Metrics
     def compute_metrics(self, conf_mtrx_list: pd.Series):
         conf_matrices_df = pd.concat(

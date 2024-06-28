@@ -44,9 +44,9 @@ class SlicedPathManager:
         is_dir(sliced_path)
         is_file(split_json_path)
         split_dict = read_json(split_json_path)
-
+        splits = list(split_dict.keys())
         sliced_dict = nested_defaultdict(5, str)
-        for subset in ["train", "val", "test"]:
+        for subset in splits:
             subset_path = join(sliced_path, subset)
             dataset_patches = sorted(os.listdir(subset_path))
             for patch in dataset_patches:
