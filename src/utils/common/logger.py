@@ -40,15 +40,17 @@ class LoggerSingleton:
         '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         datefmt='%m-%d-%Y %H:%M',
     )
+    console_out = False;
 
     def new_tqdm_handler(cls, folder_path):
         file_name = cls._instance.name.replace(" ", "_").strip("")
         os.makedirs(folder_path, exist_ok=True)
         file = os.path.join(folder_path, f"{file_name}.txt")
-        tqdm_handler = TqdmLoggingHandler(filename=file, mode='w')
+        tqdm_handler = TqdmLoggingHandler(filename=file, mode='w', console_out=cls.console_out)
         tqdm_handler.setLevel(cls._level)
         tqdm_handler.setFormatter(cls._formatter)
         cls._instance.addHandler(tqdm_handler)
+        cls._instance._last_file_handler = tqdm_handler
 
     def new_console_handler(cls):
         stream_handler = logging.StreamHandler()
@@ -74,14 +76,13 @@ class LoggerSingleton:
         if name is not None:
             cls._instance.name = name
         if folder_path is not None:
-            if cls._last_file_handler is not None:
-                cls._instance.removeHandler(cls._last_file_handler)
-            # cls.new_file_handler(cls,folder_path=folder_path)
             cls.new_tqdm_handler(cls, folder_path=folder_path)
+            if not cls.console_out:
+                cls.console_out = True
         return cls._instance
 
 
-class TqdmLoggingHandler(logging.Handler):
+class TqdmLoggingHandler(logging.Handler):#
     """
     The logger class uses only one handler, "TqdmLoggingHandler". This handler
     utilizes the method tqdm.write() for writing into both the standard output
@@ -89,16 +90,18 @@ class TqdmLoggingHandler(logging.Handler):
     messages without any problems throw the console.
 """
 
-    def __init__(self, filename, mode):
+    def __init__(self, filename, mode, console_out :bool):
         super().__init__()
         self.filename = filename
         self.f: TextIOWrapper = open(filename, mode)
         self.mode = mode
+        self.console_out = console_out
 
     def emit(self, record):
         try:
             msg = self.format(record)
-            tqdm.write(msg, file=sys.stdout)
+            if(not self.console_out):
+                tqdm.write(msg, file=sys.stdout)
             tqdm.write(msg, file=self.f)
             self.f.flush()
             self.flush()

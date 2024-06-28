@@ -1,245 +1,34 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
+
 import os
 import sys
 
-from utils.datasets.train_dataset import TrainDataset
+import pandas as pd
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.common.files import is_dir, dump_json
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from models.siames.end_to_end_Siam_UNet import SiamUnet
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import DataLoader
-import torch.nn as nn
-from tqdm import trange
+
+from utils.metrics.loss_manager import LossManager
+from utils.metrics.metric_manager import MetricManager
+from utils.visualization.raster_label_visualizer import TensorBoardLogger
+
+
 import torch
-from train.phase import Phase
+import torch.nn as nn
+from torch.utils.data import DataLoader
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from tqdm import trange
+
+from utils.common.files import dump_json
 from utils.common.logger import LoggerSingleton
+from train.epoch_manager import EpochManager, Mode
+from models.siames.end_to_end_Siam_UNet import SiamUnet
 
 log = LoggerSingleton()
 
-
-def resume_model(model: SiamUnet, checkpoint_path, tb_log_dir, training_config):
-    """Calls the corresponding model resume method"""
-    if checkpoint_path and os.path.isfile(checkpoint_path):
-        log.info('Loading checkpoint from {}'.format(checkpoint_path))
-        optimizer, starting_epoch, best_acc = \
-            model.resume_from_checkpoint(checkpoint_path, tb_log_dir,
-                                         training_config)
-        log.info(
-            f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
-    else:
-        log.info('No valid checkpoint is provided. Start to train from scratch...')
-        optimizer, starting_epoch, best_acc = \
-            model.resume_from_scratch(training_config)
-    return optimizer, starting_epoch, best_acc
-
-
-def output_directories(out_dir, exp_name):
-    """Create directories for the current experiment"""
-    # set up directories (TrainPathManager?)
-    is_dir(out_dir)
-    exp_dir = os.path.join(out_dir, exp_name)
-    os.makedirs(exp_dir, exist_ok=True)
-
-    checkpoint_dir = os.path.join(exp_dir, 'checkpoints')
-    os.makedirs(checkpoint_dir, exist_ok=True)
-
-    tb_logger_dir = os.path.join(exp_dir, 'tb_logs')
-    os.makedirs(tb_logger_dir, exist_ok=True)
-
-    config_dir = os.path.join(exp_dir, 'configs')
-    os.makedirs(config_dir, exist_ok=True)
-
-    metric_dir = os.path.join(exp_dir, 'training_metrics')
-    os.makedirs(metric_dir, exist_ok=True)
-
-    return checkpoint_dir, tb_logger_dir, config_dir, metric_dir
-
-
-def train_model(train_config: dict, path_config: dict) -> None:
-    """Trains the model using the specified configurations.
-
-    Args:
-        - test_config (dict): Configuration parameters for testing, including:
-            - 'labels_dmg': List of damage class labels.
-            - 'labels_bld': List of building class labels.
-            - 'weights_seg': List of weights for segmentation classes.
-            - 'weights_damage': List of weights for damage classes.
-            - 'weights_loss': List of weights for different loss components.
-            - 'mode': Mode of the model ('dmg' or 'bld').
-            - 'init_learning_rate': Initial learning rate.
-            - 'device': Device to use ('cpu' or 'cuda').
-            - 'epochs': Number of epochs.
-            - 'batch_size': Batch size for data loading.
-            - 'num_chips_to_viz': Number of chips to visualize.
-        - path_config (dict): Paths required for testing, including:
-            - 'exp_name': Name of the experiment.
-            - 'out_dir': Output directory for results.logger_train
-            - 'shard_splits_json': Path to the JSON file with shard splits.
-            - 'label_map_json': Path to the JSON file with label mappings.
-            - 'starting_checkpoint_path': Path to the checkpoint to resume from.
-    Returns:
-        None
-
-    Example:
-        >>> train_model(train_config, path_config)
-    """
-
-    log.name = "Training Model"
-
-    # setup output directories
-    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = \
-        output_directories(path_config['out_dir'], path_config['exp_name'])
-    dump_json(os.path.join(config_dir, 'train_config.txt'), train_config)
-    dump_json(os.path.join(config_dir, 'path_config.txt'), path_config)
-
-    # torch device
-    log.info(f'Using PyTorch version {torch.__version__}.')
-    device = torch.device(
-        train_config['device'] if torch.cuda.is_available() else "cpu")
-    log.info(f'Using device: {device}.')
-    # Establecer el número de threads que TorchScript utilizará
-    torch.set_num_threads(train_config['torch_op_threads'])
-    # Establecer el número de threads que las librerías internas de PyTorch utilizarán
-    torch.set_num_interop_threads(train_config['torch_op_threads'])
-    log.info(
-        f"Número de threads que TorchScript utilizará: {torch.get_num_threads()}")
-    log.info(f"Número de threads que las librerías internas de PyTorch utilizarán:\
-              {torch.get_num_interop_threads()}")
-
-    # DATA
-    # Load datasets
-    xBD_train = TrainDataset('train', path_config['dataset_path'], path_config['statistics_path'])
-    log.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))
-
-    xBD_val = TrainDataset('val', path_config['dataset_path'], path_config['statistics_path'])
-    log.info('xBD_disaster_dataset val length: {}'.format(len(xBD_val)))
-
-    train_loader = DataLoader(xBD_train, batch_size=train_config['batch_size'], shuffle=True,
-                              num_workers=train_config['batch_workers'], pin_memory=False)
-    val_loader = DataLoader(xBD_val, batch_size=train_config['batch_size'], shuffle=False,
-                            num_workers=train_config['batch_workers'], pin_memory=False)
-
-    # samples are for tensorboard visualization of same images through epochs
-    logger_train = SummaryWriter(log_dir=tb_logger_dir)
-    sample_train_ids = xBD_train.get_sample_images(
-        train_config['num_chips_to_viz'])
-    logger_val = SummaryWriter(log_dir=tb_logger_dir)
-    sample_val_ids = xBD_val.get_sample_images(
-        train_config['num_chips_to_viz'])
-
-    # TRAINING CONFIG
-
-    # define model
-    model = SiamUnet().to(device=device)
-    # log.info(model.model_summary())
-
-    # resume from a checkpoint if provided
-    optimizer, starting_epoch, best_acc = \
-        resume_model(model, path_config['starting_checkpoint_path'], tb_logger_dir, train_config)
-
-    # loss functions
-    weights_seg_tf = torch.FloatTensor(train_config['weights_seg'])
-    weights_damage_tf = torch.FloatTensor(train_config['weights_damage'])
-    weights_loss = train_config['weights_loss']
-
-    criterion_seg_1 = nn.CrossEntropyLoss(
-        weight=weights_seg_tf).to(device=device)
-    criterion_seg_2 = nn.CrossEntropyLoss(
-        weight=weights_seg_tf).to(device=device)
-    criterion_damage = nn.CrossEntropyLoss(
-        weight=weights_damage_tf).to(device=device)
-
-    # scheduler
-    scheduler = ReduceLROnPlateau(
-        optimizer, mode='min', patience=2000, verbose=True)
-
-    static_context = {
-        'crit_seg_1': criterion_seg_1,
-        'crit_seg_2': criterion_seg_2,
-        'crit_dmg': criterion_damage,
-        'device': device,
-        "labels_set_dmg":  train_config['labels_dmg'],
-        "labels_set_bld":  train_config['labels_bld'],
-        "weights_loss": weights_loss,
-        "label_map_json": path_config['label_map_json']
-    }
-
-    train_context = {
-        'phase': "train",
-        'logger': logger_train,
-        'loader': train_loader,
-        'sample_ids': sample_train_ids,
-        'dataset': xBD_train
-    }
-
-    val_context = {
-        'phase': "val",
-        'logger': logger_val,
-        'loader': val_loader,
-        'sample_ids': sample_val_ids,
-        'dataset': xBD_val
-    }
-
-    # Objects for training
-    training = Phase(train_context, static_context)
-    validation = Phase(val_context, static_context)
-
-    epoch = starting_epoch
-    epochs = train_config['epochs']
-    step = 1
-
-    # Metrics
-    train_metrics = []
-    val_metrics = []
-
-    for ep in trange(epoch, epochs+1, desc=f"Epoch"):
-        # epochs
-        epoch_context = {
-            'epoch': ep,
-            'epochs': epochs,
-            'step': step,
-            'model': model,
-            'optimizer': optimizer,
-            'save_path': None
-        }
-        # TRAINING
-        train_epoch_metrics, tr_loss = training.run_epoch(epoch_context)
-        train_metrics.append(train_epoch_metrics)
-        # VALIDATION
-        with torch.no_grad():
-            val_epoch_metrics, val_loss = validation.run_epoch(epoch_context)
-        scheduler.step(val_loss)  # decay Learning Rate
-        val_metrics.append(val_epoch_metrics)
-        log.info(
-            f"epoch {ep}/{epochs}: train loss:{tr_loss:3f}; val loss:{val_loss:3f};")
-        # CHECKPOINT
-        best_acc = save_if_best(
-            val_epoch_metrics, best_acc, checkpoint_dir, **epoch_context)
-
-    save_metrics(train_metrics, metric_dir)
-    save_metrics(val_metrics, metric_dir)
-
-    logger_train.flush()
-    logger_train.close()
-    logger_val.flush()
-    logger_val.close()
-    log.info('Done')
-
-
-def save_metrics(metrics, metric_dir):
-    """Save metrics in csv"""
-    # save evalution metrics
-    for epoch in range(len(metrics)):
-        for key, met in metrics[epoch].items():
-            mode = "w" if not epoch > 0 else "a"
-            header = not epoch > 0
-            met.to_csv(os.path.join(
-                metric_dir, f'{key}.csv'), mode=mode, header=header, index=False)
-
-
-def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer, **kwargs):
+def save_if_best(metrics_df, best_acc, checkpoint_dir, model, optimizer, epoch):
     """Compares f1_harmonic_mean from pixel level damage metrics and 
     f1_harmonic_mean from object level damage classification metrics and 
     saves the checkpoint as best model if needed"""
@@ -261,6 +50,189 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir, model, epoch, optimizer, 
     }, is_best, checkpoint_dir)
     return best_acc
 
+def resume_model(model: SiamUnet, checkpoint_path, device,
+                  init_learning_rate, tb_logger, new_optimizer):
+    
+    """Calls the corresponding model resume method"""
+    if checkpoint_path and os.path.isfile(checkpoint_path):
+        log.info('Loading checkpoint from {}'.format(checkpoint_path))
+        return model.resume_from_checkpoint(checkpoint_path, device, init_learning_rate,
+                                             tb_logger, new_optimizer)
+    else:
+        log.info('No valid checkpoint is provided. Start to train from scratch...')
+        return model.resume_from_scratch(init_learning_rate)
+
+def output_directories(output_folder_path):
+    """Create directories for the current experiment"""
+    os.makedirs(output_folder_path, exist_ok=True)
+
+    checkpoint_dir = os.path.join(output_folder_path, 'checkpoints')
+    os.makedirs(checkpoint_dir, exist_ok=True)
+
+    tb_logger_dir = os.path.join(output_folder_path, 'tb_logs')
+    os.makedirs(tb_logger_dir, exist_ok=True)
+
+    config_dir = os.path.join(output_folder_path, 'configs')
+    os.makedirs(config_dir, exist_ok=True)
+
+    metric_dir = os.path.join(output_folder_path, 'metrics')
+    os.makedirs(metric_dir, exist_ok=True)
+
+    return checkpoint_dir, tb_logger_dir, config_dir, metric_dir
+
+def save_loss(loss_metrics,metric_dir,filename):
+    """Save metrics in csv"""
+    path = os.path.join(metric_dir,"loss.csv")
+    df = pd.DataFrame(loss_metrics)
+    df.to_csv(path, mode="w", index=False)    
+
+           
+def save_metrics(metrics, metric_dir,file_prefix):
+    """Save metrics in csv"""
+    # save evalution metrics
+    for epoch in range(len(metrics)):
+        for key, met in metrics[epoch].items():
+            mode = "w" if not epoch > 0 else "a"
+            header = not epoch > 0
+            met.to_csv(os.path.join(
+                metric_dir, f'{file_prefix}_{key}.csv'), mode=mode, header=header, index=False)
+
+def train_model( train_loader: DataLoader, val_loader: DataLoader,
+                output_folder_path : str, configs: dict[str],
+                test_loader : DataLoader = None) -> float:
+    """Trains the model using the specified configurations.
+
+        Args:
+            configs (dict): All the configuration parameters:
+                'init_learning_rate': Initial learning rate.
+                'tot_epochs': Number of epochs.
+                'batch_size': Batch size for data loading.
+                'weights_seg': List of weights for segmentation classes.
+                'weights_damage': List of weights for damage classes.
+                'weights_loss': List of weights for different loss components.
+                'device': Device to use ('cpu' or 'cuda').
+                'torch_thread' : Threads numbers for torch backend
+                'torch_op_threads' : Thread number for torch operations.
+                'batch_workers' : Workers number for data loaders.
+                'labels_dmg': List of damage class labels.
+                'labels_bld': List of building class labels.
+                'num_chips_to_viz': Number of chips to visualize.
+                'disaster_num': Number of disasters to leave on dataset
+                'border_width': Border width for new mask creation.
+                'exp_folder_path': path for the current out folder,
+                'split_json_path': Path to the JSON file with splits of patches.
+                'statistics_json_path': Path to the JSON file with mean and standard deviation.
+                'label_map_json': Path to the JSON file with label mappings.
+                'starting_checkpoint_path': Path to the checkpoint to resume from.
+                'configuration_num': Number of the set of parameters for this experiment.
+                'new_optimizer' : Boolean that indicates if the optimizer saved in 
+                checkpoint is ignored
+    """
+    log = LoggerSingleton("Training Model", 
+                         folder_path=os.path.join(output_folder_path, "console_logs"))
+    
+    # setup output directories
+    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = output_directories(output_folder_path)
+    dump_json(os.path.join(config_dir, 'configs.txt'), configs)
+
+    # Device  
+    device = torch.device(configs['device'] if torch.cuda.is_available() else "cpu")
+    log.info(f'Using device: {device}.')
+
+    # Model
+    model = SiamUnet().to(device=device)
+    # log.info(model.model_summary())
+
+    # samples are for tensorboard visualization of same images through epochs
+    tb_logger = TensorBoardLogger(tb_logger_dir, 
+                                  configs['num_chips_to_viz'], 
+                                  configs['label_map_json'])
+    
+    # resume from a checkpoint if provided
+    model: SiamUnet
+    optimizer, starting_epoch, best_acc = resume_model(model,configs['starting_checkpoint_path'],
+                                                        device,
+                                                        configs['init_learning_rate'],
+                                                        tb_logger,
+                                                        configs['new_optimizer'])
+    log.info(f'Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}')
+
+    # loss functions
+    weights_seg_tf = torch.FloatTensor(configs['weights_seg'])
+    weights_damage_tf = torch.FloatTensor(configs['weights_damage'])
+    weights_loss = configs['weights_loss']
+
+    criterion_seg_1 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
+    criterion_seg_2 = nn.CrossEntropyLoss(weight=weights_seg_tf).to(device=device)
+    criterion_damage = nn.CrossEntropyLoss(weight=weights_damage_tf).to(device=device)
+
+    loss_manager = LossManager(weights_loss, [criterion_seg_1,criterion_seg_2,criterion_damage])
+    
+    metric_manager = MetricManager(configs['labels_bld'],configs['labels_dmg'])
+
+    # scheduler
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=2000)
+
+    epochs = configs['tot_epochs']
+    sheared_vars = {
+        'loss_manager' : loss_manager,
+        'metric_manager' : metric_manager,
+        'tb_logger': tb_logger,
+        'tot_epochs': epochs,
+        'optimizer': optimizer,
+        'model': model,
+        'device': device,
+    }
+    
+    # Objects for training
+    training = EpochManager(mode=Mode.TRAINING, loader=train_loader, **sheared_vars)
+    validation = EpochManager(mode=Mode.VALIDATION, loader=val_loader, **sheared_vars)
+
+    # Metrics
+    train_metrics = []
+    val_metrics = []
+    loss_metrics = []
+
+    for epoch in trange(starting_epoch, epochs+1, desc=f"Epoch"):
+        # TRAINING
+        train_epoch_metrics, tr_loss = training.run_epoch(epoch)
+        train_metrics.append(train_epoch_metrics)
+        # VALIDATION
+        with torch.no_grad():
+            val_epoch_metrics, val_loss = validation.run_epoch(epoch)
+        val_metrics.append(val_epoch_metrics)
+        
+        scheduler.step(val_loss)  # decay Learning Rate
+
+        log.info(f"epoch {epoch}/{configs['tot_epochs']}:\
+                  train loss:{tr_loss:3f};\
+                  val loss:{val_loss:3f};")
+        loss_metrics.append({"epoch":epoch,
+                             "tr_loss": tr_loss,
+                             "val_loss": val_loss})
+        # CHECKPOINT
+        best_acc = save_if_best(val_epoch_metrics, best_acc,
+                                checkpoint_dir, model, optimizer, epoch)
+
+    save_loss(loss_metrics, metric_dir,"train_loss.csv")
+    save_metrics(train_metrics, metric_dir,"train")
+    save_metrics(val_metrics, metric_dir,"val")
+    
+    # TESTING
+    if(test_loader is not None):
+        predicted_dir = os.path.join(output_folder_path,"test_pred_masks")
+        os.makedirs(predicted_dir,exist_ok=True)
+        testing = EpochManager(mode=Mode.TESTING, loader=test_loader, **sheared_vars)
+        with torch.no_grad():
+            test_metrics, test_loss = testing.run_epoch(0,predicted_dir)
+        log.info(f"Loss over testing split:{test_loss:3f};")
+        save_loss([test_loss], metric_dir,"test_loss.csv")
+        save_metrics([test_metrics], metric_dir, "test")
+        best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
+
+    tb_logger.flush()
+    tb_logger.close()    
+    return best_acc
 
 if __name__ == "__main__":
     train_config = {

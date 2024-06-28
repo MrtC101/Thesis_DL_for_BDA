@@ -327,8 +327,9 @@ class SiamUnet(nn.Module):
             torch.nn.init.xavier_uniform_(m.weight)
             m.bias.data.fill_(0.01)
 
-    def resume_from_checkpoint(self, checkpoint_path: str, tb_log_dir: str, config: dict) -> \
-            tuple[torch.optim.Optimizer, int, float]:
+    def resume_from_checkpoint(self, checkpoint_path: str, device,
+                                init_learning_rate, tb_logger, new_optimizer : bool) -> \
+                                tuple[torch.optim.Optimizer, int, float]:
         """
         Resumes the model from a checkpoint.
 
@@ -341,48 +342,38 @@ class SiamUnet(nn.Module):
             tuple: A tuple containing the optimizer, starting epoch, and best accuracy.
         """
 
-        checkpoint = torch.load(checkpoint_path, map_location=config['device'])
+        checkpoint = torch.load(checkpoint_path, map_location=device)
         self.load_state_dict(checkpoint['state_dict'])
 
-        # don't load the optimizer settings so that a newly
-        # specified lr can take effect
-        if config["mode"] == 'dmg':
+        if not new_optimizer:
+            # don't load the optimizer settings so that a newly
+            # specified lr can take effect
             self.print_network()
             self.freeze_model_param()
             self.print_network()
 
-            # monitor model
-            logger_model = SummaryWriter(log_dir=tb_log_dir)
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')
-                logger_model.add_histogram(tag, value.data.cpu().numpy(),
-                                           global_step=0)
+                tb_logger.add_histogram(tag, value.data.cpu().numpy(),global_step=0)
 
             self.reinitialize_Siamese()
 
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')
-                logger_model.add_histogram(tag, value.data.cpu().numpy(),
-                                           global_step=1)
-
-            logger_model.flush()
-            logger_model.close()
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad,
-                                                self.parameters()),
-                                         lr=config['init_learning_rate'])
+                tb_logger.add_histogram(tag, value.data.cpu().numpy(),global_step=1)
+                
+            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad,self.parameters()),
+                                         lr=init_learning_rate)
         else:
-            optimizer = torch.optim.Adam(self.parameters(),
-                                         lr=config['init_learning_rate'])
+            optimizer = torch.optim.Adam(self.parameters(),lr=init_learning_rate)
 
         starting_epoch = checkpoint['epoch'] + 1
-        # we did not increment epoch before saving it, so can just start here
         best_acc = checkpoint.get('best_f1', 0.0)
         return optimizer, starting_epoch, best_acc
 
-    def resume_from_scratch(self, config: dict) -> tuple:
+    def resume_from_scratch(self, init_learning_rate) -> tuple:
         """Resumes model from scratch"""
-        optimizer = torch.optim.Adam(
-            self.parameters(), lr=config['init_learning_rate'])
+        optimizer = torch.optim.Adam(self.parameters(), lr=init_learning_rate)
         starting_epoch = 1
         best_acc = 0.0
         return optimizer, starting_epoch, best_acc

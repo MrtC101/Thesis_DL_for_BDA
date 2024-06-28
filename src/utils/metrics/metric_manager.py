@@ -25,21 +25,13 @@ class MetricManager:
     types (building or damage).
     """
 
-    def __init__(self, phase_context, static_context) -> None:
-        self.bld_labels = static_context['labels_set_bld']
-        self.dmg_labels = static_context['labels_set_dmg']
-        self.px_dmg_metric = \
-            MetricComputer(Level.PX_BLD, self.dmg_labels,
-                           phase_context, static_context)
-        self.px_bld_metric = \
-            MetricComputer(Level.PX_DMG, self.bld_labels,
-                           phase_context, static_context)
-        self.obj_dmg_metric = \
-            MetricComputer(Level.OBJ_BLD, self.dmg_labels,
-                           phase_context, static_context)
-        self.obj_bld_metric = \
-            MetricComputer(Level.OBJ_DMG, self.bld_labels,
-                           phase_context, static_context)
+    def __init__(self, bld_labels, dmg_labels) -> None:
+        self.bld_labels = bld_labels
+        self.dmg_labels = dmg_labels
+        self.px_dmg_metric = MetricComputer(self.dmg_labels)
+        self.px_bld_metric = MetricComputer(self.bld_labels)
+        self.obj_dmg_metric = MetricComputer(self.dmg_labels)
+        self.obj_bld_metric = MetricComputer(self.bld_labels)
 
     def get_confusion_matrices_for(self, level: Level, args: dict):
         """Gets confusion matrices for a given level.
@@ -85,13 +77,12 @@ class MetricManager:
         log = LoggerSingleton()
         log.info(f"--{phase.upper()} METRICS--")
         for key, metric_df in metrics.items():
-            log.info(to_table(curr_type=key, df=metric_df,
-                     odd=True, decim_digits=5))
+            log.info(to_table(curr_type=key, df=metric_df,odd=True, decim_digits=5))
             for index, row in metric_df.iterrows():
                 msg = f"{phase}/{key}_metrics"
                 tb_log.add_scalars(msg, dict(row), int(row["epoch"]))
 
-    def compute_epoch_metrics(self, phase, tb_log, epoch, confusion_matrices_df: pd.DataFrame,
+    def compute_epoch_metrics(self, phase, tb_log, epoch, confusion_matrices: list,
                               levels = [Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD],
                               paralelism=False):
         """Computes metrics for damage and building classification
@@ -104,7 +95,8 @@ class MetricManager:
         Returns:
             dict: Dictionary containing computed metrics for damage and building classification.
         """
-  
+        confusion_matrices_df = pd.DataFrame(confusion_matrices)
+
         def compute_metrics_for_level(lvl, mtrx):
             matrix = self.compute_metrics_for(lvl, confusion_matrices_df[mtrx])
             matrix.insert(0, "epoch", epoch)
