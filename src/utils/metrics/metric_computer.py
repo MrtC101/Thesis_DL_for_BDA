@@ -27,8 +27,7 @@ class MetricComputer:
         
     # Compute Metrics
     def compute_metrics(self, conf_mtrx_list: pd.Series):
-        conf_matrices_df = pd.concat(
-            list(conf_mtrx_list), axis=0, ignore_index=True)
+        conf_matrices_df = pd.concat(list(conf_mtrx_list), axis=0, ignore_index=True)
         class_metrics = self.compute_eval_metrics(conf_matrices_df)
         return class_metrics
 

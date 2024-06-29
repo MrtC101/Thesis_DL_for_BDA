@@ -29,6 +29,7 @@
 # use and distribution.                                                         #
 # DM19-0988                                                                     #
 #################################################################################
+import math
 import os
 import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
@@ -69,29 +70,37 @@ def get_feature_info(feature: dict) -> dict:
         the numerical category of the building.
     """
 
-    props = {}
+    props = []
 
-    for feat in feature['features']['xy']:
+    for building in feature['features']['xy']:
+        # if build from bld_mask = no-damage
+        damage_class = building.get('subtype','no-damage')
+        dmg_label = LABEL_NAME_TO_NUM[damage_class]
+
         # read the coordinates
-        feat_shape = wkt.loads(feat['wkt'])
-        coords = list(mapping(feat_shape)['coordinates'][0])
-        # a new, independent geometry with coordinates copied
+        shape = wkt.loads(building['wkt'])
+        point_list = list(shape.exterior.coords)
+        point_list = list(map(lambda cord: (math.floor(cord[0]),\
+                                            math.floor(cord[1])), point_list))
 
-        # determine the damage type
-        if 'subtype' in feat['properties']:
-            damage_class = feat['properties']['subtype']
-        else:
-            # usually for pre images - assign them to the no-damage class
-            damage_class = 'no-damage'
-
-        damage_class_num = LABEL_NAME_TO_NUM[damage_class]
-        # maps to (numpy array of coords, numerical category of the building)
-        props[feat['properties']['uid']] = \
-            (np.array(coords, np.uint8), damage_class_num)
+        centroid  = shape.centroid.coords[0]
+        props.append((point_list, dmg_label, centroid))
     return props
 
+def border_correction(x, y, c_x, c_y, b):
+    """Manipurales c polygon's border point by b
+    Args:
+        (x,y) point coordinate
+        (c_x,c_y) polygon's centroid point
+        b border width
+    """
+    x += b if y < c_x else (-b)
+    y += b if y < c_y else (-b)
+    x = max(min(x, 1024), 0)
+    y = max(min(y, 1024), 0)
+    return x,y
 
-def polygons_list_to_mask(size: tuple, polys: list, border: int) -> np.ndarray:
+def polygons_list_to_mask(image_path, label_path, border: int) -> np.ndarray:
     """ Plots inside an np.ndarray all polygons inside polys.
 
     Args:
@@ -108,45 +117,19 @@ def polygons_list_to_mask(size: tuple, polys: list, border: int) -> np.ndarray:
         from cv2.fillPoly
     """
 
+    label_json = read_json(label_path)
+    size = get_shape(image_path)
+    polys = get_feature_info(label_json)
+        
     mask_img = np.zeros(size, np.int32)  # 0 is the background class
-    for tup in polys.values():
-        # poly is a np.ndarray
-        poly, damage_class_num = tup
-        polygon = Polygon(poly)
+    for point_list, dmg_label, centroid in polys:
+        c_x, c_y = centroid
+        poly = list(map(lambda cord: border_correction(cord[0], cord[1],
+                                                        c_x, c_y, border), point_list))
+        ns_poly = np.array([poly], np.int32)
+        mask_img = fillPoly(mask_img, ns_poly, (dmg_label,)*3)
 
-        # Getting the center points from the polygon and the polygon points
-        (poly_center_x, poly_center_y) = polygon.centroid.coords[0]
-        polygon_points = polygon.exterior.coords
-
-        # Setting a new polygon with each X,Y manipulated
-        shrunk_polygon = []
-        for (x, y) in polygon_points:
-            if x < poly_center_x:
-                x += border
-            elif x > poly_center_x:
-                x -= border
-
-            if y < poly_center_y:
-                y += border
-            elif y > poly_center_y:
-                y -= border
-
-            x = max(min(x, 255), 0)
-            y = min(min(y, 255), 0)
-            shrunk_polygon.append([x, y])
-
-        # Transforming the polygon back to a np.ndarray
-        ns_poly = np.array([shrunk_polygon], np.int32)
-
-        assert ns_poly.shape == (1, len(shrunk_polygon), 2), \
-            f"{ns_poly.shape} wrong shape"
-
-        # Filling the shrunken polygon to add a border between close polygons
-        mask_img = fillPoly(mask_img, ns_poly, (damage_class_num,)*3)
-
-    mask_img = mask_img[:, :, 0].squeeze()
-    # print(f'shape of final mask_img: {mask_img.shape}')
-    return mask_img
+    return mask_img[:,:,0].squeeze()
 
 
 def mask_tiles(images_dir: str, labels_dir: str, targets_dir: str,
@@ -170,7 +153,6 @@ def mask_tiles(images_dir: str, labels_dir: str, targets_dir: str,
 
     for label_path in tqdm(json_paths):
 
-        # just the file name without extension
         tile_id = os.path.basename(label_path).split('.json')[0]
         image_path = join(images_dir, f'{tile_id}.png')
         target_path = join(targets_dir, f'{tile_id}_target.png')
@@ -179,15 +161,7 @@ def mask_tiles(images_dir: str, labels_dir: str, targets_dir: str,
             continue
 
         # read the label json
-        label_json = read_json(label_path)
-
-        # read the image and get its size
-        tile_size = get_shape(image_path)
-        # read in the polygons from the json file
-        polys = get_feature_info(label_json)
-
-        mask_img = polygons_list_to_mask(tile_size, polys, border_width)
-
+        mask_img = polygons_list_to_mask(image_path, label_path, border_width)
         imwrite(target_path, mask_img)
 
 
@@ -209,8 +183,7 @@ def create_masks(raw_path: str, border_width: int) -> None:
 
     log.name = "Create Target Masks"
     assert border_width >= 0, 'border_width < 0'
-    assert border_width < 5, \
-        'specified border_width is > 4 pixels - are you sure?'
+    assert border_width < 5, 'specified border_width is > 4 pixels - are you sure?'
 
     for subset in tqdm(os.listdir(raw_path)):
         log.info(f"Creating masks for {subset}/ folder.")

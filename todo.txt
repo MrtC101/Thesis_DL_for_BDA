@@ -1,9 +1,25 @@
-1. Crear un nuevo dataset que lea tanto datos aumentados como datos originales.
-2. Aplicar normalización para la imagen "online"
-3. Este dataset va a devolver un nuevo objeto disasterCropper que tienen el método __iter__() y
-el método __next()__ para iterar sobre la representación en forma de tensor de una imagen.
-Y va a devolver un diccionario con parches de 256x256 de la imagen para pasar por la red.
-4. Modificar el entrenamiento para realizar un step despues de pasar un iterator. 
-5. Mergemasks para crear una función que junte todas las salidas de una red y
- genere la imagen de salida.
-6. Quitar la métrica a nivel de objeto del entrenamiento.
+Lista de versiones que he implementado hasta ahora:
+ \textbf{copia y pega del repositorio}: anda mal, esta mal codificada, no es performante, no es fácil de entender.
+ \textbf{Mi implementación}: de la versión del repositorio. Tiene shards, tiene métrica de objetos, tiene falsas augmentaciones "tarda mucho"
+
+Voy a implementar las siguientes versiones:
+\vspace*{0pt}
+\begin{itemize}[topsep=0pt]
+    \tightlist
+    \item \textbf{Versión base} = Mi-implementación - shards - obj-metric - false-augmentation + automatic-latex-table + obj-metric-last
+    \item \textbf{versión my\_preprocess} = versión base + augmentaciones para desbalance + normalización de datos de entrada.
+    \item \textbf{versión completa} = my\_preprocess + hyperparamer-tuning-BHOB + 10-folding CV por configuración de parametros.
+\end{itemize}
+
+Me falta:
+1.augmentaciones
+post procesamiento(
+calcular métricas par imagen completa de píxel y de objeto
+algoritmo para contar y crear tabla.
+mejorar algoritmo para métrica de objetos
+Bounding boxes para mostrar la salida.
+)
+tablas latex
+definir el subconjunto con imágenes de entrenamiento.
+implementación de modelo en deploy.
+AGREGAR CURVA ROC durante prueba en test
