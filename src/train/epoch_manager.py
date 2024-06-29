@@ -109,11 +109,13 @@ class EpochManager:
             # Compute predictions
             softmax = torch.nn.Softmax(dim=1)
             pred_masks = [torch.argmax(softmax(logit_mask), dim=1)
-                        for logit_mask in logit_masks]
+                            for logit_mask in logit_masks]
 
-            step_matrices = self.metric_manager.compute_confusion_matrices(
-                    y_seg, y_cls, pred_masks[0], pred_masks[2], batch_idx,
-                    levels=[Level.PX_DMG, Level.PX_BLD])
+            compute_conf_matrices = self.metric_manager.compute_confusion_matrices
+            step_matrices = compute_conf_matrices(y_seg, y_cls,
+                                                  pred_masks[0], pred_masks[2], batch_idx, 
+                                                  levels=[Level.PX_DMG, Level.PX_BLD,]
+                                                  )
             confusion_matrices.append(step_matrices)
 
             if (save_path is not None):
@@ -126,5 +128,6 @@ class EpochManager:
 
         metrics = self.metric_manager.compute_epoch_metrics(self.mode.value, self.tb_logger,
                                                             epoch, confusion_matrices,
-                                                            levels=[Level.PX_DMG, Level.PX_BLD])
+                                                            levels=[Level.PX_DMG, Level.PX_BLD]
+                                                            )
         return metrics, self.loss_manager.combined_losses.avg

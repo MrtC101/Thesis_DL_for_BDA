@@ -41,13 +41,13 @@ def preprocess(disaster_num, border_width):
     
     # Raw data
     log_Title("split disasters")
-    split_json_path = split_dataset(raw_path, xbd_path,{
+    split_raw_json_path = split_dataset(raw_path, xbd_path,{
         "train": 0.9,
         "test": 0.1
     })
 
     log_Title("creating data statistics")
-    data_dicts_path = create_data_dicts(split_json_path, xbd_path)
+    data_dicts_path = create_data_dicts(split_raw_json_path, xbd_path)
     mean_std_json_path = os.path.join(data_dicts_path,"all_tiles_mean_stddev.json")
     
     ## ONLY FOR TRAIN DATASET
@@ -60,9 +60,9 @@ def preprocess(disaster_num, border_width):
     # Cropping
     log_Title("creating data patches")
     sliced_path = join(xbd_path, "sliced")
-    slice_dataset(split_json_path, sliced_path)
+    slice_dataset(split_raw_json_path, sliced_path)
     
     log_Title("split patches")
-    split_sliced_json_path = split_sliced_dataset(sliced_path, split_json_path, xbd_path)
+    split_sliced_json_path = split_sliced_dataset(sliced_path, split_raw_json_path, xbd_path)
     
-    return split_json_path, split_sliced_json_path, mean_std_json_path
+    return split_raw_json_path, split_sliced_json_path, mean_std_json_path

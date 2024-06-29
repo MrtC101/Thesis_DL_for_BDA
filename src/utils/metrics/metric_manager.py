@@ -42,13 +42,13 @@ class MetricManager:
             *args: Additional arguments required for computing confusion matrices.
         """
         if (level == Level.PX_BLD):
-            return MatrixComputer.conf_mtrx_for_px_level(level, self.bld_labels, **args)
+            return MatrixComputer.patches_px_conf_mtrx(level, self.bld_labels, **args)
         elif (level == Level.PX_DMG):
-            return MatrixComputer.conf_mtrx_for_px_level(level, self.dmg_labels, **args)
+            return MatrixComputer.patches_px_conf_mtrx(level, self.dmg_labels, **args)
         elif (level == Level.OBJ_BLD):
-            return MatrixComputer.conf_mtrx_for_obj_level(level, self.bld_labels, 3, **args)
+            return MatrixComputer.patches_obj_conf_mtrx(level, self.bld_labels, 3, **args)
         elif (level == Level.OBJ_DMG):
-            return MatrixComputer.conf_mtrx_for_obj_level(level, self.dmg_labels, 3, **args)
+            return MatrixComputer.patches_obj_conf_mtrx(level, self.dmg_labels, 3, **args)
         else:
             raise Exception(f"{level} Not Implemented")
 
@@ -162,3 +162,30 @@ class MetricManager:
             for lvl in levels:
                 matrices[lvl.value["matrix_key"]] = get_confusion_matrix_for_level(lvl, data, batch_idx)
         return matrices
+    
+    def compute_pred_metrics(self, bbs_df, bld_mask, dmg_mask, pred_mask):
+        px_conf_mtrx = \
+            MatrixComputer.tile_px_conf_mtrx(bld_mask, dmg_mask, pred_mask, self.dmg_labels)
+        # INEFICIENTISIMA
+        # obj_conf_mtrx = MatrixComputer.tile_obj_conf_mtrx(dmg_mask, pred_mask, self.dmg_labels)
+        px_metric = MetricComputer.compute_eval_metrics(px_conf_mtrx)
+        #b = MetricComputer.compute_metrics(obj_conf_mtrx)
+        return px_metric
+
+    @staticmethod
+    def save_metrics(metrics, metric_dir,file_prefix):
+        """Save metrics in csv"""
+        # save evalution metrics
+        for epoch in range(len(metrics)):
+            for key, met in metrics[epoch].items():
+                mode = "w" if not epoch > 0 else "a"
+                header = not epoch > 0
+                met.to_csv(os.path.join(
+                    metric_dir, f'{file_prefix}_{key}.csv'), mode=mode, header=header, index=False)
+
+    @staticmethod
+    def save_loss(loss_metrics,metric_dir,filename):
+        """Save metrics in csv"""
+        path = os.path.join(metric_dir,"loss.csv")
+        df = pd.DataFrame(loss_metrics)
+        df.to_csv(path, mode="w", index=False)    

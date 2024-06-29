@@ -80,23 +80,6 @@ def output_directories(output_folder_path):
 
     return checkpoint_dir, tb_logger_dir, config_dir, metric_dir
 
-def save_loss(loss_metrics,metric_dir,filename):
-    """Save metrics in csv"""
-    path = os.path.join(metric_dir,"loss.csv")
-    df = pd.DataFrame(loss_metrics)
-    df.to_csv(path, mode="w", index=False)    
-
-           
-def save_metrics(metrics, metric_dir,file_prefix):
-    """Save metrics in csv"""
-    # save evalution metrics
-    for epoch in range(len(metrics)):
-        for key, met in metrics[epoch].items():
-            mode = "w" if not epoch > 0 else "a"
-            header = not epoch > 0
-            met.to_csv(os.path.join(
-                metric_dir, f'{file_prefix}_{key}.csv'), mode=mode, header=header, index=False)
-
 def train_model( train_loader: DataLoader, val_loader: DataLoader,
                 output_folder_path : str, configs: dict[str],
                 test_loader : DataLoader = None) -> float:
@@ -214,9 +197,9 @@ def train_model( train_loader: DataLoader, val_loader: DataLoader,
         best_acc = save_if_best(val_epoch_metrics, best_acc,
                                 checkpoint_dir, model, optimizer, epoch)
 
-    save_loss(loss_metrics, metric_dir,"train_loss.csv")
-    save_metrics(train_metrics, metric_dir,"train")
-    save_metrics(val_metrics, metric_dir,"val")
+    MetricManager.save_loss(loss_metrics, metric_dir,"train_loss.csv")
+    MetricManager.save_metrics(train_metrics, metric_dir,"train")
+    MetricManager.save_metrics(val_metrics, metric_dir,"val")
     
     # TESTING
     if(test_loader is not None):
@@ -224,10 +207,10 @@ def train_model( train_loader: DataLoader, val_loader: DataLoader,
         os.makedirs(predicted_dir,exist_ok=True)
         testing = EpochManager(mode=Mode.TESTING, loader=test_loader, **sheared_vars)
         with torch.no_grad():
-            test_metrics, test_loss = testing.run_epoch(0,predicted_dir)
+            test_metrics, test_loss = testing.run_epoch(1,predicted_dir)
         log.info(f"Loss over testing split:{test_loss:3f};")
-        save_loss([test_loss], metric_dir,"test_loss.csv")
-        save_metrics([test_metrics], metric_dir, "test")
+        MetricManager.save_loss([test_loss], metric_dir,"test_loss.csv")
+        MetricManager.save_metrics([test_metrics], metric_dir, "test")
         best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
 
     tb_logger.flush()
