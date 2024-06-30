@@ -1,20 +1,13 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from collections import OrderedDict, defaultdict
 import random
 
 import pandas as pd
-import rasterio
-import shapely
-import rasterio.features
 import numpy as np
-import shapely.geometry
-import geopandas as gpd
-import matplotlib.pyplot as plt
-from shapely.geometry import shape
-from shapely.geometry import Polygon
 from utils.metrics.common import Level
 import matplotlib
+
+from utils.polygon.polygon_manager import get_buildings
 matplotlib.use("TkAgg")
 
 class MatrixComputer:
@@ -70,7 +63,6 @@ class MatrixComputer:
                 'false_pos': fp,
                 'false_neg': fn,
                 'total': total_pixels}
-    
 
     # OBJECT LEVEL
     @staticmethod
@@ -96,8 +88,8 @@ class MatrixComputer:
     def tile_obj_conf_mtrx(dmg_mask, pred_mask, labels_set):
         """Returns a confusión matrix for one image"""
         conf_mrtx = MatrixComputer.evaluate_polys(dmg_mask, pred_mask, labels_set)
-        return conf_mrtx
-    
+        return conf_mrtx     
+
     @staticmethod
     def evaluate_polys(target_mask, pred_mask, labels_set, iou_threshold: float = 0.5):
         """ This method calculates the corresponding confusion matrix at object level.
@@ -120,52 +112,6 @@ class MatrixComputer:
         Returns:
             pd.DataFrame : A confusion matrix for each label. 
         """
-        # functions
-        def get_polygons(region, mask):
-            """Returns a list of tuples (clusters,pixel_value)"""
-            polys = []
-            connected_components = rasterio.features.shapes(region, mask=mask)
-            for shape_geojson, pixel_val in connected_components:
-                shape = shapely.geometry.shape(shape_geojson)
-                assert isinstance(shape, Polygon)
-                polys.append((shape, int(pixel_val)))
-            return polys
-        
-        def assing_mayority_class(blds, clusters_with_cls):
-            # ESTA PARTE ES SUPER INNEFICIENTE Y se puede mejorar. Hilos y euristicas
-            """Assign a class to a building based on majority vote.
-            (It is assigned the class from the cluster with more superposition)"""
-            # Assign majority class to each predicted polygon
-            poly_overlap_class = [(0.0,None)] * len(blds)
-            bld_area_label = []
-            # compears the area of one polygon with all the others
-            for i, (building, _) in enumerate(blds):
-                for cluster_list in clusters_with_cls:
-                    for cluster, label in cluster_list:
-
-                        if not building.is_valid:
-                            building = building.buffer(0)
-                        if not cluster.is_valid:#????
-                            cluster = cluster.buffer(0)
-                        
-                        intersection_area = building.intersection(cluster).area
-                        if intersection_area > poly_overlap_class[i][0]:
-                            poly_overlap_class[i] = (intersection_area,label)
-                bld_area_label.append(
-                    (building,poly_overlap_class[i][0],poly_overlap_class[i][1])
-                    )
-
-            # Build the final list of buildings with class 
-            return bld_area_label
-
-        def get_buildings(mask,label_set):
-            """Return a list of (polygon,class)"""
-            mask = np.array(mask).astype(np.int16)
-            binary_region = np.where(mask > 0, 1, 0).astype(np.int16)
-            blds = get_polygons(binary_region, binary_region > 0) #GET ALL FINAL POLYGONS
-            clusters_with_cls = [get_polygons(mask, mask == c) for c in label_set] #
-            blds_with_cls = assing_mayority_class(blds, clusters_with_cls)
-            return blds_with_cls
 
         def compute_IoU(gt_buildings,pd_buildings):
             building_list = []

@@ -1,25 +1,11 @@
-Lista de versiones que he implementado hasta ahora:
- \textbf{copia y pega del repositorio}: anda mal, esta mal codificada, no es performante, no es fácil de entender.
- \textbf{Mi implementación}: de la versión del repositorio. Tiene shards, tiene métrica de objetos, tiene falsas augmentaciones "tarda mucho"
-
-Voy a implementar las siguientes versiones:
-\vspace*{0pt}
-\begin{itemize}[topsep=0pt]
-    \tightlist
-    \item \textbf{Versión base} = Mi-implementación - shards - obj-metric - false-augmentation + automatic-latex-table + obj-metric-last
-    \item \textbf{versión my\_preprocess} = versión base + augmentaciones para desbalance + normalización de datos de entrada.
-    \item \textbf{versión completa} = my\_preprocess + hyperparamer-tuning-BHOB + 10-folding CV por configuración de parametros.
-\end{itemize}
-
 Me falta:
-1.augmentaciones
-post procesamiento(
-calcular métricas par imagen completa de píxel y de objeto
-algoritmo para contar y crear tabla.
-mejorar algoritmo para métrica de objetos
-Bounding boxes para mostrar la salida.
-)
-tablas latex
-definir el subconjunto con imágenes de entrenamiento.
-implementación de modelo en deploy.
-AGREGAR CURVA ROC durante prueba en test
+# la tabla debe caluclarse tanto para verdaderos como para predicho
+# ambas tablas se deben imprimir en figura
+- AGREGAR CURVA ROC durante prueba en test para pixel y objeto
+- Augmentaciones de datos
+- Obtención de BBS sin json
+- Mejorar eficiencia de metrica nivel de objeto
+- definir el subconjunto con imágenes de entrenamiento.
+- Tabla latex???
+- implementación de modelo en deploy.
+- Página web

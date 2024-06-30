@@ -118,6 +118,9 @@ class EpochManager:
                                                   )
             confusion_matrices.append(step_matrices)
 
+            if(Mode.TESTING == self.mode):
+                RocCurve()
+
             if (save_path is not None):
                 SplitDataset.save_pred_patch(pred_masks[2], batch_idx,
                                               dis_id,tile_id, patch_id, save_path)

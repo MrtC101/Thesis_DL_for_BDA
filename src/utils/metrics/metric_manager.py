@@ -163,15 +163,6 @@ class MetricManager:
                 matrices[lvl.value["matrix_key"]] = get_confusion_matrix_for_level(lvl, data, batch_idx)
         return matrices
     
-    def compute_pred_metrics(self, bbs_df, bld_mask, dmg_mask, pred_mask):
-        px_conf_mtrx = \
-            MatrixComputer.tile_px_conf_mtrx(bld_mask, dmg_mask, pred_mask, self.dmg_labels)
-        # INEFICIENTISIMA
-        # obj_conf_mtrx = MatrixComputer.tile_obj_conf_mtrx(dmg_mask, pred_mask, self.dmg_labels)
-        px_metric = MetricComputer.compute_eval_metrics(px_conf_mtrx)
-        #b = MetricComputer.compute_metrics(obj_conf_mtrx)
-        return px_metric
-
     @staticmethod
     def save_metrics(metrics, metric_dir,file_prefix):
         """Save metrics in csv"""
