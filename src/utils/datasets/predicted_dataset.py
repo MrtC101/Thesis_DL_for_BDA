@@ -1,10 +1,11 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import numpy as np
-from torch.utils.data import Dataset
 import cv2
 import os
 import sys
+import torch
+import numpy as np
+from torch.utils.data import Dataset
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
@@ -34,7 +35,21 @@ class PredictedDataset(Dataset):
             f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
         return True
 
-    def load_images(self, tile : dict) -> dict:
+    @staticmethod
+    def save_pred_patch( pred_dmg_mask : torch.Tensor | np.ndarray, 
+                        batch_idx : str, dis_idx : str, tile_idx :str, patch_idx : str,
+                          save_path: str) -> None:
+        """Saves current prediction image"""
+        os.makedirs(save_path, exist_ok=True)
+        
+        for ch,(dis_id,tile_id,patch_id) in enumerate(zip(dis_idx,tile_idx,patch_idx)):
+            file = os.path.join(save_path,
+                                 f"{dis_id}_{tile_id}_{patch_id}_dmg_mask.png")
+            mask = pred_dmg_mask[ch]
+            img = np.array(mask).astype(np.uint8)
+            cv2.imwrite(file, img)
+
+    def _load_images(self, tile : dict) -> dict:
         """Load images and mask from dataset paths"""
         data = {}
         data["pre_img"] = cv2.cvtColor(cv2.imread(tile["pre"]["image"]), cv2.COLOR_BGR2RGB)
@@ -43,6 +58,10 @@ class PredictedDataset(Dataset):
         data["dmg_mask"] = cv2.imread(tile["post"]["mask"])[:, :, 0]
         data["bld_json"] = read_json(tile["pre"]["json"]) 
         data["dmg_json"] = read_json(tile["post"]["json"])
+        data["pre_img"] = torch.Tensor(data["pre_img"]).to(torch.uint8)
+        data["post_img"] = torch.Tensor(data["post_img"]).to(torch.uint8)
+        data["bld_mask"] = torch.Tensor(data["bld_mask"]).to(torch.uint8)
+        data["dmg_mask"] = torch.Tensor(data["dmg_mask"]).to(torch.uint8)
         return data
 
     def merge_patches(self, patch_path_dict : dict) -> np.ndarray:
@@ -62,6 +81,6 @@ class PredictedDataset(Dataset):
     
     def __getitem__(self, i : int) -> tuple[str, str, dict, np.ndarray]:
         disaster_id, tile_id, tile, patch_dict = self.tile_list[i]
-        loaded_tile = self.load_images(tile)
+        loaded_tile = self._load_images(tile)
         predicted_mask = self.merge_patches(patch_dict)
-        return disaster_id, tile_id, loaded_tile, predicted_mask
+        return disaster_id, tile_id, loaded_tile, torch.Tensor(predicted_mask)

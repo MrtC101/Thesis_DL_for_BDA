@@ -6,7 +6,7 @@ from os.path import join
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 
 from preprocessing.prepare_folder.clean_folder import delete_not_in
 from preprocessing.prepare_folder.create_label_masks import create_masks

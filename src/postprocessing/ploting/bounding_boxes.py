@@ -2,6 +2,7 @@ import pandas as pd
 from shapely.wkt import loads
 from utils.polygon.polygon_manager import BoundingBox, get_buildings
 
+
 def get_bbs_form_json(label_dict : dict) -> pd.DataFrame:
     """Create a pandas Dataframe with bounding boxes from json."""
     buildings_list = label_dict['features']['xy']

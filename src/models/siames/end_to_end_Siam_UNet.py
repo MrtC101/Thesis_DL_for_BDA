@@ -96,6 +96,51 @@ class SiamUnet(nn.Module):
         self.softmax = torch.nn.Softmax(dim=1)
 
     
+    @staticmethod
+    def _block(in_channels: int, features: int, name: str) -> nn.Sequential:
+        """
+        Creates a block of layers.
+
+        Args:
+            in_channels: The number of input channels.
+            features: The number of features for the convolutional layers.
+            name: The base name for the layers.
+
+        Returns:
+            nn.Sequential: A sequential container of the layers.
+        """
+        return nn.Sequential(
+            OrderedDict(
+                [
+                    (
+                        name + "conv1",
+                        nn.Conv2d(
+                            in_channels=in_channels,
+                            out_channels=features,
+                            kernel_size=3,
+                            padding=1,
+                            bias=False,
+                        ),
+                    ),
+                    (name + "norm1", nn.BatchNorm2d(num_features=features)),
+                    (name + "relu1", nn.ReLU(inplace=True)),
+                    (
+                        name + "conv2",
+                        nn.Conv2d(
+                            in_channels=features,
+                            out_channels=features,
+                            kernel_size=3,
+                            padding=1,
+                            bias=False,
+                        ),
+                    ),
+                    (name + "norm2", nn.BatchNorm2d(num_features=features)),
+                    (name + "relu2", nn.ReLU(inplace=True)),
+                ]
+            )
+        )
+
+
     #Used for debugging
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
@@ -120,7 +165,7 @@ class SiamUnet(nn.Module):
             x2: The second input tensor.
 
         Returns:
-            tuple: A tuple containing the output segmentation and classification tensors.
+            tuple: A tuple of logits tensors masks for segmentation and classification.
         \"""
 
         # UNet on x1
@@ -200,49 +245,28 @@ class SiamUnet(nn.Module):
 
         return out_seg_1, out_seg_2, out_class
     """
-    @staticmethod
-    def _block(in_channels: int, features: int, name: str) -> nn.Sequential:
-        """
-        Creates a block of layers.
 
-        Args:
-            in_channels: The number of input channels.
-            features: The number of features for the convolutional layers.
-            name: The base name for the layers.
-
-        Returns:
-            nn.Sequential: A sequential container of the layers.
+    """
+    Returns logits
+    """
+    
+    def compute_probabilities(self, logit_masks) -> tuple:
         """
-        return nn.Sequential(
-            OrderedDict(
-                [
-                    (
-                        name + "conv1",
-                        nn.Conv2d(
-                            in_channels=in_channels,
-                            out_channels=features,
-                            kernel_size=3,
-                            padding=1,
-                            bias=False,
-                        ),
-                    ),
-                    (name + "norm1", nn.BatchNorm2d(num_features=features)),
-                    (name + "relu1", nn.ReLU(inplace=True)),
-                    (
-                        name + "conv2",
-                        nn.Conv2d(
-                            in_channels=features,
-                            out_channels=features,
-                            kernel_size=3,
-                            padding=1,
-                            bias=False,
-                        ),
-                    ),
-                    (name + "norm2", nn.BatchNorm2d(num_features=features)),
-                    (name + "relu2", nn.ReLU(inplace=True)),
-                ]
-            )
-        )
+            Returns:
+                tuple: A tuple of probabilities tensor masks for segmentation and classification.
+        """
+        return tuple(self.softmax(logit_mask) for logit_mask in logit_masks)
+
+    def compute_predictions(self, logit_masks) -> tuple:
+        """
+            Returns:
+                tuple: A tuple of predictions tensor masks for segmentation and classification.
+        """
+        return tuple(torch.argmax(self.softmax(logit_mask), dim=1) for logit_mask in logit_masks)
+    
+    def compute_binary(self, logit_masks, threshold = 0.5) -> tuple:
+        probabilities = self.compute_probabilities(logit_masks)
+        return tuple(mask >= threshold for mask in probabilities)
 
     def freeze_model_param(self):
         """Disables weights modification on each layer from the model"""

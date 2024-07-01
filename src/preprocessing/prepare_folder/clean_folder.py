@@ -9,7 +9,7 @@ import argparse
 from tqdm import tqdm
 from utils.common.files import is_dir
 from os.path import join
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 log = LoggerSingleton()
 
 """

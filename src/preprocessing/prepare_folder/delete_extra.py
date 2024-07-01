@@ -10,7 +10,7 @@ import argparse
 from tqdm import tqdm
 from itertools import chain
 from utils.pathManagers.rawManager import RawPathManager
-from utils.common.logger import LoggerSingleton, TqdmToLog
+from utils.loggers.console_logger import LoggerSingleton, TqdmToLog
 log = LoggerSingleton()
 
 

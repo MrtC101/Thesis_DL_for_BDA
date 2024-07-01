@@ -1,8 +1,10 @@
 from io import BytesIO
 import os
 import cv2
-from matplotlib import gridspec, patches
 import matplotlib.pyplot as plt
+import matplotlib
+matplotlib.use("Agg")
+from matplotlib import gridspec, patches
 import numpy as np
 import pandas as pd
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
@@ -93,17 +95,20 @@ def comparative_figure(dis_id,tile_id,pre_img,post_img, pred_mask, gt_table, pd_
     ax3.imshow(pred_mask, cmap=viz.colormap, norm=viz.normalizer, interpolation='none')
     ax3.axis('off')
     ax3.set_title('Predicted Damage Mask', fontsize=subtitle_size)
-  
     
-    ax4 = fig.add_subplot(gs[1, 0:1])  # Span all columns in the second row
+    ax4.set_title('Predicted building count', fontsize=subtitle_size)
+    ax4 = fig.add_subplot(gs[1, 0])  # Span all columns in the second row
     ax4.axis('off')
-    ax4.set_title(f"Disaster {dis_id} {tile_id}", fontsize=title_size, fontweight="bold")
-    addPlotTable(ax4, gt_table, subtitle_size, [0.4]*len(gt_table.columns), 0.16)
+    addPlotTable(ax4, gt_table, subtitle_size, [0.6]*len(gt_table.columns), 0.16)
 
-    ax5 = fig.add_subplot(gs[1, 1:2])  # Span all columns in the second row
+    ax5.set_title('Predicted building count', fontsize=subtitle_size)
+    ax5 = fig.add_subplot(gs[1, 2])  # Span all columns in the second row
     ax5.axis('off')
-    addPlotTable(ax5, pd_table, subtitle_size, [0.4]*len(pd_table.columns), 0.16)
+    addPlotTable(ax5, pd_table, subtitle_size, [0.6]*len(pd_table.columns), 0.16)
 
+    ax6 = fig.add_subplot(gs[1, 1])  # Span all columns in the second row
+    ax6.axis('off')
+    ax6.set_title(f"Disaster {dis_id} {tile_id}", fontsize=title_size, fontweight="bold")
     
     os.makedirs(save_path, exist_ok=True)
     files = os.path.join(save_path, f"{dis_id}-{tile_id}_predicted_dmg_mask.png")
@@ -137,14 +142,16 @@ def generate_figures(dis_id, tile_id, tile_dict, pred_mask,
         in the first row and 'curr_table' in the second row."""
     os.makedirs(save_path, exist_ok=True)
     #Save images.
-    pre_img = tile_dict["pre_img"]
+    pre_img = np.array(tile_dict["pre_img"])
     file_path = os.path.join(save_path, f"{dis_id}_{tile_id}_pre_disaster.png")
     plt.imsave(file_path, pre_img)
     plt.close()
-    post_img = tile_dict["post_img"]
+
+    post_img = np.array(tile_dict["post_img"])
     file_path = os.path.join(save_path, f"{dis_id}_{tile_id}_post_disaster.png")
     plt.imsave(file_path, post_img)
     plt.close()
+    
     pred_img = prediction_with_label_map(pred_mask, label_map_json)
     file_path = os.path.join(save_path, f"{dis_id}_{tile_id}_pred_damage_mask.png")
     plt.imsave(file_path, pred_img)

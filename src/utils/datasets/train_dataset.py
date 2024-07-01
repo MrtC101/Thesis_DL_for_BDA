@@ -5,7 +5,6 @@ import torch
 from torchvision import transforms
 from utils.common.files import read_json, is_json
 from torch.utils.data import Dataset, DataLoader
-import torchvision
 import cv2
 import os
 import sys
@@ -20,7 +19,7 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-class SplitDataset(Dataset):
+class TrainDataset(Dataset):
     """Class that implements the corresponding methods to access raw xBD dataset data."""
 
     def __init__(self, split_name: str, splits_json_path: str, mean_stdv_json_path : str):
@@ -93,19 +92,6 @@ class SplitDataset(Dataset):
         data["dmg_mask"][mask] = 0
         data["dmg_mask"] = torch.from_numpy(data["dmg_mask"]).long()
         return disaster_id, tile_id, patch_id, data   
-
-    @staticmethod
-    def save_pred_patch( pred_dmg_mask: Tensor, batch_idx : int, dis_idx : tuple, tile_idx :tuple,
-                         patch_idx : tuple, save_path: str) -> None:
-        """Saves current prediction image"""
-        os.makedirs(save_path, exist_ok=True)
-        
-        for ch,(dis_id,tile_id,patch_id) in enumerate(zip(dis_idx,tile_idx,patch_idx)):
-            file = os.path.join(save_path,
-                                 f"{dis_id}_{tile_id}_{patch_id}_dmg_mask.png")
-            mask = pred_dmg_mask[ch]
-            img = np.array(mask).astype(np.uint8)
-            cv2.imwrite(file, img)
         
     @staticmethod
     def get_sample_images(loader: DataLoader, num_chips_to_viz : int):

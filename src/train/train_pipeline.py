@@ -11,9 +11,10 @@ import os
 import sys
 from os.path import join
 import torch
-from torch.utils.data import DataLoader, SubsetRandomSampler
+from torch.utils.data import SubsetRandomSampler
 from sklearn.model_selection import KFold
 from tqdm import tqdm
+
 
 # Environment variables
 """
@@ -28,8 +29,9 @@ if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from train.training import train_model
-from utils.datasets.train_dataset import SplitDataset
-from utils.common.logger import LoggerSingleton
+from utils.datasets.train_dataset import TrainDataset
+from utils.loggers.console_logger import LoggerSingleton
+from utils.dataloaders.train_dataloader import TrainDataLoader
 
 def train_definitive(output_path, configs : dict[str]):
     """Train the model with the hole training dataset"""
@@ -37,24 +39,24 @@ def train_definitive(output_path, configs : dict[str]):
     log = LoggerSingleton("DEFINITIVE MODEL", folder_path=join(output_path, "console_logs"))
 
     #Load Dataset    
-    xBD_train = SplitDataset('train', configs['split_json_path'], configs['statistics_json_path'])
+    xBD_train = TrainDataset('train', configs['split_json_path'], configs['statistics_json_path'])
     log.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))    
-    xBD_test = SplitDataset('test', configs['split_json_path'], configs['statistics_json_path'])
+    xBD_test = TrainDataset('test', configs['split_json_path'], configs['statistics_json_path'])
     log.info('xBD_disaster_dataset test length: {}'.format(len(xBD_test)))
     
     # Load dataloaders
-    train_loader = DataLoader(xBD_train,
+    train_loader = TrainDataLoader(xBD_train,
                             batch_size=configs['batch_size'],
                             shuffle=True,
                             num_workers=configs['batch_workers'],
                             pin_memory=False
                             )
-    val_loader = DataLoader(xBD_train,
+    val_loader = TrainDataLoader(xBD_train,
                             batch_size=configs['batch_size'],
                             shuffle=True,
                             num_workers=configs['batch_workers'],
                             pin_memory=False)
-    test_loader = DataLoader(xBD_test,
+    test_loader = TrainDataLoader(xBD_test,
                             batch_size=configs['batch_size'],
                             num_workers=configs['batch_workers'],
                             pin_memory=False)
@@ -104,7 +106,7 @@ def k_cross_validation(k,configs : dict[str]):
 
     # Define the K-fold Cross Validator
     KF = KFold(n_splits=k, shuffle=True)
-    xBD_train = SplitDataset('train', configs['split_json_path'], configs['statistics_json_path'])
+    xBD_train = TrainDataset('train', configs['split_json_path'], configs['statistics_json_path'])
     log.info('xBD_disaster_dataset train length: {}'.format(len(xBD_train)))    
     
     scores = []
@@ -115,13 +117,13 @@ def k_cross_validation(k,configs : dict[str]):
                                       f"{k}-fold_{fold}")
         f"exp_{configs['configuration_num']}_{k}-fold_{fold}"
         # Load datasets
-        train_loader = DataLoader(xBD_train,
+        train_loader = TrainDataLoader(xBD_train,
                                 batch_size=configs['batch_size'],
                                 sampler=SubsetRandomSampler(train_idx),
                                 num_workers=configs['batch_workers'],
                                 pin_memory=False
                                 )
-        val_loader = DataLoader(xBD_train,
+        val_loader = TrainDataLoader(xBD_train,
                                 batch_size=configs['batch_size'],
                                 sampler=SubsetRandomSampler(val_idx),
                                 num_workers=configs['batch_workers'],

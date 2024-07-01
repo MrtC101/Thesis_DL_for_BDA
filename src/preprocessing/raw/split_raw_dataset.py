@@ -12,7 +12,7 @@ from random import shuffle
 from collections import defaultdict
 from utils.common.files import dump_json
 from utils.pathManagers.rawManager import RawPathManager, DisasterDict
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 log = LoggerSingleton()
 
 def split_dataset(raw_path: str, out_path: str,sets :dict) -> str:

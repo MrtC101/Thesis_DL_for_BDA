@@ -44,7 +44,7 @@ from shapely import wkt
 from shapely.geometry import mapping, Polygon
 from cv2 import fillPoly, imread, imwrite
 from utils.common.files import read_json, is_dir
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 log = LoggerSingleton()
 
 path = join(os.environ.get("DATA_PATH"), 'constants/xBD_label_map.json')
