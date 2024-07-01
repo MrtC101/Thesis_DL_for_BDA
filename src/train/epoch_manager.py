@@ -1,46 +1,43 @@
-import enum
 import os
 import sys
+import enum
+import torch
+from tqdm import tqdm
+from dataclasses import dataclass
+from datetime import datetime
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from tqdm import tqdm
-import torch
-from datetime import datetime
-from torch.utils.data import DataLoader
-from utils.common.logger import LoggerSingleton
-from utils.metrics.metric_manager import Level, MetricManager
-from utils.datasets.train_dataset import SplitDataset
+from utils.dataloaders.train_dataloader import TrainDataLoader
+from utils.loggers.console_logger import LoggerSingleton
+from utils.loggers.tensorboard_logger import TensorBoardLogger
 from models.siames.end_to_end_Siam_UNet import SiamUnet
+from utils.metrics.metric_manager import Level, MetricManager
 from utils.metrics.loss_manager import LossManager
+from utils.datasets.predicted_dataset import PredictedDataset
 
-
-class Mode(enum.Enum):
-    TRAINING = "train"
-    VALIDATION = "val"
-    TESTING = "test"
-
+@dataclass(init=True, repr=False, eq=False, order=False, unsafe_hash=False, frozen=False,
+           match_args=True, kw_only=False, slots=False, weakref_slot=False)
 class EpochManager:
-    """
-        That implementes one epoch
-    """
-
-    def __init__(self, mode : Mode, loader : DataLoader, tot_epochs : int,
-                optimizer : torch.optim.Optimizer, model : SiamUnet,
-                device : torch.device, loss_manager : LossManager,
-                metric_manager : MetricManager, tb_logger):
-        self.mode = mode
-        self.loader = loader
-        self.tot_epochs = tot_epochs
-        self.optimizer = optimizer
-        self.model = model 
-        self.device = device
-        self.loss_manager = loss_manager
-        self.metric_manager = metric_manager
-        self.tb_logger = tb_logger
-
-
+    """Manages a single epoch of training or evaluation.
+    Because is instance of dataclass dunder methods are generated automatically"""
+    
+    class Mode(enum.Enum):
+        TRAINING = "train"
+        VALIDATION = "val"
+        TESTING = "test"
+    
+    mode : Mode
+    loader : TrainDataLoader
+    tot_epochs : int
+    optimizer : torch.optim.Optimizer
+    model : SiamUnet
+    device : torch.device
+    loss_manager : LossManager
+    metric_manager : MetricManager
+    tb_logger : TensorBoardLogger
+    
     def logging_wrapper(func):
         """Wrapper applied to the epoch_iteration method
           for printing messages"""
@@ -49,10 +46,12 @@ class EpochManager:
             self = args[0]
             epoch = args[1]
             if (self.mode.value == "train"):
-                self.tb_logger.add_scalars(f'{self.mode.value}/learning_rate',
-                                        {"lr": self.optimizer.param_groups[0]["lr"]},
-                                        epoch)
-            log = LoggerSingleton(f"{self.mode.value} Step")
+                self.tb_logger.add_scalars(
+                    f'{self.mode.value}/learning_rate',
+                    {"lr": self.optimizer.param_groups[0]["lr"]},
+                    epoch
+                )
+            log = LoggerSingleton(name=f"{self.mode.value} Step")
             log.info(f'{self.mode.value.upper()}  epoch: {epoch}/{self.tot_epochs}')
             start_time = datetime.now()
 
@@ -60,8 +59,10 @@ class EpochManager:
 
             duration = datetime.now() - start_time
             self.tb_logger.add_scalar(
-                f'{self.mode.value}/time', duration.total_seconds(), epoch)
-
+                f'{self.mode.value}/time',
+                duration.total_seconds(),
+                epoch
+            )
             return result
         return decorator
 
@@ -107,30 +108,34 @@ class EpochManager:
                 self.optimizer.step()
 
             # Compute predictions
-            softmax = torch.nn.Softmax(dim=1)
-            pred_masks = [torch.argmax(softmax(logit_mask), dim=1)
-                            for logit_mask in logit_masks]
-
-            compute_conf_matrices = self.metric_manager.compute_confusion_matrices
-            step_matrices = compute_conf_matrices(y_seg, y_cls,
-                                                  pred_masks[0], pred_masks[2], batch_idx, 
-                                                  levels=[Level.PX_DMG, Level.PX_BLD,]
-                                                  )
+            pred_masks = self.model.compute_predictions(logit_masks) 
+ 
+            step_matrices = self.metric_manager.compute_confusion_matrices(
+                                                batch_idx,
+                                                gt_bld_mask=y_seg,
+                                                gt_dmg_mask=y_cls,
+                                                pd_bld_mask=pred_masks[0],
+                                                pd_dmg_mask=pred_masks[2],
+                                                levels=[Level.PX_DMG, Level.PX_BLD]
+                                                )
             confusion_matrices.append(step_matrices)
 
-            if(Mode.TESTING == self.mode):
-                RocCurve()
+            if(self.Mode.TESTING == self.mode):
+                pass
 
             if (save_path is not None):
-                SplitDataset.save_pred_patch(pred_masks[2], batch_idx,
-                                              dis_id,tile_id, patch_id, save_path)
+                PredictedDataset.save_pred_patch(pred_masks[2], batch_idx, dis_id,
+                                              tile_id, patch_id, save_path)
                 log.info(f'Prediction with size {pred_masks[2].size()} saved: {save_path}')
 
         self.loss_manager.log_losses(self.tb_logger, self.mode.value, epoch)
-        self.tb_logger.tb_log_images(self.mode, self.loader, self.model, epoch, self.device)
-
-        metrics = self.metric_manager.compute_epoch_metrics(self.mode.value, self.tb_logger,
-                                                            epoch, confusion_matrices,
+        self.tb_logger.tb_log_images(self.mode.value, self.loader, self.model, epoch, self.device)
+        
+        metrics = self.metric_manager.compute_epoch_metrics(epoch, confusion_matrices,
                                                             levels=[Level.PX_DMG, Level.PX_BLD]
                                                             )
+        self.metric_manager.log_metrics(phase=self.mode.value,
+                                        tb_log=self.tb_logger,
+                                        metrics=metrics)
+        
         return metrics, self.loss_manager.combined_losses.avg

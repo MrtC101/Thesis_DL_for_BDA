@@ -1,6 +1,9 @@
 import os
 import sys
 from os.path import join
+from joblib import Parallel, delayed
+import torch
+os.environ["parallelism"] = "True"
 
 # Environment variables
 os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
@@ -15,7 +18,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from train.train_pipeline import k_cross_validation, train_definitive
 from postprocessing.postprocess_pipeline import postprocess
 from preprocessing.preprocessing_pipeline import preprocess
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 from sklearn.model_selection import ParameterGrid
 
 
@@ -58,8 +61,6 @@ def SequentialSearch(param_list):
               de validación de {best[1]:.4f}')
     return best_params
     
-from joblib import Parallel, delayed
-import torch
 
 def ParalelSearch(param_list):
     # torch hardware configurations
@@ -121,8 +122,8 @@ if __name__ == "__main__":
     }
     visual_config = {
         'num_chips_to_viz': 2,
-        'labels_dmg': [ 1, 2, 3, 4],
-        'labels_bld': [1],
+        'labels_dmg': [ 0, 1, 2, 3, 4],
+        'labels_bld': [1], # not include 0 because is binary 
     }
     pre_config = {
         "disaster_num": 20,

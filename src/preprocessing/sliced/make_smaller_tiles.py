@@ -27,7 +27,7 @@ import math
 import numpy as np
 import random
 import argparse
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 log = LoggerSingleton()
 
 

@@ -3,28 +3,24 @@
 
 import os
 import sys
+import torch
+from torch import nn
+from torch.optim.lr_scheduler import ReduceLROnPlateau
+from tqdm import trange
 
-import pandas as pd
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 
+from models.siames.end_to_end_Siam_UNet import SiamUnet
+from train.epoch_manager import EpochManager
+from utils.common.files import dump_json
+from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.metrics.loss_manager import LossManager
 from utils.metrics.metric_manager import MetricManager
-from utils.visualization.raster_label_visualizer import TensorBoardLogger
-
-
-import torch
-import torch.nn as nn
-from torch.utils.data import DataLoader
-from torch.optim.lr_scheduler import ReduceLROnPlateau
-from tqdm import trange
-
-from utils.common.files import dump_json
-from utils.common.logger import LoggerSingleton
-from train.epoch_manager import EpochManager, Mode
-from models.siames.end_to_end_Siam_UNet import SiamUnet
+from utils.loggers.console_logger import LoggerSingleton
+from utils.loggers.tensorboard_logger import TensorBoardLogger
 
 log = LoggerSingleton()
 
@@ -80,9 +76,9 @@ def output_directories(output_folder_path):
 
     return checkpoint_dir, tb_logger_dir, config_dir, metric_dir
 
-def train_model( train_loader: DataLoader, val_loader: DataLoader,
+def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
                 output_folder_path : str, configs: dict[str],
-                test_loader : DataLoader = None) -> float:
+                test_loader : TrainDataLoader = None) -> float:
     """Trains the model using the specified configurations.
 
         Args:
@@ -168,8 +164,8 @@ def train_model( train_loader: DataLoader, val_loader: DataLoader,
     }
     
     # Objects for training
-    training = EpochManager(mode=Mode.TRAINING, loader=train_loader, **sheared_vars)
-    validation = EpochManager(mode=Mode.VALIDATION, loader=val_loader, **sheared_vars)
+    training = EpochManager(mode=EpochManager.Mode.TRAINING, loader=train_loader, **sheared_vars)
+    validation = EpochManager(mode=EpochManager.Mode.VALIDATION, loader=val_loader, **sheared_vars)
 
     # Metrics
     train_metrics = []
@@ -205,7 +201,7 @@ def train_model( train_loader: DataLoader, val_loader: DataLoader,
     if(test_loader is not None):
         predicted_dir = os.path.join(output_folder_path,"test_pred_masks")
         os.makedirs(predicted_dir,exist_ok=True)
-        testing = EpochManager(mode=Mode.TESTING, loader=test_loader, **sheared_vars)
+        testing = EpochManager(mode=EpochManager.Mode.TESTING, loader=test_loader, **sheared_vars)
         with torch.no_grad():
             test_metrics, test_loss = testing.run_epoch(1,predicted_dir)
         log.info(f"Loss over testing split:{test_loss:3f};")

@@ -8,7 +8,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.pathManagers.slicedManager import SlicedPathManager
 from utils.common.files import dump_json
 import argparse
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 
 log = LoggerSingleton()
 

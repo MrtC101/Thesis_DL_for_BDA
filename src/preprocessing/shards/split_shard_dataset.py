@@ -4,7 +4,7 @@ import os
 import sys
 from utils.common.files import dump_json
 from utils.pathManagers.shardManager import ShardPathManager
-from utils.common.logger import LoggerSingleton
+from utils.loggers.console_logger import LoggerSingleton
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))

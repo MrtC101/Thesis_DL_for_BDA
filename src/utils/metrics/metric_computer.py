@@ -24,7 +24,7 @@ class MetricComputer:
 
     def __init__(self, labels_set):
         self.labels_set = labels_set
-        
+    
     # Compute Metrics
     def compute_metrics(self, conf_mtrx_list: pd.Series):
         conf_matrices_df = pd.concat(list(conf_mtrx_list), axis=0, ignore_index=True)

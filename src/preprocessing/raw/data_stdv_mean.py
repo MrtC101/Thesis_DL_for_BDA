@@ -24,7 +24,7 @@ from collections import defaultdict
 from shapely import wkt
 import argparse
 from tqdm import tqdm
-from utils.common.logger import LoggerSingleton, TqdmToLog
+from utils.loggers.console_logger import LoggerSingleton, TqdmToLog
 log = LoggerSingleton()
 
 
