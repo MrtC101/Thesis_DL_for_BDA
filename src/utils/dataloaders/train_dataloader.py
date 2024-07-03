@@ -32,8 +32,12 @@ class TrainDataLoader(DataLoader):
             sample_idxs = random.sample(range(len(self)), number)
 
             # Obtener los elementos de los índices seleccionados
+            self.dataset.set_normalize(normalized)
+            
             self.last_sample = []
             for i in sample_idxs:
-                self.last_sample.append(self.dataset[i,normalized])
+                self.last_sample.append(self.dataset[i])
+            
+            self.dataset.set_normalize(True)
 
         return self.last_sample

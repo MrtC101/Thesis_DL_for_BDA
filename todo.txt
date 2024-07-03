@@ -1,15 +1,13 @@
 Me falta:
-
-paralelismo -> El método funciona correctamente ? -> confusion_obj rapida -> 
-suma de confusiones -> metrica de confusion -> curva roc -> plotings y tablas
-ERROR TKINDER CON HILOS
-- Agregar parametro booleano para habilitar y deshabilitar paralelismo a nivel de hilos.
-- Mejorar eficiencia de metrica nivel de objeto
-- ambas tablas se deben imprimir en figura
+- Implementar la página web.
+- Corregir todos los errores de conteo de cajas.
 - AGREGAR CURVA ROC durante prueba en test para pixel y objeto
-- Augmentaciones de datos
-- definir el subconjunto con imágenes de entrenamiento.
+- Agregar parametro booleano para habilitar y deshabilitar paralelismo a nivel de hilos.
+- Augmentations de datos
 - Tabla latex???
-- implementación de modelo en deploy.
-- Página web
-- Documetar codigo
+- Implementar todo el loggin que sea necesario
+- Documentar código
+- Definir el subconjunto con imágenes de entrenamiento.
+- Automatizar subida y bajada de cluster TOKO y CIMAC
+- SELECCIONAR IMAGENES DE ARGENTINA
+- Redactar documento mientras se realiza computo.

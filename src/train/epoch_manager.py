@@ -12,7 +12,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.loggers.console_logger import LoggerSingleton
 from utils.loggers.tensorboard_logger import TensorBoardLogger
-from models.siames.end_to_end_Siam_UNet import SiamUnet
+from models.trainable_model import SiamUnet
 from utils.metrics.metric_manager import Level, MetricManager
 from utils.metrics.loss_manager import LossManager
 from utils.datasets.predicted_dataset import PredictedDataset
@@ -84,6 +84,7 @@ class EpochManager:
         """
         log = LoggerSingleton()
         confusion_matrices = []
+        binary_masks = []
         for batch_idx, (dis_id,tile_id,patch_id,patch) in enumerate(tqdm(self.loader,desc="Step")):
             # STEP
             log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
@@ -120,8 +121,11 @@ class EpochManager:
                                                 )
             confusion_matrices.append(step_matrices)
 
-            if(self.Mode.TESTING == self.mode):
-                pass
+            if(self.Mode.TESTING == self.mode and False):
+                threasholds = [i*0.1 for i in range(0,10)]
+                for th in threasholds:
+                    mask = self.model.compute_binary(logit_masks, th)
+                    binary_masks.append(mask)
 
             if (save_path is not None):
                 PredictedDataset.save_pred_patch(pred_masks[2], batch_idx, dis_id,
@@ -137,5 +141,6 @@ class EpochManager:
         self.metric_manager.log_metrics(phase=self.mode.value,
                                         tb_log=self.tb_logger,
                                         metrics=metrics)
-        
+        if(self.Mode.TESTING == self.mode and False):
+            self.metric_manager.plot_roc_auc(binary_masks)
         return metrics, self.loss_manager.combined_losses.avg
