@@ -14,19 +14,20 @@
 # See the LICENSE file in the root directory of this project for the full text of the MIT License.
 import os
 import sys
+import argparse
+import numpy as np
+from tqdm import tqdm
+from shapely import wkt
+from collections import defaultdict
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-import numpy as np
+from utils.loggers.console_logger import LoggerSingleton
 from utils.common.files import dump_json, is_dir, read_json
 from utils.datasets.raw_datasets import RawDataset
-from collections import defaultdict
-from shapely import wkt
-import argparse
-from tqdm import tqdm
-from utils.loggers.console_logger import LoggerSingleton, TqdmToLog
-log = LoggerSingleton()
 
+log = LoggerSingleton()
 
 def compute_mean_stddev(pre_img: np.array, post_img: np.array) -> dict:
     """Computes the mean and standard deviation from each tile from each disaster."""
@@ -45,7 +46,6 @@ def compute_mean_stddev(pre_img: np.array, post_img: np.array) -> dict:
             "B": float(norm_img[:, :, 2].std()),
         }
     return mean
-
 
 def count_buildings(pre_json: dict, post_json: dict) -> dict:
     """Counts buildings' class and area from each tile from each disaster."""
@@ -68,7 +68,6 @@ def count_buildings(pre_json: dict, post_json: dict) -> dict:
 
     return count
 
-
 def count_by_disaster(count: dict) -> dict:
     """Sums the bld_area and bld_class for all tiles from each disaster."""
     c_by_d = {}
@@ -89,7 +88,6 @@ def count_by_disaster(count: dict) -> dict:
                     for val_id, value in mesure.items():
                         c_by_d[zone_id][time_id][m_id][val_id] += value
     return c_by_d
-
 
 def create_data_dicts(splits_json_path : str, out_path : str) -> str:
     """Creates three JSON files and stores them in a folder named \
@@ -142,7 +140,6 @@ def create_data_dicts(splits_json_path : str, out_path : str) -> str:
     mean_disaster_path = os.path.join(dicts_path, "all_tiles_count_area_by_disaster.json")
     dump_json(mean_disaster_path, c_by_d)
     return dicts_path
-
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(

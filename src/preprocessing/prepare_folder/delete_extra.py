@@ -2,17 +2,17 @@
 # Licensed under the MIT License.
 import os
 import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-
 import random
 import argparse
 from tqdm import tqdm
-from itertools import chain
+
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from utils.pathManagers.rawManager import RawPathManager
 from utils.loggers.console_logger import LoggerSingleton, TqdmToLog
-log = LoggerSingleton()
 
+log = LoggerSingleton()
 
 def leave_only_n(data_path: dict, n: int) -> None:
     """Pick n random disaster tiles and deletes all the rest of files from
@@ -38,7 +38,8 @@ def leave_only_n(data_path: dict, n: int) -> None:
         ids = [random.randint(0, total_tiles) for _ in range(n)]
         for i in tqdm(range(total_tiles), file=TqdmToLog(log)):
             if (i not in ids):
-                files_to_remove = [file for time in tot_tiles[i].values() for file in time.values()]
+                files_to_remove = [file for time in tot_tiles[i].values()
+                                    for file in time.values()]
                 for file in files_to_remove:
                     os.remove(file)
         log.info(f"Files {total_tiles-n}  removed. {n} tiles left.")

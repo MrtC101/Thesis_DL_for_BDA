@@ -13,7 +13,7 @@ if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 
-from models.siames.end_to_end_Siam_UNet import SiamUnet
+from models.trainable_model import TrainModel
 from train.epoch_manager import EpochManager
 from utils.common.files import dump_json
 from utils.dataloaders.train_dataloader import TrainDataLoader
@@ -46,7 +46,7 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir, model, optimizer, epoch):
     }, is_best, checkpoint_dir)
     return best_acc
 
-def resume_model(model: SiamUnet, checkpoint_path, device,
+def resume_model(model: TrainModel, checkpoint_path, device,
                   init_learning_rate, tb_logger, new_optimizer):
     
     """Calls the corresponding model resume method"""
@@ -119,7 +119,7 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
     log.info(f'Using device: {device}.')
 
     # Model
-    model = SiamUnet().to(device=device)
+    model = TrainModel().to(device=device)
     # log.info(model.model_summary())
 
     # samples are for tensorboard visualization of same images through epochs
@@ -128,7 +128,6 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
                                   configs['label_map_json'])
     
     # resume from a checkpoint if provided
-    model: SiamUnet
     optimizer, starting_epoch, best_acc = resume_model(model,configs['starting_checkpoint_path'],
                                                         device,
                                                         configs['init_learning_rate'],
@@ -193,9 +192,9 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
         best_acc = save_if_best(val_epoch_metrics, best_acc,
                                 checkpoint_dir, model, optimizer, epoch)
 
-    MetricManager.save_loss(loss_metrics, metric_dir,"train_loss.csv")
-    MetricManager.save_metrics(train_metrics, metric_dir,"train")
-    MetricManager.save_metrics(val_metrics, metric_dir,"val")
+    MetricManager.save_loss(loss_metrics, metric_dir, "train_loss.csv")
+    MetricManager.save_metrics(train_metrics, metric_dir, "train")
+    MetricManager.save_metrics(val_metrics, metric_dir, "val")
     
     # TESTING
     if(test_loader is not None):

@@ -9,8 +9,23 @@ import numpy as np
 import pandas as pd
 from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
 
+color = {
+    "no-damage":'mediumturquoise',
+    "minor-damage":'violet',
+    "major-damage":'aqua',
+    "destroyed":'lime',
+    "un-classified":'black'
+}
+
 def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
     """Plots the given table in the given matplotlib figure axis."""
+    levels_name = ["no-damage", "minor-damage", "major-damage", "destroyed","un-classified"]
+    curr_table.sort_values(by=["Level"], key=lambda l: l.map(lambda x: levels_name.index(x)),
+                              ignore_index=True, inplace=True)
+    
+    colors = ['darkgray','limegreen','orange','red','gray']
+    curr_colors = [colors[levels_name.index(l)] for l in curr_table["Level"]]
+    
     table = ax.table(
         colWidths=col_width,
         cellText=curr_table.values,
@@ -19,7 +34,6 @@ def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
         cellLoc='center',
         loc='center'
         )
-    colors = ['darkgray','limegreen','orange','red','gray']
     table.set_fontsize(fontsize)
     # Aplicar estilos a la tabla
     for (i, j), cell in table.get_celld().items():
@@ -27,7 +41,7 @@ def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
             cell.set_linewidth(2.0)
             cell.get_text().set_fontweight('bold')
         else:
-            cell.set_facecolor(colors[i-1])
+            cell.set_facecolor(curr_colors[i-1])
         cell.set_height(row_height)
     return table
 
@@ -36,14 +50,7 @@ def bbs_by_level_figures(dis_id, tile_id, bbs_df : pd.DataFrame, label_map_json,
         Generates a png transparent background image for each class of bounding boxes.
         (La idea es tener una iamgen con las bounding boxes de con la misma clase)
     """
-    color = {
-        "no-damage":'mediumturquoise',
-        "minor-damage":'violet',
-        "major-damage":'aqua',
-        "destroyed":'lime',
-        "un-classified":'black'
-    }
-
+        
     for cls in np.unique(bbs_df["label"]):
         # Crear una figura y un eje
         fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100, facecolor='none')
@@ -59,6 +66,8 @@ def bbs_by_level_figures(dis_id, tile_id, bbs_df : pd.DataFrame, label_map_json,
             #        verticalalignment='top',
             #        bbox=dict(facecolor='red', alpha=0.3,
             #                edgecolor='none', pad=3))
+        
+        
         ax.set_xlim(0, 1024)
         ax.set_ylim(1024, 0)
         ax.axis('off')
@@ -96,19 +105,18 @@ def comparative_figure(dis_id,tile_id,pre_img,post_img, pred_mask, gt_table, pd_
     ax3.axis('off')
     ax3.set_title('Predicted Damage Mask', fontsize=subtitle_size)
     
-    ax4.set_title('Predicted building count', fontsize=subtitle_size)
     ax4 = fig.add_subplot(gs[1, 0])  # Span all columns in the second row
     ax4.axis('off')
     addPlotTable(ax4, gt_table, subtitle_size, [0.6]*len(gt_table.columns), 0.16)
+    ax4.set_title('Predicted building count', fontsize=subtitle_size)
 
-    ax5.set_title('Predicted building count', fontsize=subtitle_size)
     ax5 = fig.add_subplot(gs[1, 2])  # Span all columns in the second row
     ax5.axis('off')
     addPlotTable(ax5, pd_table, subtitle_size, [0.6]*len(pd_table.columns), 0.16)
+    ax5.set_title('Predicted building count', fontsize=subtitle_size)
 
     ax6 = fig.add_subplot(gs[1, 1])  # Span all columns in the second row
     ax6.axis('off')
-    ax6.set_title(f"Disaster {dis_id} {tile_id}", fontsize=title_size, fontweight="bold")
     
     os.makedirs(save_path, exist_ok=True)
     files = os.path.join(save_path, f"{dis_id}-{tile_id}_predicted_dmg_mask.png")

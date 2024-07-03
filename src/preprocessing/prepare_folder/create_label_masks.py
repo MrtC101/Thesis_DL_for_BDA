@@ -1,50 +1,24 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
-#
 # Modificaciones (c) 2024 Martín Cogo Belver.
 # Martín Cogo Belver has rights reserved over this modifications.
-#
-# Modification Notes:
-# - Documentation added with docstrings for code clarity.
-# - Re-implementation of methods to enhance readability and efficiency.
-# - Re-implementation of features for improved functionality.
-# - Changes in the logic of implementation for better performance.
-# - Bug fixes in the code.
-#
-# See the LICENSE file in the root directory of this project for the full text of the MIT License.
-#################################################################################
-# xView2                                                                        #
-# Copyright 2019 Carnegie Mellon University.                                    #
-# NO WARRANTY. THIS CARNEGIE MELLON UNIVERSITY AND SOFTWARE ENGINEERING         #
-# INSTITUTE MATERIAL IS FURNISHED ON AN "AS-IS" BASIS. CARNEGIE MELLON          #
-# UNIVERSITY MAKES NO WARRANTIES OF ANY KIND, EITHER EXPRESSED OR IMPLIED, AS   #
-# TO ANY MATTER INCLUDING, BUT NOT LIMITED TO, WARRANTY OF FITNESS FOR PURPOSE  #
-# OR MERCHANTABILITY, EXCLUSIVITY, OR RESULTS OBTAINED FROM USE OF THE MATERIAL.#
-# CARNEGIE MELLON UNIVERSITY DOES NOT MAKE ANY WARRANTY OF ANY KIND WITH RESPECT#
-# TO FREEDOM FROM PATENT, TRADEMARK, OR COPYRIGHT INFRINGEMENT.                 #
-# Released under a MIT (SEI)-style license, please see LICENSE.md or contact    #
-# permission@sei.cmu.edu for full terms.                                        #
-# [DISTRIBUTION STATEMENT A] This material has been approved for public release #
-# and unlimited distribution. Please see Copyright notice for non-US Government #
-# use and distribution.                                                         #
-# DM19-0988                                                                     #
-#################################################################################
-import math
+
 import os
 import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-
+import math
 import shutil
 import argparse
 import numpy as np
 from tqdm import tqdm
 from os.path import join
 from shapely import wkt
-from shapely.geometry import mapping, Polygon
+
 from cv2 import fillPoly, imread, imwrite
+
+if (os.environ.get("SRC_PATH") not in sys.path):
+    sys.path.append(os.environ.get("SRC_PATH"))
+
 from utils.common.files import read_json, is_dir
 from utils.loggers.console_logger import LoggerSingleton
+
 log = LoggerSingleton()
 
 path = join(os.environ.get("DATA_PATH"), 'constants/xBD_label_map.json')
@@ -157,9 +131,6 @@ def mask_tiles(images_dir: str, labels_dir: str, targets_dir: str,
         image_path = join(images_dir, f'{tile_id}.png')
         target_path = join(targets_dir, f'{tile_id}_target.png')
 
-        if (os.path.exists(target_path)):
-            continue
-
         # read the label json
         mask_img = polygons_list_to_mask(image_path, label_path, border_width)
         imwrite(target_path, mask_img)
@@ -187,17 +158,21 @@ def create_masks(raw_path: str, border_width: int) -> None:
 
     for subset in tqdm(os.listdir(raw_path)):
         log.info(f"Creating masks for {subset}/ folder.")
+        
         subset_path = join(raw_path, subset)
+        is_dir(subset_path)
+
         images_dir = join(subset_path, 'images')
         labels_dir = join(subset_path, 'labels')
-        is_dir(subset_path)
+        targets_dir = join(subset_path, 'targets')
+
         if (not os.path.exists(images_dir) or not os.path.exists(labels_dir)):
             log.info(f"Skiping folder {subset_path}, there is no folder 'images' or 'labels'.")
+            #Move folder to skip it
             shutil.move(subset_path, join(raw_path, "..", subset))
-            continue
 
-        targets_dir = join(subset_path, 'targets')
         os.makedirs(targets_dir, exist_ok=True)
+
         mask_tiles(images_dir, labels_dir, targets_dir, border_width)
 
         log.info(f"Masks for {subset}/ folder created.")

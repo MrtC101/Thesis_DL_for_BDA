@@ -1,13 +1,14 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from utils.common.files import read_json, is_json
-from torch.utils.data import Dataset
 import cv2
 import os
 import sys
+from torch.utils.data import Dataset
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+
+from utils.common.files import read_json, is_json
 
 
 class TileDataset(Dataset):

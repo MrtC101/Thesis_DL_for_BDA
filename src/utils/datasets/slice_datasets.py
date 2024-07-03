@@ -2,10 +2,11 @@
 # Licensed under the MIT License.
 import os
 import sys
+import cv2
+
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-import cv2
 from torch.utils.data import Dataset
 from utils.common.files import read_json, is_json
 

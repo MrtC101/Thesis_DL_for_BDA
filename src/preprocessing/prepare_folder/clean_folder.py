@@ -2,14 +2,15 @@
 # Licensed under the MIT License.
 import os
 import sys
+import argparse
+from tqdm import tqdm
+from os.path import join
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-import argparse
-from tqdm import tqdm
 from utils.common.files import is_dir
-from os.path import join
 from utils.loggers.console_logger import LoggerSingleton
+
 log = LoggerSingleton()
 
 """
@@ -26,7 +27,6 @@ DISASTERS_OF_INTEREST = ('midwest-flooding_','guatemala-volcano_',
     'lower-puna-volcano_', 'nepal-flooding_', 'pinery-bushfire_',
     'portugal-wildfire_', 'woolsey-fire_')
 """
-
 
 def delete_not_in(data_path: str) -> None:
     """Deletes all files from data_path directory that don't starts with a

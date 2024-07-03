@@ -1,36 +1,12 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
-# Licensed under the MIT License.
-#
-# Copyright (c) 2024 Martín Cogo Belver.
-# Martín Cogo Belver has rights reserved over this modifications.
-#
-# Modification Notes:
-# - Documentation added with docstrings for code clarity.
-# - Re-implementation of methods to enhance readability and efficiency.
-# - Re-implementation of features for improved functionality.
-# - Changes in the logic of implementation for better performance.
-# - Bug fixes in the code.
-#
-# See the LICENSE file in the root directory of this project for the full text of the MIT License.
-
 from collections import OrderedDict
-import os
-import shutil
-from time import localtime, strftime
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.utils
-from torch.utils.tensorboard import SummaryWriter
-import torch.utils.tensorboard
-import torch.utils.tensorboard.summary
-
 
 class SiamUnet(nn.Module):
-    """This class implements the architecture of the Siamese CNN used in this project."""
 
-    def __init__(self, in_channels: int = 3, out_channels_s: int = 2, out_channels_c: int = 5,
-                 init_features: int = 16) -> None:
+    def __init__(self, in_channels: int = 3, out_channels_s: int = 2,
+                out_channels_c: int = 5, init_features: int = 16) -> None:
         super(SiamUnet, self).__init__()
 
         features = init_features
@@ -263,10 +239,6 @@ class SiamUnet(nn.Module):
                 tuple: A tuple of predictions tensor masks for segmentation and classification.
         """
         return tuple(torch.argmax(self.softmax(logit_mask), dim=1) for logit_mask in logit_masks)
-    
-    def compute_binary(self, logit_masks, threshold = 0.5) -> tuple:
-        probabilities = self.compute_probabilities(logit_masks)
-        return tuple(mask >= threshold for mask in probabilities)
 
     def freeze_model_param(self):
         """Disables weights modification on each layer from the model"""
@@ -325,132 +297,3 @@ class SiamUnet(nn.Module):
 
         self.conv_s.weight.requires_grad = False
         self.conv_s.bias.requires_grad = False
-
-    def reinitialize_Siamese(self):
-        """initialize all layers from the model"""
-        torch.nn.init.xavier_uniform_(self.upconv4_c.weight)
-        torch.nn.init.xavier_uniform_(self.upconv3_c.weight)
-        torch.nn.init.xavier_uniform_(self.upconv2_c.weight)
-        torch.nn.init.xavier_uniform_(self.upconv1_c.weight)
-        torch.nn.init.xavier_uniform_(self.conv_c.weight)
-
-        self.upconv4_c.bias.data.fill_(0.01)
-        self.upconv3_c.bias.data.fill_(0.01)
-        self.upconv2_c.bias.data.fill_(0.01)
-        self.upconv1_c.bias.data.fill_(0.01)
-        self.conv_c.bias.data.fill_(0.01)
-
-        self.conv4_c.apply(SiamUnet.init_weights)
-        self.conv3_c.apply(SiamUnet.init_weights)
-        self.conv2_c.apply(SiamUnet.init_weights)
-        self.conv1_c.apply(SiamUnet.init_weights)
-
-    def init_weights(m):
-        """Inits a weights of the current layer with xavier uniform"""
-        if type(m) == nn.Linear:
-            torch.nn.init.xavier_uniform_(m.weight)
-            m.bias.data.fill_(0.01)
-
-    def resume_from_checkpoint(self, checkpoint_path: str, device,
-                                init_learning_rate, tb_logger, new_optimizer : bool) -> \
-                                tuple[torch.optim.Optimizer, int, float]:
-        """
-        Resumes the model from a checkpoint.
-
-        Args:
-            checkpoint_path : The path to the checkpoint file.
-            tb_log_dir : The directory for TensorBoard logs.
-            config : Configuration dictionary containing necessary parameters.
-
-        Returns:
-            tuple: A tuple containing the optimizer, starting epoch, and best accuracy.
-        """
-
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        self.load_state_dict(checkpoint['state_dict'])
-
-        if not new_optimizer:
-            # don't load the optimizer settings so that a newly
-            # specified lr can take effect
-            self.print_network()
-            self.freeze_model_param()
-            self.print_network()
-
-            for tag, value in self.named_parameters():
-                tag = tag.replace('.', '/')
-                tb_logger.add_histogram(tag, value.data.cpu().numpy(),global_step=0)
-
-            self.reinitialize_Siamese()
-
-            for tag, value in self.named_parameters():
-                tag = tag.replace('.', '/')
-                tb_logger.add_histogram(tag, value.data.cpu().numpy(),global_step=1)
-                
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad,self.parameters()),
-                                         lr=init_learning_rate)
-        else:
-            optimizer = torch.optim.Adam(self.parameters(),lr=init_learning_rate)
-
-        starting_epoch = checkpoint['epoch'] + 1
-        best_acc = checkpoint.get('best_f1', 0.0)
-        return optimizer, starting_epoch, best_acc
-
-    def resume_from_scratch(self, init_learning_rate) -> tuple:
-        """Resumes model from scratch"""
-        optimizer = torch.optim.Adam(self.parameters(), lr=init_learning_rate)
-        starting_epoch = 1
-        best_acc = 0.0
-        return optimizer, starting_epoch, best_acc
-
-    def save_checkpoint(self, state: dict, is_best: bool,
-                        checkpoint_dir: str = '../checkpoints') -> None:
-        """
-        checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far.
-        """
-        checkpoint_path = os.path.join(checkpoint_dir,
-                                       f"checkpoint_epoch{state['epoch']}_"
-                                       f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
-        torch.save(state, checkpoint_path)
-        if is_best:
-            shutil.copyfile(checkpoint_path, os.path.join(
-                checkpoint_dir, 'model_best.pth.tar'))
-
-    def print_network(self) -> None:
-        print('model summary')
-        for name, p in self.named_parameters():
-            print(name)
-            print(p.requires_grad)
-
-    def model_summary(self) -> str:
-        """
-            Returns an string that contains a summary of the model total weights
-        """
-        class Text(str):
-            def __add__(self, other) -> 'Text':
-                return Text(super().__add__("\n").__add__(other))
-
-        lay_n = 0
-        total_params = 0
-        model_params = [layer for layer in self.parameters()
-                        if layer.requires_grad]
-        layers = [child for child in self.children()]
-        lay_t = Text("")
-        for layer in layers:
-            lay_n_params = model_params[lay_n].numel()
-            lay_n += 1
-            if hasattr(layer, "bias"):
-                if (layer.bias is not None):
-                    lay_n_params += model_params[lay_n].numel()
-                    lay_n += 1
-            total_params += lay_n_params
-            lay_t += (str(layer)+"\t"*3+str(lay_n_params))
-
-        t = Text("self_summary")
-        t += ""
-        t += "Layer_name"+"\t"*7+"Number of Parameters"
-        t += "="*100
-        t += "\t"*10
-        t += lay_t
-        t += "="*100
-        t += f"Total Params:{total_params}"
-        return str(t)
