@@ -22,18 +22,22 @@ app = Flask(__name__)
 app.config['UPLOAD_FOLDER'] = 'static/images/'
 @app.route('/', methods=['GET'])
 def index():
-    lan_json_path = os.path.join("web_page","static","language.json")
+    lan_json_path = os.path.join("static","language.json")
     if(os.path.isfile(lan_json_path)):
         with open(lan_json_path) as f:
             language = json.load(f)
     else:
         raise Exception("No language File.")
-    preview_images = {
-        'img_pre': os.path.join("static", "preview_img_1.png"),
-        'img_post':os.path.join("static", "preview_img_2.png")
-    }
-    print(url_for("static",filename='style.css'))
-    return render_template('index.html', language=language, images_exist=preview_images)
+    table = [
+            {
+                "id":"class-1",
+                "num": 0,
+                "label":"no-damage",
+                "color": "gray"
+            }
+    ]
+
+    return render_template('index.html', language=language["en"], table=table)
 
 
 if __name__ == '__main__':

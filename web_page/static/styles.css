@@ -1,37 +1,73 @@
-.container {
-    display: flex;
+header {
+    display: block;
+    height: min-content;
     justify-content: center;
     align-items: center;
-    height: 100vh;
+    padding-inline: 30px; 
+    padding: 1rem 2rem;
+    border-bottom: 2px solid #ffc107; /* Línea decorativa */
+}
+header h1 {
+    font-size: 1.75rem;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+header ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    align-items: center;
+}
+header ul li {
+    margin-right: 1rem;
+}
+.lang-switch {
+    font-weight: bold;
+}
+
+main h3 {
+    font-size: 1.75rem;
+    margin: 0;
+    display: block;
+    text-align: center;
+}
+
+.container {
+    display: flex;
+    width: min-content;
+    justify-content: center;
+    align-items: center;
     margin: 0;
     padding: 0;
 }
 
-.grid-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    grid-template-rows: 1fr 1fr;
-    gap: 10px;
-}
-
-.grid-item {
-    border: 1px solid #ccc;
-    padding: 10px;
+.my-card {
+    position: relative;
+    width: 100%;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 0.25rem;
+    overflow: hidden;
     text-align: center;
+    height: 300px; /* Ajusta la altura según tus necesidades */
 }
 
-.sub-grid-container {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 10px;
+.my-card h3 {
+    width: 100%;
+    position: block;
+    z-index: 10;
+    background: rgba(255, 255, 255, 0.8);
+    padding: 0.5rem;
+    margin-bottom: 1rem;
 }
 
-.sub-grid-item {
-    border: 1px solid #ccc;
-    padding: 10px;
+.my-card input {
+    width: 100%;
+    position: block;
 }
 
-img {
-    max-width: 100%;
-    height: auto;
+.my-card .supp img{
+    width: 100%;
 }
