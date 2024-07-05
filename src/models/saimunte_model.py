@@ -238,6 +238,7 @@ class SiamUnet(nn.Module):
             Returns:
                 tuple: A tuple of predictions tensor masks for segmentation and classification.
         """
+        
         return tuple(torch.argmax(self.softmax(logit_mask), dim=1) for logit_mask in logit_masks)
 
     def freeze_model_param(self):
