@@ -59,6 +59,7 @@ main h3 {
 }
 
 .card img {
+    padding: 1%;
     width: 100%;
     height: auto;
 }

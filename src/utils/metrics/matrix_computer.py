@@ -1,8 +1,11 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
 import random
+import numpy as np
 import pandas as pd
+import rasterio
 import torch
+from postprocessing.bounding_boxes import BoundingBox
 from utils.metrics.common import Level
 import matplotlib
 
@@ -120,31 +123,45 @@ class MatrixComputer:
             pd.DataFrame : A confusion matrix for each label. 
         """
 
-        def compute_IoU(gt_buildings,pd_buildings):
+        def compute_IoU(gt_buildings, pd_buildings, pd_shape):
+            pd_label_matrix = np.zeros(pd_shape)
+            if(len(pd_buildings) > 0):
+                shapes_list = [(poly['bld'],i+1) for i,poly in enumerate(pd_buildings)]
+                transform = rasterio.transform.from_origin(0, pd_shape[0], 1, 1)
+                pd_label_matrix = rasterio.features.rasterize(shapes_list, 
+                                                            out_shape=pd_shape,
+                                                            transform=transform,
+                                                            fill=0, dtype=np.int32)
+            
             building_list = []
             # Calculate metrics for each ground truth polygon
             for id, gt_dict  in enumerate(gt_buildings):
                 gt_poly = gt_dict["bld"]
                 gt_label = gt_dict["label"]
+                gt_bb = BoundingBox.create(gt_poly)
+                x1,y1,x2,y2 = gt_bb.get_components()
+                candidates = np.unique(pd_label_matrix[x1:x2,y1:y2])
+
                 best_iou = 0
                 best_intersection_area = 0
                 best_union_area = 0
+                for id in candidates:
+                    if id > 0:
+                        pd_dict = pd_buildings[id-1]
+                        pd_poly = pd_dict["bld"]
+                        pd_label = pd_dict["label"]
+                        if gt_label != pd_label:
+                            intersection = 0
+                            union = gt_poly.area + pd_poly.area
+                        else:
+                            intersection = gt_poly.intersection(pd_poly).area
+                            union = gt_poly.union(pd_poly).area
+                        iou = intersection / union if union > 0 else 0
 
-                for pd_dict in pd_buildings:
-                    pd_poly = pd_dict["bld"]
-                    pd_label = pd_dict["label"]
-                    if gt_label != pd_label:
-                        intersection = 0
-                        union = gt_poly.area + pd_poly.area
-                    else:
-                        intersection = gt_poly.intersection(pd_poly).area
-                        union = gt_poly.union(pd_poly).area
-                    iou = intersection / union if union > 0 else 0
-
-                    if iou > best_iou:
-                        best_iou = iou
-                        best_intersection_area = intersection
-                        best_union_area = union
+                        if iou > best_iou:
+                            best_iou = iou
+                            best_intersection_area = intersection
+                            best_union_area = union
 
                 building_list.append({
                     'id': id,
@@ -161,7 +178,7 @@ class MatrixComputer:
         # code
         gt_buildings = get_buildings(target_mask, labels_set)            
         pd_buildings = get_buildings(pred_mask, labels_set)
-        IoU_df = compute_IoU(gt_buildings, pd_buildings)
+        IoU_df = compute_IoU(gt_buildings, pd_buildings, pred_mask.shape)
         results = []
         for c in labels_set:
             df = IoU_df[IoU_df["label"]==c]
