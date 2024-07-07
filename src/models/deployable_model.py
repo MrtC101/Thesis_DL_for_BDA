@@ -2,13 +2,15 @@ import os
 import random
 import sys
 import math
+import cv2
 from matplotlib import patches, pyplot as plt
 import numpy as np
 import pandas as pd
 import torch
-import json
 from torchvision.io import read_image
 from torchvision.transforms import Normalize
+from torchvision.utils import draw_bounding_boxes
+
 
 from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 
@@ -16,14 +18,14 @@ from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from postprocessing.bounding_boxes import get_bbs_form_mask
+from postprocessing.bounding_boxes import get_bbs_from_mask
 from models.saimunte_model import SiamUnet
 from utils.visualization.label_to_color import LabelDict
 
 
 class DeployModel(SiamUnet):
     
-    label_dict = LabelDict()       
+    label_dict = LabelDict()    
     
     def load_weights(self, weights_path):
         device = torch.device("gpu") if torch.cuda.is_available() else torch.device("cpu")
@@ -57,25 +59,35 @@ class DeployModel(SiamUnet):
     }
     
     def bbs_imgs(self, bbs_df : pd.DataFrame, dir_path : str, n: int):
+        """
+            Generates a png transparent background image for each class of bounding boxes.
+            (La idea es tener una iamgen con las bounding boxes de con la misma clase)
+        """
+        for cls in self.label_dict.keys_list:
+            if not cls in ["background","un-classified"]:
+                # Filtrar las bounding boxes para la clase actual
+                cur_df = bbs_df[bbs_df["label"] == cls]
+                boxes = torch.tensor(cur_df[['x1', 'y1', 'x2', 'y2']].values, dtype=torch.float)
+                color = self.color[cls]
 
-        for label in self.label_dict.keys_list:
-            if label not in ["background","un-classified"]:
-                fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100, facecolor='none')
-                bounding_boxes = bbs_df[bbs_df["label"] == label]
-                # Dibujar cada bounding box y etiqueta en la imagen
-                for _, row in bounding_boxes.iterrows():
-                    x, y, w, h, l = row["x"], row["y"], row["w"], row["h"], row["label"]
-                    rect = patches.Rectangle((x, y), width=w, height=h, linewidth=2,
-                                            edgecolor=self.color[l], facecolor='none')
-                    ax.add_patch(rect)
-                    ax.set_xlim(0, 1024)
-                    ax.set_ylim(1024, 0)
-                    ax.axis('off')
-                i = self.label_dict.get_num_by_key(label)
+                # Crear una imagen en blanco para dibujar las bounding boxes
+                image_with_boxes = torch.zeros((3, 1024, 1024), dtype=torch.uint8) 
+                
+                # Dibujar las bounding boxes en la imagen
+                if len(cur_df) > 0:
+                    image_with_boxes = draw_bounding_boxes(image_with_boxes,
+                                                            boxes, colors=color, width=2)
+                
+                # Convertir el tensor a una imagen numpy
+                img_np = image_with_boxes.permute(1, 2, 0).numpy()
+                # Crear una máscara alfa para el fondo transparente
+                alpha = np.any(img_np > 0, axis=2).astype(np.uint8) * 255
+                img = np.dstack((img_np[:, :, 2::-1], alpha))  # Añadir el canal alfa a la imagen
+                
+                # Guardar la imagen usando cv2.imwrite
+                i = self.label_dict.get_num_by_key(cls)
                 file_path = os.path.join(dir_path, f"bb_{i}_{n}.png")
-                plt.subplots_adjust(left=0, right=1, top=1, bottom=0)  # Eliminar márgenes
-                plt.savefig(file_path, transparent=True, format='png', pad_inches=0)
-                plt.close()
+                cv2.imwrite(file_path, img)
            
     def _postproccess(self, patch_batch : torch.Tensor, dir_path : str) -> str:
         """Implements the postprocessing pipeline"""
@@ -85,8 +97,7 @@ class DeployModel(SiamUnet):
         img = LabelMaskVisualizer().draw_label_img(pred_img)
         LabelMaskVisualizer.save_arr_img(img,dmg_path)
         
-        label_dict = [1, 2, 3, 4]
-        bbs_df = get_bbs_form_mask(pred_img, label_dict)
+        bbs_df = get_bbs_from_mask(pred_img)
         pd_values = list(bbs_df.value_counts(subset=["label"]).items())
         pd_table = pd.DataFrame([(val[0][0], val[1]) for val in pd_values],
                                  columns=["Level", "Count"])

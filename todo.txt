@@ -1,7 +1,4 @@
 Me falta:
-- BBS con torch
-- Agregar parametro booleano para habilitar y deshabilitar paralelismo a nivel de hilos.
-- MEJORAR Corregir todos los errores de conteo de cajas.
 - AGREGAR CURVA ROC durante prueba en test para pixel y objeto
 - Augmentations de datos
 - Tabla latex???

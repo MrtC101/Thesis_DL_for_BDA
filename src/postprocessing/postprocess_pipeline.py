@@ -14,7 +14,7 @@ from utils.metrics.metric_manager import MetricComputer
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.predicted_dataset import PredictedDataset
 from postprocessing.plot_results import generate_figures
-from postprocessing.bounding_boxes import get_bbs_form_json, get_bbs_form_mask
+from postprocessing.bounding_boxes import get_bbs_from_json, get_bbs_from_mask
 
 
 def save_metric(px_metric: pd.DataFrame, pred_out, file_prefix="pixel"):
@@ -49,12 +49,12 @@ def postprocess(split_raw_json_path, definitive_folder, save_path):
         save_metric(obj_metric, pred_out, file_prefix="object")
 
         
-        gt_bbs_df = get_bbs_form_json(tile_dict["dmg_json"])
+        gt_bbs_df = get_bbs_from_json(tile_dict["dmg_json"])
         gt_values = list(gt_bbs_df.value_counts(subset=["label"]).items())
         gt_table = pd.DataFrame([(val[0][0], val[1])
                                 for val in gt_values], columns=["Level", "Count"])
         
-        pd_bbs_df = get_bbs_form_mask(pred_mask, dmg_labels)
+        pd_bbs_df = get_bbs_from_mask(pred_mask)
         pd_values = list(pd_bbs_df.value_counts(subset=["label"],sort=False).items())
         pd_table = pd.DataFrame([(val[0][0], val[1])
                                 for val in pd_values], columns=["Level", "Count"])

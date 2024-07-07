@@ -29,7 +29,7 @@ function build_table(table_arr) {
   for (const level of table_arr) {
       const row = table.insertRow();
       const cell1 = row.insertCell(0);
-      const cell2 = row.insertCell(1);     
+      const cell2 = row.insertCell(1);
       cell1.style.backgroundColor = level['color'];
       cell1.textContent = window.all_language[window.lang][level['id']];
       cell2.textContent = level['num'];

@@ -2,39 +2,47 @@ import os
 import cv2
 import matplotlib.pyplot as plt
 import matplotlib
+import torch
 matplotlib.use("Agg")
 from matplotlib import gridspec, patches
 import numpy as np
 import pandas as pd
 from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 from utils.visualization.label_to_color import LabelDict
+from torchvision.utils import draw_bounding_boxes
 
-labels = LabelDict()
+labels_dict = LabelDict()
 
-def bbs_by_level_figures(dis_id, tile_id, bbs_df : pd.DataFrame, save_folder):
+def bbs_by_level_figures(dis_id, tile_id, bbs_df: pd.DataFrame, save_folder):
     """
-        Generates a png transparent background image for each class of bounding boxes.
-        (La idea es tener una iamgen con las bounding boxes de con la misma clase)
+    Generates a png transparent background image for each class of bounding boxes.
+    (La idea es tener una imagen con las bounding boxes de con la misma clase)
     """
-        
     for cls in np.unique(bbs_df["label"]):
-        # Crear una figura y un eje
-        fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100, facecolor='none')
-        bounding_boxes = bbs_df[bbs_df["label"] == cls]
-        # Dibujar cada bounding box y etiqueta en la imagen
-        for _, row in bounding_boxes.iterrows():
-            x, y, w, h, label = row["x"], row["y"], row["w"], row["h"], row["label"]
-            rect = patches.Rectangle((x, y), width=w, height=h, linewidth=2,
-                                    edgecolor=labels.get_color_by_key(label), facecolor='none')
-            ax.add_patch(rect)
-            
-        ax.set_xlim(0, 1024)
-        ax.set_ylim(1024, 0)
-        ax.axis('off')
+        # Filtrar las bounding boxes para la clase actual
+        cur_df = bbs_df[bbs_df["label"] == cls]
+        boxes = torch.tensor(cur_df[['x1', 'y1', 'x2', 'y2']].values, dtype=torch.float)
+        labels = [cls] * len(cur_df)  # Crear una lista de etiquetas de la clase actual
+        color = labels_dict.get_color_by_key(cls)
+
+        # Crear una imagen en blanco para dibujar las bounding boxes
+        img_tensor = torch.zeros((3, 1024, 1024), dtype=torch.uint8)  # Asegurarse de que tenga 3 canales de color
+
+        # Dibujar las bounding boxes en la imagen
+        image_with_boxes = draw_bounding_boxes(img_tensor, boxes, colors=color, width=2,
+                                               #labels=labels
+                                               )
+
+        # Convertir el tensor a una imagen numpy
+        img_np = image_with_boxes.permute(1, 2, 0).numpy()
+        
+        # Crear una máscara alfa para el fondo transparente
+        alpha = np.any(img_np > 0, axis=2).astype(np.uint8) * 255
+        img = np.dstack((img_np[:, :, 2::-1], alpha))  # Añadir el canal alfa a la imagen
+
+        # Guardar la imagen usando cv2.imwrite
         file_path = os.path.join(save_folder, f"{dis_id}_{tile_id}_{cls}_bbs.png")
-        plt.subplots_adjust(left=0, right=1, top=1, bottom=0)  # Eliminar márgenes
-        plt.savefig(file_path, transparent=True, format='png', pad_inches=0)
-        plt.close()
+        cv2.imwrite(file_path, img)
 
 def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
     """Plots the given table in the given matplotlib figure axis."""    
@@ -48,7 +56,7 @@ def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
         )
     table.set_fontsize(fontsize)
     curr_colors = ["darkgrey"]
-    curr_colors.extend([labels.get_color_by_key(key) 
+    curr_colors.extend([labels_dict.get_color_by_key(key) 
                                        for key in curr_table["Level"]])
     # Aplicar estilos a la tabla
     for (i, j), cell in table.get_celld().items():
