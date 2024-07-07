@@ -3,7 +3,7 @@ import sys
 from os.path import join
 from joblib import Parallel, delayed
 import torch
-os.environ["parallelism"] = "True"
+os.environ["parallelism"] = ""
 
 # Environment variables
 os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
@@ -36,7 +36,6 @@ def create_params(dataset_path, mean_std_json_path, configs):
             'exp_folder_path': os.path.join(os.environ["OUT_PATH"],f'config-{i}'),
             "split_json_path": dataset_path,
             "statistics_json_path": mean_std_json_path,
-            'label_map_json': join(os.environ["DATA_PATH"], "constants","xBD_label_map.json"),
             'starting_checkpoint_path': None
         }
         current_config = dict(
@@ -103,7 +102,7 @@ def parameter_search(configs : dict):
     log.info(f"Accuracy for the final model : {definitive_acc_score}")
     
     save_path = os.path.join(os.environ['OUT_PATH'],"predictions")
-    postprocess(split_raw_json_path, pred_path, best_params['label_map_json'], save_path)
+    postprocess(split_raw_json_path, pred_path, save_path)
     
 
 if __name__ == "__main__":

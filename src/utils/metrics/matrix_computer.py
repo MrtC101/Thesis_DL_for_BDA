@@ -6,7 +6,7 @@ import torch
 from utils.metrics.common import Level
 import matplotlib
 
-from utils.polygon.polygon_manager import get_buildings
+from postprocessing.polygon_manager import get_buildings
 matplotlib.use("TkAgg")
 
 class MatrixComputer:
@@ -29,10 +29,10 @@ class MatrixComputer:
 
     @staticmethod
     def tile_px_conf_mtrx(gt_bld_mask : torch.Tensor, gt_dmg_mask : torch.Tensor,
-                          pd_dmg_mask : torch.Tensor, dmg_labels : int):
+                          pd_dmg_mask : torch.Tensor, labels_set : int):
         """Computes the confusion matrix for the predicted mask.(Pixel Level)"""
         conf_mtrx_list = []
-        for label in dmg_labels:
+        for label in labels_set:
             conf = MatrixComputer.\
                 conf_mtrx_px_by_cls(gt_bld_mask.unsqueeze(0) , gt_dmg_mask.unsqueeze(0),
                                      pd_dmg_mask.unsqueeze(0), label)

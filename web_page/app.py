@@ -1,12 +1,17 @@
 import os
 import sys
 import csv
+import shutil
 from flask import Flask, json, render_template, request, abort
+
+os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+os.environ["SRC_PATH"] = os.path.join(os.environ["PROJ_PATH"], "src")
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from models.deployable_model import DeployModel
+from utils.visualization.label_to_color import LabelDict
 
 ## MODEL
 model = DeployModel()
@@ -32,9 +37,8 @@ def index():
         jf = json.loads(dec)
         data = dict(jf)
         lang = data['lang']
-
-    return render_template('index.html', predict=predict_url,
-                            lang=lang, language=language[lang])
+    return render_template('index.html', predict=predict_url,lang=lang,
+                            language=language[lang], all_language=language)
 
 @app.route(predict_url, methods=["POST"])
 def predict():
@@ -42,35 +46,45 @@ def predict():
         return abort(400,{'error': 'No images found'})
 
     pre_img = request.files['pre-img']
-    post_img = request.files['post-img']
-
-    pre_img_path = os.path.join(app.config['UPLOAD_FOLDER'], pre_img.filename)
-    post_img_path = os.path.join(app.config['UPLOAD_FOLDER'], post_img.filename)
+    pre_img_path = os.path.join(app.config['UPLOAD_FOLDER'], "uploaded", pre_img.filename)
     pre_img.save(pre_img_path)
+    post_img = request.files['post-img']
+    post_img_path = os.path.join(app.config['UPLOAD_FOLDER'], "uploaded", post_img.filename)
     post_img.save(post_img_path)
 
     pred_dir = os.path.join(app.config['UPLOAD_FOLDER'], "predicted")
+    shutil.rmtree(pred_dir)
     model.make_prediction(pre_img_path, post_img_path, pred_dir)
+
+    # images paths
     j = lambda x: os.path.join(pred_dir,x)
-    mask = {"filename":j("dmg_img.png")}
-    bbs = [{"filename":j(f'bb_{i}.png') } for i in range(5)]
-    
-    table_path = os.path.join(pred_dir, "pred_table.csv")
+    bbs = []
+    for file in os.listdir(pred_dir):
+        if file.startswith("dmg"):
+            dmg_pred = j(file)
+        elif file.startswith("bb"):
+             bbs.append(j(file))
+        elif file.endswith(".csv"):
+            table_path = j(file)
+
+    #read csv table
     table = []
+    labels_dict = LabelDict()
     with open(table_path, mode='r') as file:
         csv_reader = csv.reader(file, skipinitialspace=True)
-        l_to_n = ["no-damage", "minor-damage", "major-damage", "destroyed", "un-classified"]
-        color = ['darkgray','limegreen','orange','red','gray']
         next(csv_reader)
         for row in csv_reader:
-            i = l_to_n.index(row[0])
+            key = row[0]
+            i = labels_dict.get_num_by_key(key)
+            c = labels_dict.get_color_by_key(key)
             table.append({
-                    "id":f"class-{i+1}",
+                    "id":f"class-{i}",
                     "num": row[1],
-                    "label": row[0],
-                    "color": color[i]
+                    "label": key,
+                    "color": c
             })
-    return json.jsonify({"table":table, "mask":mask, "bbs":bbs})
+
+    return json.jsonify({"table": table, "mask": dmg_pred, "bbs": bbs})
 
 
 if __name__ == '__main__':

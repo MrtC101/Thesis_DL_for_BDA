@@ -1,8 +1,11 @@
 {% extends "base.html" %}
 
 {% block content %}
+<div id="overlay">
+    <div class="loader"></div>
+  </div>
 <div class="d-flex justify-content-center py-3">
-    <button class="btn btn-warning" onclick="process()">{{ language["process"] }}</button>
+    <button id="fetchButton" class="btn btn-warning" onclick="process()">{{ language["process"] }}</button>
 </div>
 <div class="container">
     <div class="row">

@@ -1,6 +1,7 @@
 import torch
+from models.trainable_model import TrainModel
 from utils.dataloaders.train_dataloader import TrainDataLoader
-from utils.visualization.raster_label_visualizer import RasterLabelVisualizer
+from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 from torch.utils.tensorboard import SummaryWriter
 
 class TensorBoardLogger(SummaryWriter):
@@ -9,23 +10,24 @@ class TensorBoardLogger(SummaryWriter):
         samples of images that are shown during training on tensor board.
     """
 
-    def __init__(self, tb_logger_dir : str, num_patches_to_vis : int,
-                  label_map_json : str):
+    def __init__(self, tb_logger_dir : str, num_patches_to_vis : int):
         super().__init__(log_dir=tb_logger_dir)
         self.num_patches_to_vis = num_patches_to_vis
-        self.viz = RasterLabelVisualizer(label_map=label_map_json)
+        self.viz = LabelMaskVisualizer()
         self.softmax = torch.nn.Softmax(dim=1)
 
-    def tb_log_images(self, mode_value : str, loader : TrainDataLoader, model, epoch, device):
+    def tb_log_images(self, mode_value : str, loader : TrainDataLoader, model : TrainModel,
+                       epoch, device):
         """This method creates logging image files for tensorboard visualization"""
         
         def log_patch(pred_bld_mask, pred_dmg_mask, prefix, idx, epoch):
             current_patch = {}
-            current_patch['bld_mask'] = self.viz.bld_mask_raster(pred_bld_mask) 
-            current_patch['dmg_mask'] = self.viz.dmg_mask_raster(pred_dmg_mask)
+            current_patch['bld_mask'] = self.viz.draw_label_img(pred_bld_mask) 
+            current_patch['dmg_mask'] = self.viz.draw_label_img(pred_dmg_mask)
             for key, img in current_patch.items():
                 tag = f"{prefix}/images/{key}_{idx}"
-                self.add_image(tag, img, epoch, dataformats='CHW')
+                self.add_image(tag, torch.from_numpy(img.copy()).permute(2,0,1),
+                                epoch, dataformats='CHW')
 
         patches = loader.det_img_sample(number=self.num_patches_to_vis,
                                                     normalized=True)
@@ -54,7 +56,8 @@ class TensorBoardLogger(SummaryWriter):
             pre = patch['pre_img'].reshape(1, c, h, w)
             post = patch['post_img'].reshape(1, c, h, w)
             scores = model(pre.to(device=device), post.to(device=device))
-            pred_bld_mask = torch.argmax(self.softmax(scores[0]), dim=1)
-            pred_dmg_mask = torch.argmax(self.softmax(scores[2]), dim=1)   
+            predictions = model.compute_predictions(scores)
+            pred_bld_mask = predictions[0]
+            pred_dmg_mask = predictions[2]   
             log_patch(pred_bld_mask, pred_dmg_mask, mode_value, idx, epoch)
 

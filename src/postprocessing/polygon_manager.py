@@ -10,10 +10,7 @@ from cv2 import fillPoly
 import shapely.plotting
 from tqdm import tqdm
 import concurrent.futures
-
 from utils.loggers.console_logger import LoggerSingleton
-
-parallelism = bool(os.environ["parallelism"])
 
 def check(poly):
     """Repear autointersections"""
@@ -90,7 +87,7 @@ def midpoint_of_edges(polygon):
             break
     return midpoint
 
-def assing_mayority_class( bld_clusters, label_clusters):
+def assing_mayority_class( bld_clusters, label_clusters, parallelism):
     """Assign a class to a building based on majority vote.
     (It is assigned the class from the cluster with more superposition)"""
     # CODE
@@ -121,7 +118,7 @@ def assing_mayority_class( bld_clusters, label_clusters):
             
         # Assign majority class to each predicted polygon
         # Because the clusters obtained are disjoint subsets theres no need to calculate intersection.
-        if parallelism:
+        if parallelism == False:
             bld_area_label = parallel_poly_label_match(bld_poly_list)
         else:
             bld_area_label = poly_label_match(bld_poly_list)
@@ -137,7 +134,7 @@ def get_polygons(region, mask):
         polys.append((shape, int(pixel_val)))
     return polys
 
-def get_buildings(mask,label_set) -> list:
+def get_buildings(mask, label_set, parallel) -> list:
     """Return a list of (polygon,class)"""
     mask = np.array(mask).astype(rasterio.uint8)
     bin_mask = np.array(mask > 0).astype(rasterio.bool_)
@@ -147,7 +144,7 @@ def get_buildings(mask,label_set) -> list:
     for label in label_set: 
         label_bin_mask = np.array(mask == label).astype(rasterio.bool_) & bin_mask
         label_clusters.append(get_polygons(mask, label_bin_mask))
-    blds_with_cls = assing_mayority_class(bld_clusters, label_clusters)
+    blds_with_cls = assing_mayority_class(bld_clusters, label_clusters, parallel)
     return blds_with_cls
 
 @dataclass
