@@ -1,12 +1,17 @@
 Me falta:
-- Implementar la página web.
-- Corregir todos los errores de conteo de cajas.
-- AGREGAR CURVA ROC durante prueba en test para pixel y objeto
+- BBS con torch
 - Agregar parametro booleano para habilitar y deshabilitar paralelismo a nivel de hilos.
+- MEJORAR Corregir todos los errores de conteo de cajas.
+- AGREGAR CURVA ROC durante prueba en test para pixel y objeto
 - Augmentations de datos
 - Tabla latex???
+- MEJORAR CODIGO DE WEB 
+- ESPECIAL ATENICON EN GRAFICAR Y GUARDAR IMAGENES DE POST.
+- Pulir todas las nuevas implementaciones Ya que una vez terminadas no se vuelve a tocar.
 - Implementar todo el loggin que sea necesario
 - Documentar código
+
+!!!IMPORTANTE UNA VEZ SE MANDA A PROCESAR NO SE VUELVE A TOCAR EL CODIGO    
 - Definir el subconjunto con imágenes de entrenamiento.
 - Automatizar subida y bajada de cluster TOKO y CIMAC
 - SELECCIONAR IMAGENES DE ARGENTINA

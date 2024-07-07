@@ -101,7 +101,6 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
                 'exp_folder_path': path for the current out folder,
                 'split_json_path': Path to the JSON file with splits of patches.
                 'statistics_json_path': Path to the JSON file with mean and standard deviation.
-                'label_map_json': Path to the JSON file with label mappings.
                 'starting_checkpoint_path': Path to the checkpoint to resume from.
                 'configuration_num': Number of the set of parameters for this experiment.
                 'new_optimizer' : Boolean that indicates if the optimizer saved in 
@@ -123,9 +122,7 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
     # log.info(model.model_summary())
 
     # samples are for tensorboard visualization of same images through epochs
-    tb_logger = TensorBoardLogger(tb_logger_dir, 
-                                  configs['num_chips_to_viz'], 
-                                  configs['label_map_json'])
+    tb_logger = TensorBoardLogger(tb_logger_dir, configs['num_chips_to_viz'])
     
     # resume from a checkpoint if provided
     optimizer, starting_epoch, best_acc = resume_model(model,configs['starting_checkpoint_path'],

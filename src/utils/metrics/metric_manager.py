@@ -29,10 +29,6 @@ class MetricManager:
     def __init__(self, bld_labels, dmg_labels) -> None:
         self.bld_labels = bld_labels
         self.dmg_labels = dmg_labels
-        self.px_dmg_metric = MetricComputer(self.dmg_labels)
-        self.px_bld_metric = MetricComputer(self.bld_labels)
-        self.obj_dmg_metric = MetricComputer(self.dmg_labels)
-        self.obj_bld_metric = MetricComputer(self.bld_labels)
 
 
     def parallelism_by_level(self, levels, lvl_key, func, *params):
@@ -109,13 +105,13 @@ class MetricManager:
     def compute_metrics_for(self, level : Level, conf_df : pd.Series):
         """Computes metrics for a given level."""
         if (level == Level.PX_BLD):
-            return self.px_bld_metric.compute_metrics(conf_df)
+            return MetricComputer.compute_metrics(conf_df, self.bld_labels)
         elif (level == Level.PX_DMG):
-            return self.px_dmg_metric.compute_metrics(conf_df)
+            return MetricComputer.compute_metrics(conf_df, self.dmg_labels)
         elif (level == Level.OBJ_BLD):
-            return self.obj_bld_metric.compute_metrics(conf_df)
+            return MetricComputer.compute_metrics(conf_df, self.bld_labels)
         elif (level == Level.OBJ_DMG):
-            return self.obj_dmg_metric.compute_metrics(conf_df)
+            return MetricComputer.compute_metrics(conf_df, self.dmg_labels)
 
     def compute_epoch_metrics(self ,epoch : int, confusion_matrices: list,
                             levels=[Level.PX_DMG, Level.PX_BLD, Level.OBJ_DMG, Level.OBJ_BLD]

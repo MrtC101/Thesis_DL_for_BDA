@@ -1,4 +1,5 @@
 import os
+import random
 import sys
 import math
 from matplotlib import patches, pyplot as plt
@@ -9,19 +10,20 @@ import json
 from torchvision.io import read_image
 from torchvision.transforms import Normalize
 
+from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
+
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.visualization.plot_results import prediction_with_label_map
-
-with open("/home/mrtc101/Desktop/tesina/repo/hiper_siames/data/constants/xBD_label_map.json") as f:
-    labels_d = json.load(f)  
-       
-from postprocessing.ploting.bounding_boxes import get_bbs_form_mask
+from postprocessing.bounding_boxes import get_bbs_form_mask
 from models.saimunte_model import SiamUnet
+from utils.visualization.label_to_color import LabelDict
+
 
 class DeployModel(SiamUnet):
+    
+    label_dict = LabelDict()       
     
     def load_weights(self, weights_path):
         device = torch.device("gpu") if torch.cuda.is_available() else torch.device("cpu")
@@ -44,52 +46,54 @@ class DeployModel(SiamUnet):
                 rows.append(line)
         mask = torch.cat(rows, dim=0)
         img = mask.to(torch.uint8)
-        img = np.array(img)
         return img
 
     color = {
         "no-damage":'mediumturquoise',
         "minor-damage":'violet',
-        "major-damage":'aqua',
+        "major-damage":'blue',
         "destroyed":'lime',
         "un-classified":'black'
     }
     
-    def bbs_imgs(self, bbs_df : pd.DataFrame, dir_path : str):
-        for i, label in enumerate(self.color.keys()):
-            fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100, facecolor='none')
-            bounding_boxes = bbs_df[bbs_df["label"] == label]
-            # Dibujar cada bounding box y etiqueta en la imagen
-            for _, row in bounding_boxes.iterrows():
-                x, y, w, h, l = row["x"], row["y"], row["w"], row["h"], row["label"]
-                rect = patches.Rectangle((x, y), width=w, height=h, linewidth=2,
-                                        edgecolor=self.color[l], facecolor='none')
-                ax.add_patch(rect)
-                ax.set_xlim(0, 1024)
-                ax.set_ylim(1024, 0)
-                ax.axis('off')
-            file_path = os.path.join(dir_path, f"bb_{i}.png")
-            plt.subplots_adjust(left=0, right=1, top=1, bottom=0)  # Eliminar márgenes
-            plt.savefig(file_path, transparent=True, format='png', pad_inches=0)
-            plt.close()
+    def bbs_imgs(self, bbs_df : pd.DataFrame, dir_path : str, n: int):
+
+        for label in self.label_dict.keys_list:
+            if label not in ["background","un-classified"]:
+                fig, ax = plt.subplots(figsize=(10.24, 10.24), dpi=100, facecolor='none')
+                bounding_boxes = bbs_df[bbs_df["label"] == label]
+                # Dibujar cada bounding box y etiqueta en la imagen
+                for _, row in bounding_boxes.iterrows():
+                    x, y, w, h, l = row["x"], row["y"], row["w"], row["h"], row["label"]
+                    rect = patches.Rectangle((x, y), width=w, height=h, linewidth=2,
+                                            edgecolor=self.color[l], facecolor='none')
+                    ax.add_patch(rect)
+                    ax.set_xlim(0, 1024)
+                    ax.set_ylim(1024, 0)
+                    ax.axis('off')
+                i = self.label_dict.get_num_by_key(label)
+                file_path = os.path.join(dir_path, f"bb_{i}_{n}.png")
+                plt.subplots_adjust(left=0, right=1, top=1, bottom=0)  # Eliminar márgenes
+                plt.savefig(file_path, transparent=True, format='png', pad_inches=0)
+                plt.close()
            
     def _postproccess(self, patch_batch : torch.Tensor, dir_path : str) -> str:
         """Implements the postprocessing pipeline"""
-        dmg_labels = [1, 2, 3, 4]
+        n = random.randint(0,10**10)
         pred_img = self._merge_patches(patch_batch)
-        dmg_path = os.path.join(dir_path, "dmg_img.png")
-        color_pred_img = prediction_with_label_map(pred_img, labels_d)
-        plt.imsave(dmg_path, color_pred_img)
-        plt.close()
+        dmg_path = os.path.join(dir_path, f"dmg_img_{n}.png")
+        img = LabelMaskVisualizer().draw_label_img(pred_img)
+        LabelMaskVisualizer.save_arr_img(img,dmg_path)
         
-        bbs_df = get_bbs_form_mask(pred_img, dmg_labels)
+        label_dict = [1, 2, 3, 4]
+        bbs_df = get_bbs_form_mask(pred_img, label_dict)
         pd_values = list(bbs_df.value_counts(subset=["label"]).items())
         pd_table = pd.DataFrame([(val[0][0], val[1]) for val in pd_values],
                                  columns=["Level", "Count"])
-        table_path = os.path.join(dir_path, "pred_table.csv")
+        table_path = os.path.join(dir_path, f"pred_table_{n}.csv")
         pd_table.to_csv(table_path, index=False)
 
-        self.bbs_imgs(bbs_df, dir_path)
+        self.bbs_imgs(bbs_df, dir_path, n)
 
     def _normalize_image(self, img : torch.Tensor) -> torch.Tensor:
         if img.shape[0] > 3:

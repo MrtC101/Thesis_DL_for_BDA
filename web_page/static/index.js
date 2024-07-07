@@ -1,47 +1,3 @@
-const all_language = {
-  "es":{
-      "title":"Clasificación de daños en imágenes satelitales",
-      "lang-switch":"Cambiar a Inglés",
-      "project":"Proyecto final de carrera de Licenciatura en Ciencias de la Computación",
-      "pre":"Imagen previa al desastre natural",
-      "post":"Imagen posterior al desastre natural",
-      "process": "Procesar imágenes",
-      "output": "Imagen de salida",
-      "settings" : "Superposición",
-      "table": "Conteo de edificios por daños",
-      "level": "Nivel",
-      "class" : "Tipo",
-      "class-1": "Sin daños",
-      "class-2": "Daño menor",
-      "class-3": "Daño mayor",
-      "class-4": "Destruido",
-      "class-5": "Sin clasificar",
-      "saturation": "saturación",
-      "apply": "aplicar"
-  },
-  "en":{
-      "title":"Damage assessment in satellite images",
-      "lang-switch":"Change to Spanish",
-      "project":"Undergraduate Final Project for a Bachelor's Degree in Computer Science",
-      "pre":"Pre-disaster image",
-      "post":"Post-disaster image",
-      "process": "Process images",
-      "output": "Process output",
-      "settings" : "Superposition",
-      "table": "Building count by damage",
-      "level": "Level",
-      "class" : "Type",
-      "class-1": "No damage",
-      "class-2": "Minor damage",
-      "class-3": "Mayor damage",
-      "class-4": "Destroyed",
-      "class-5": "Not classified",
-      "saturation": "saturation",
-      "apply": "apply"
-  }
-}
-const language = all_language[window.lang]
-  
 // PROCESS FUNCTIONS
 function build_settings(table_arr){
   table = document.getElementById("setting-t")
@@ -55,7 +11,7 @@ function build_settings(table_arr){
       cell1.innerHTML = `
       <div class="row block">
           <label class="col-6" for="${level.id}">
-              ${language[level.id]} ${language['saturation']}
+              ${window.all_language[window.lang][level.id]}
           </label>
           <input class="col-4" type="range" id="${level.id}" min="0" max="1" step="0.1" value="1">
           <output class="col-2" id="${level.id}-val" for="${level.id}">1</output>
@@ -75,15 +31,14 @@ function build_table(table_arr) {
       const cell1 = row.insertCell(0);
       const cell2 = row.insertCell(1);     
       cell1.style.backgroundColor = level['color'];
-      cell1.textContent = language[level['id']];
+      cell1.textContent = window.all_language[window.lang][level['id']];
       cell2.textContent = level['num'];
   }
 }
 
 function set_images(mask_obj, bbs_arr) {
   const out_img = document.getElementById('output-preview');
-  out_img.src = "";
-  out_img.src = mask_obj["filename"];
+  out_img.src = mask_obj;
 
   const container = document.getElementById('out-img-container');
 
@@ -91,13 +46,14 @@ function set_images(mask_obj, bbs_arr) {
   const existingImages = container.querySelectorAll('img[id^="bb-"]');
   existingImages.forEach(img => img.remove());
 
-  // Agregar nuevas imágenes dinámicamente
-  for (let i = 0; i < bbs_arr.length; i++) {
-      const bb_img = document.createElement('img');
-      bb_img.id = `bb-${i}`;
-      bb_img.src = bbs_arr[i]["filename"];
-      bb_img.style.filter = "opacity(1)";
-      container.appendChild(bb_img);
+  for(const path of bbs_arr){
+    const bb_img = document.createElement('img');
+    i = path.split("_")[1];
+    bb_img.id = `bb-${i}`;
+    bb_img.src = path;
+    bb_img.style.zIndex = i;
+    bb_img.style.filter = "opacity(1)";
+    container.appendChild(bb_img);
   }
 }
 
@@ -161,6 +117,9 @@ function addSettingsListeners(){
  * @description This method calls the server for a prediction.
  */
 async function process(){
+  //Loading bar
+  const overlay = document.getElementById("overlay");
+  overlay.style.display = "flex";
   const serverUrl = window.predictURL
   options = await get_images()
   fetch(serverUrl, options)
@@ -171,7 +130,8 @@ async function process(){
       set_images(dict["mask"], dict["bbs"])
       addSettingsListeners()
     })
-    .catch(error => {console.error('Error:', error)});
+    .catch(error => {console.error('Error:', error)})
+    .finally(() => overlay.style.display = "none")
 }
 
 

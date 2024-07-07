@@ -22,16 +22,15 @@ class MetricComputer:
           information.
     """
 
-    def __init__(self, labels_set):
-        self.labels_set = labels_set
-    
     # Compute Metrics
-    def compute_metrics(self, conf_mtrx_list: pd.Series):
+    @staticmethod
+    def compute_metrics(conf_mtrx_list: pd.Series, label_set : list):
         conf_matrices_df = pd.concat(list(conf_mtrx_list), axis=0, ignore_index=True)
-        class_metrics = self.compute_eval_metrics(conf_matrices_df)
+        class_metrics = MetricComputer.compute_eval_metrics(conf_matrices_df, label_set)
         return class_metrics
-
-    def compute_eval_metrics(self, conf_mtrx_df: pd.DataFrame):
+    
+    @staticmethod
+    def compute_eval_metrics(conf_mtrx_df: pd.DataFrame, labels_set : list):
         """Computes the evaluation metrics for the current epoch
             metrics are:
             - Precision
@@ -41,7 +40,7 @@ class MetricComputer:
         """
         eval_results = []
         f1_harmonic_mean = 0
-        for cls in self.labels_set:
+        for cls in labels_set:
             class_idx = (conf_mtrx_df['class'] == cls)
             tp = conf_mtrx_df.loc[class_idx, 'true_pos'].sum()
             fp = conf_mtrx_df.loc[class_idx, 'false_pos'].sum()
@@ -65,7 +64,7 @@ class MetricComputer:
             f1_harmonic_mean += 1.0 / (f1) if f1 > 0.0 else 0.0
             
 
-        f1_harmonic_mean = len(self.labels_set) / \
+        f1_harmonic_mean = len(labels_set) / \
             f1_harmonic_mean if f1_harmonic_mean > 0.0 else 0.0
 
         metrics = pd.DataFrame(eval_results)

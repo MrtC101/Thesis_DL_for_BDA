@@ -18,12 +18,10 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 
 from utils.common.files import read_json, is_dir
 from utils.loggers.console_logger import LoggerSingleton
+from utils.visualization.label_to_color import LabelDict
 
 log = LoggerSingleton()
-
-path = join(os.environ.get("DATA_PATH"), 'constants/xBD_label_map.json')
-LABEL_NAME_TO_NUM = read_json(path)['label_name_to_num']
-
+labels = LabelDict()
 
 def get_shape(image_path: str) -> tuple:
     """Opens the image and retrieves its size."""
@@ -49,7 +47,8 @@ def get_feature_info(feature: dict) -> dict:
     for building in feature['features']['xy']:
         # if build from bld_mask = no-damage
         damage_class = building.get('subtype','no-damage')
-        dmg_label = LABEL_NAME_TO_NUM[damage_class]
+        
+        dmg_label = labels.get_key_by_num(damage_class)
 
         # read the coordinates
         shape = wkt.loads(building['wkt'])
