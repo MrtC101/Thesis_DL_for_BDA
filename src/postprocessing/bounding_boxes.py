@@ -70,8 +70,8 @@ def get_bbs_from_mask(mask, parallel=True) -> pd.DataFrame:
     """Create a pandas DataFrame with bounding boxes from predicted mask."""
     bld_list = get_buildings(mask, parallel)
     bbs_list = []
-    for id, bld_dict in enumerate(bld_list):
-        x1, y1, x2, y2 = BoundingBox.create(bld_dict['bld']).get_components()
-        label = labels_dict.get_key_by_num(bld_dict['label'])
+    for id, (bld, lab_num) in enumerate(bld_list):
+        x1, y1, x2, y2 = BoundingBox.create(bld).get_components()
+        label = labels_dict.get_key_by_num(lab_num)
         bbs_list.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "label": label, "uid": id})
     return pd.DataFrame(bbs_list, columns=["x1", "y1", "x2", "y2", "label", "uid"])

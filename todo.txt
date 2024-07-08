@@ -3,7 +3,6 @@ Me falta:
 - Augmentations de datos
 - Tabla latex???
 - MEJORAR CODIGO DE WEB 
-- ESPECIAL ATENICON EN GRAFICAR Y GUARDAR IMAGENES DE POST.
 - Pulir todas las nuevas implementaciones Ya que una vez terminadas no se vuelve a tocar.
 - Implementar todo el loggin que sea necesario
 - Documentar código

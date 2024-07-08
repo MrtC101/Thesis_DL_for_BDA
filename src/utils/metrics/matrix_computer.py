@@ -126,7 +126,7 @@ class MatrixComputer:
         def compute_IoU(gt_buildings, pd_buildings, pd_shape):
             pd_label_matrix = np.zeros(pd_shape)
             if(len(pd_buildings) > 0):
-                shapes_list = [(poly['bld'],i+1) for i,poly in enumerate(pd_buildings)]
+                shapes_list = [(poly[0],i+1) for i,poly in enumerate(pd_buildings)]
                 transform = rasterio.transform.from_origin(0, pd_shape[0], 1, 1)
                 pd_label_matrix = rasterio.features.rasterize(shapes_list, 
                                                             out_shape=pd_shape,
@@ -135,9 +135,7 @@ class MatrixComputer:
             
             building_list = []
             # Calculate metrics for each ground truth polygon
-            for id, gt_dict  in enumerate(gt_buildings):
-                gt_poly = gt_dict["bld"]
-                gt_label = gt_dict["label"]
+            for id, (gt_poly, gt_label)  in enumerate(gt_buildings):
                 gt_bb = BoundingBox.create(gt_poly)
                 x1,y1,x2,y2 = gt_bb.get_components()
                 candidates = np.unique(pd_label_matrix[x1:x2,y1:y2])
@@ -147,9 +145,7 @@ class MatrixComputer:
                 best_union_area = 0
                 for id in candidates:
                     if id > 0:
-                        pd_dict = pd_buildings[id-1]
-                        pd_poly = pd_dict["bld"]
-                        pd_label = pd_dict["label"]
+                        pd_poly, pd_label = pd_buildings[id-1]
                         if gt_label != pd_label:
                             intersection = 0
                             union = gt_poly.area + pd_poly.area
