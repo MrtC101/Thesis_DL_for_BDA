@@ -173,4 +173,4 @@ class MetricManager:
         """Save metrics in csv"""
         path = os.path.join(metric_dir,"loss.csv")
         df = pd.DataFrame(loss_metrics)
-        df.to_csv(path, mode="w", index=False)    
+        df.to_csv(path, mode="w", index=False)

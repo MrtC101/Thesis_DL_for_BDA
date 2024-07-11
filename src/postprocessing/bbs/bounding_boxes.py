@@ -6,7 +6,7 @@ from shapely.wkt import loads
 from dataclasses import dataclass
 from typing import List, Tuple
 
-from postprocessing.polygon_manager import get_buildings
+from postprocessing.bbs.polygon_manager import get_buildings
 from utils.visualization.label_to_color import LabelDict
 
 @dataclass

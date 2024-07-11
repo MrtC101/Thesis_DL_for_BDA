@@ -226,13 +226,6 @@ class SiamUnet(nn.Module):
     Returns logits
     """
     
-    def compute_probabilities(self, logit_masks) -> tuple:
-        """
-            Returns:
-                tuple: A tuple of probabilities tensor masks for segmentation and classification.
-        """
-        return tuple(self.softmax(logit_mask) for logit_mask in logit_masks)
-
     def compute_predictions(self, logit_masks) -> tuple:
         """
             Returns:

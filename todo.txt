@@ -1,10 +1,11 @@
 Me falta:
 - AGREGAR CURVA ROC durante prueba en test para pixel y objeto
+- Agregar matriz de confusion multiclase para conjunto de test.
 - Augmentations de datos
-- Tabla latex???
+- Implementar todo el loggin que sea necesario
 - MEJORAR CODIGO DE WEB 
 - Pulir todas las nuevas implementaciones Ya que una vez terminadas no se vuelve a tocar.
-- Implementar todo el loggin que sea necesario
+- Tabla latex???
 - Documentar código
 
 !!!IMPORTANTE UNA VEZ SE MANDA A PROCESAR NO SE VUELVE A TOCAR EL CODIGO    

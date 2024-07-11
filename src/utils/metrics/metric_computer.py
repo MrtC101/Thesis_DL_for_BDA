@@ -1,8 +1,11 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
+from collections import defaultdict
 import os
 import sys
 import pandas as pd
+from sklearn.metrics import auc, average_precision_score, precision_recall_curve
+import torch
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
@@ -70,3 +73,49 @@ class MetricComputer:
         metrics = pd.DataFrame(eval_results)
         metrics.insert(0, "f1_harmonic_mean", f1_harmonic_mean)
         return metrics
+
+    @staticmethod    
+    def compute_ROC(conf_dict: dict[torch.Tensor]):
+        # Almacenar las curvas ROC para cada clase y umbral
+        curves = defaultdict(lambda: defaultdict(list))
+        
+        for th, conf_tensor in conf_dict.items():
+            for i_label in range(conf_tensor.shape[0]):
+                tp, fp, fn, tn, tot = map(float, conf_tensor[i_label])
+                sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+                specificity = tn / (fp + tn) if (fp + tn) > 0 else 0
+                curves[i_label][th] = (1 - specificity, sensitivity)  # FPR, TPR
+        
+        # Calcular el AUC para cada curva ROC
+        roc_curves = {}
+        for label, th_curves in curves.items():
+            x, y = zip(*sorted(th_curves.values()))  # Ordenar por FPR
+            auc_value = auc(x, y)
+            roc_curves[label] = (x, y, auc_value)
+        
+        return roc_curves
+    
+    def compute_PR(conf_dict: dict[torch.Tensor]):
+        pr_curves = {}
+        
+        for th, conf_tensor in conf_dict.items():
+            y_scores = []
+            y_true_all = []
+            
+            for i_label in range(conf_tensor.shape[0]):
+                tp, fp, fn, tn, tot = map(float, conf_tensor[i_label])
+                sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+                precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+                recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+                
+                y_scores.append(sensitivity)  # Scores are the sensitivities here for illustration
+                y_true_all.append(1 if tp + fn > 0 else 0)  # For simplicity, assume class presence
+        
+            # Calcular precisión, recuperación y puntuaciones
+            precision, recall, _ = precision_recall_curve(y_true_all, y_scores)
+            ap = average_precision_score(y_true_all, y_scores)
+            
+            pr_curves[th] = (precision, recall, ap)
+        
+        return pr_curves
+

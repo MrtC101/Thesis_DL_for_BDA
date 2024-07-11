@@ -13,8 +13,8 @@ from utils.metrics.matrix_computer import MatrixComputer
 from utils.metrics.metric_manager import MetricComputer
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.predicted_dataset import PredictedDataset
-from postprocessing.plot_results import generate_figures
-from postprocessing.bounding_boxes import get_bbs_from_json, get_bbs_from_mask
+from postprocessing.plots.plot_results import generate_figures
+from postprocessing.bbs.bounding_boxes import get_bbs_from_json, get_bbs_from_mask
 
 
 def save_metric(px_metric: pd.DataFrame, pred_out, file_prefix="pixel"):

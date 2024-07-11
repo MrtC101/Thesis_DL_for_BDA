@@ -15,10 +15,14 @@ from models.saimunte_model import SiamUnet
 class TrainModel(SiamUnet):
     """This class implements the architecture of the Siamese CNN used in this project."""
 
-    def compute_binary(self, logit_masks, threshold = 0.5) -> tuple:
-        probabilities = self.compute_probabilities(logit_masks)
-        return tuple(mask >= threshold for mask in probabilities)
+    def make_binary(self, gt_dmg_mask : torch.Tensor , label_set : list) -> torch.Tensor:
+        bin_mask_list = [gt_dmg_mask == label for label in label_set]
+        return torch.stack(bin_mask_list)
 
+    def compute_binary(self, dmg_logit_mask : torch.Tensor, threshold = 0.5) -> torch.Tensor:
+        bin_mask = self.softmax(dmg_logit_mask) >= threshold
+        return bin_mask
+    
     def reinitialize_Siamese(self):
         """initialize all layers from the model"""
         torch.nn.init.xavier_uniform_(self.upconv4_c.weight)

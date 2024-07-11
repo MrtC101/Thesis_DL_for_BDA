@@ -8,6 +8,8 @@ from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import trange
 
+from utils.metrics.curve_computer import make_metric_curves
+
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
@@ -204,7 +206,8 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
         MetricManager.save_loss([test_loss], metric_dir,"test_loss.csv")
         MetricManager.save_metrics([test_metrics], metric_dir, "test")
         best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
-
+        make_metric_curves(test_loader, model, metric_dir)
+        
     tb_logger.flush()
     tb_logger.close()    
     return best_acc

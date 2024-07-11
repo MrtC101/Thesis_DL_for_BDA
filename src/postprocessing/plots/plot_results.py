@@ -146,3 +146,37 @@ def generate_figures(dis_id, tile_id, tile_dict, pred_mask, gt_table, pd_table, 
     superposed_image = cv2.addWeighted(pre_img, 0.8, pred_img, 0.5, 0)
     file_path = os.path.join(save_path, f"{dis_id}_{tile_id}_superposed.png")
     LabelMaskVisualizer.save_arr_img(superposed_image, file_path)
+
+def plot_roc_curves(type, roc_curves, out):
+    plt.figure(figsize=(10, 8))
+    
+    for label, (fpr, tpr, auc_value) in roc_curves.items():
+        plt.plot(fpr, tpr, label=f'Class {label} (AUC = {auc_value:.2f})')
+    
+    plt.plot([0, 1], [0, 1], 'k--', label='Baseline')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('False Positive Rate (FPR)')
+    plt.ylabel('True Positive Rate (TPR)')
+    plt.title('Receiver Operating Characteristic (ROC) Curve')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    #especificiar si es parche o tile.
+    plt.savefig(os.path.join(out,f"{type}_ROC_curves.png"))
+
+def plot_pr_curves(type, pr_curves, out):
+    plt.figure(figsize=(10, 8))
+    
+    for label, (fpr, tpr, pr_value) in pr_curves.items():
+        plt.plot(fpr, tpr, label=f'Class {label} (AP = {pr_value:.2f})')
+    
+    plt.plot([0, 1], [0, 1], 'k--', label='Baseline')
+    plt.xlim([0.0, 1.0])
+    plt.ylim([0.0, 1.05])
+    plt.xlabel('Recall')
+    plt.ylabel('Precision')
+    plt.title('Precision-Recall Curve')
+    plt.legend(loc='lower right')
+    plt.grid(True)
+    #especificiar si es parche o tile.
+    plt.savefig(os.path.join(out,f"{type}_PR_curves.png"))
