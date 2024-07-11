@@ -58,3 +58,19 @@ def get_buildings(mask: torch.Tensor, parallelism: bool = True) -> list:
         else:
             assign_label(mask, t_label_matrix, shapes_list)
     return blds_with_cls
+
+def get_instance_mask(shapes_list : list, shape = (1024,1024)) -> torch.Tensor:
+    """
+        Returns instances mask
+    """
+    instance_mask = torch.zeros(size=shape,dtype=torch.int32)
+    if(len(shapes_list) > 0):
+        shapes_list = [(poly[0], i+1) for i, poly in enumerate(shapes_list)]
+        transform = rasterio.transform.from_origin(0, shape[0], 1, 1)
+        instance_mask = rasterio.features.rasterize(shapes_list, 
+                                                    out_shape=shape,
+                                                    transform=transform,
+                                                    fill=0,
+                                                    dtype=np.int32)
+        instance_mask = torch.from_numpy(instance_mask)
+    return instance_mask

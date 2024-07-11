@@ -1,15 +1,15 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
 import random
-import numpy as np
 import pandas as pd
-import rasterio
+import concurrent.futures
 import torch
-from postprocessing.bounding_boxes import BoundingBox
+from tqdm import tqdm
+from postprocessing.bbs.bounding_boxes import BoundingBox
 from utils.metrics.common import Level
 import matplotlib
 
-from postprocessing.polygon_manager import get_buildings
+from postprocessing.bbs.polygon_manager import get_buildings, get_instance_mask
 matplotlib.use("TkAgg")
 
 class MatrixComputer:
@@ -98,10 +98,68 @@ class MatrixComputer:
     def tile_obj_conf_mtrx(dmg_mask, pred_mask, labels_set):
         """Returns a confusión matrix for one image"""
         conf_mrtx = MatrixComputer.evaluate_polys(dmg_mask, pred_mask, labels_set)
-        return pd.DataFrame(conf_mrtx)     
-
+        return pd.DataFrame(conf_mrtx)         
+    
     @staticmethod
-    def evaluate_polys(target_mask, pred_mask, labels_set, iou_threshold: float = 0.5):
+    def compute_IoU(gt_buildings, gt_label_matrix, pd_buildings, pd_label_matrix):
+        def compute_iou(candidates):
+            best_iou, best_intersection_area, best_union_area =  0.0, 0, 0
+            for pid in candidates:
+                if pid > 0:
+                    _, pd_label = pd_buildings[pid-1]
+                    if gt_label != pd_label:
+                        intersection = 0
+                        union = (gt_label_matrix == gid).sum() + (pd_label_matrix == pid).sum()
+                    else:
+                        intersection = ((gt_label_matrix == gid) & (pd_label_matrix == pid)).sum()
+                        union = ((gt_label_matrix == gid) | (pd_label_matrix == pid)).sum()
+                    
+                    iou = intersection / union if union > 0 else 0
+
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_intersection_area = intersection
+                        best_union_area = union
+
+            return best_iou, best_intersection_area, best_union_area
+
+        building_list = []
+        # Calculate metrics for each ground truth polygon
+        for gid, (gt_poly, gt_label)  in enumerate(gt_buildings):
+            gt_bb = BoundingBox.create(gt_poly)
+            gx1, gy1, gx2, gy2 = gt_bb.get_components()
+            candidates = pd_label_matrix[gx1:gx2,gy1:gy2].unique()
+            if(len(candidates) > 1000):
+               print(len(candidates))
+            best_iou = 0
+            best_intersection_area = 0
+            best_union_area = 0
+            chunk_size = 1000
+
+            parts = [candidates[i:i + chunk_size] for i in range(0, len(candidates), chunk_size)]
+            with concurrent.futures.ThreadPoolExecutor() as executor:
+                futures = [executor.submit(compute_iou, part) for part in parts]            
+                for future in concurrent.futures.as_completed(futures):
+                    iou, intersection, union = future.result()
+                    if iou > best_iou:
+                        best_iou = iou
+                        best_intersection_area = intersection
+                        best_union_area = union
+                        
+            building_list.append({
+                'id': gid,
+                'polygon': gt_poly,
+                'label': gt_label,
+                'iou': best_iou,
+                'intersection_area': best_intersection_area,
+                'union_area': best_union_area
+            })
+        
+        return pd.DataFrame(building_list,columns=['id',  'polygon',
+                'label', 'iou', 'intersection_area', 'union_area'])
+    
+    @staticmethod
+    def evaluate_polys(target_mask, pred_mask, labels_set, iou_threshold: float = 0.7):
         """ This method calculates the corresponding confusion matrix at object level.
         1- Obtain for target mask and pred mask
             1- All buildings from mask are obtained
@@ -122,66 +180,19 @@ class MatrixComputer:
         Returns:
             pd.DataFrame : A confusion matrix for each label. 
         """
-
-        def compute_IoU(gt_buildings, pd_buildings, pd_shape):
-            pd_label_matrix = np.zeros(pd_shape)
-            if(len(pd_buildings) > 0):
-                shapes_list = [(poly[0],i+1) for i,poly in enumerate(pd_buildings)]
-                transform = rasterio.transform.from_origin(0, pd_shape[0], 1, 1)
-                pd_label_matrix = rasterio.features.rasterize(shapes_list, 
-                                                            out_shape=pd_shape,
-                                                            transform=transform,
-                                                            fill=0, dtype=np.int32)
-            
-            building_list = []
-            # Calculate metrics for each ground truth polygon
-            for id, (gt_poly, gt_label)  in enumerate(gt_buildings):
-                gt_bb = BoundingBox.create(gt_poly)
-                x1,y1,x2,y2 = gt_bb.get_components()
-                candidates = np.unique(pd_label_matrix[x1:x2,y1:y2])
-
-                best_iou = 0
-                best_intersection_area = 0
-                best_union_area = 0
-                for id in candidates:
-                    if id > 0:
-                        pd_poly, pd_label = pd_buildings[id-1]
-                        if gt_label != pd_label:
-                            intersection = 0
-                            union = gt_poly.area + pd_poly.area
-                        else:
-                            intersection = gt_poly.intersection(pd_poly).area
-                            union = gt_poly.union(pd_poly).area
-                        iou = intersection / union if union > 0 else 0
-
-                        if iou > best_iou:
-                            best_iou = iou
-                            best_intersection_area = intersection
-                            best_union_area = union
-
-                building_list.append({
-                    'id': id,
-                    'polygon':gt_poly,
-                    'label': gt_label,
-                    'iou': best_iou,
-                    'intersection_area': best_intersection_area,
-                    'union_area': best_union_area
-                })
-            
-            return pd.DataFrame(building_list,columns=['id',  'polygon',
-                    'label', 'iou', 'intersection_area', 'union_area'])
-        
         # code
         gt_buildings = get_buildings(target_mask, labels_set)            
+        gt_label_matrix = get_instance_mask(gt_buildings)
         pd_buildings = get_buildings(pred_mask, labels_set)
-        IoU_df = compute_IoU(gt_buildings, pd_buildings, pred_mask.shape)
+        pd_label_matrix = get_instance_mask(pd_buildings)
+        IoU_df = MatrixComputer.compute_IoU(gt_buildings, gt_label_matrix,
+                                             pd_buildings, pd_label_matrix)
         results = []
         for c in labels_set:
             df = IoU_df[IoU_df["label"]==c]
-            total_buildings = len(df)
             tp = (df["iou"] >= iou_threshold).sum()
-            fn = (df["iou"] < iou_threshold).sum()
-            fp = total_buildings - tp
+            fp = len(pd_buildings) - tp
+            fn = len(gt_buildings) - tp
             tn = 0  
             # Calculating true negatives is typically not done in object detection
             
@@ -191,7 +202,43 @@ class MatrixComputer:
                 'false_pos': fp, 
                 'false_neg': fn,
                 'true_neg': tn,
-                'total': total_buildings
+                'total': len(gt_buildings)+len(gt_buildings)
             })
     
         return results
+    
+    @staticmethod
+    def compute_bin_matrices_px(bin_pred_tensor : torch.Tensor,
+                                bin_true_tensor : torch.Tensor) -> torch.Tensor:
+        axis  = (1, 2)
+        tp = torch.sum(bin_true_tensor & bin_pred_tensor, axis)
+        fn = torch.sum(bin_true_tensor & ~bin_pred_tensor, axis)
+        fp = torch.sum(~bin_true_tensor & bin_pred_tensor, axis)
+        tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis)
+        size = bin_pred_tensor.shape
+        tot = torch.ones(size[0],dtype=torch.int32) * size[1] * size[2]
+        return torch.stack([tp, fp, fn, tn, tot], axis=0)
+
+    @staticmethod
+    def compute_bin_matrices_obj(bin_pred_tensor : torch.Tensor,
+                                 bin_true_tensor : torch.Tensor) -> torch.Tensor:
+        tp_list = []
+        fp_list = []
+        fn_list = []
+        tn_list = []
+        tot_list = []
+        for i in range(0,bin_pred_tensor.shape[0]):
+            matrx_dict = MatrixComputer.evaluate_polys(bin_true_tensor[i],bin_pred_tensor[i],[1])[0]
+            tp_list.append(matrx_dict["true_pos"])
+            fp_list.append(matrx_dict["false_pos"])
+            fn_list.append(matrx_dict["false_neg"])
+            tn_list.append(matrx_dict["true_neg"])
+            tot_list.append(matrx_dict["total"])
+
+        tp = torch.tensor(tp_list, dtype=torch.int32)
+        fp = torch.tensor(fp_list, dtype=torch.int32)
+        fn = torch.tensor(fn_list, dtype=torch.int32)
+        tn = torch.tensor(tn_list, dtype=torch.int32)
+        tot = torch.tensor(tot_list, dtype=torch.int32)
+
+        return torch.stack([tp,fp,fn,tn,tot],axis=0)

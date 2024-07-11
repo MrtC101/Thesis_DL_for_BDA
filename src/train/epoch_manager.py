@@ -121,12 +121,6 @@ class EpochManager:
                                                 )
             confusion_matrices.append(step_matrices)
 
-            if(self.Mode.TESTING == self.mode and False):
-                threasholds = [i*0.1 for i in range(0,10)]
-                for th in threasholds:
-                    mask = self.model.compute_binary(logit_masks, th)
-                    binary_masks.append(mask)
-
             if (save_path is not None):
                 PredictedDataset.save_pred_patch(pred_masks[2], batch_idx, dis_id,
                                               tile_id, patch_id, save_path)
@@ -141,6 +135,4 @@ class EpochManager:
         self.metric_manager.log_metrics(phase=self.mode.value,
                                         tb_log=self.tb_logger,
                                         metrics=metrics)
-        if(self.Mode.TESTING == self.mode and False):
-            self.metric_manager.plot_roc_auc(binary_masks)
         return metrics, self.loss_manager.combined_losses.avg
