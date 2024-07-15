@@ -1,39 +1,21 @@
-# Copyright (c) Microsoft Corporation. All rights reserved.
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-#
-# Modificaciones (c) 2024 Martín Cogo Belver.
-# Martín Cogo Belver has rights reserved over this modifications.
-#
-# Modification Notes:
-# - Documentation added with docstrings for code clarity.
-# - Re-implementation of methods to enhance readability and efficiency.
-# - Re-implementation of features for improved functionality.
-# - Changes in the logic of implementation for better performance.
-# - Bug fixes in the code.
-#
-# See the LICENSE file in the root directory of this project for the full text of the MIT License.
-import os
-import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-
-from typing import Dict, List
-from utils.datasets.raw_datasets import TileDataset
-from utils.datasets.slice_datasets import PatchDataset
-from utils.common.files import clean_folder, read_json
-from torchvision import transforms
-from tqdm import tqdm
 import math
 import numpy as np
-import random
-import argparse
+from tqdm import tqdm
+from typing import Dict, List
+from torchvision import transforms
+from utils.common.pathManager import FilePath
+from utils.datasets.raw_datasets import TileDataset
+from utils.datasets.slice_datasets import PatchDataset
 from utils.loggers.console_logger import LoggerSingleton
+
 log = LoggerSingleton()
 
 
-def slice_tile(n: int, random_c: bool, pre_img: np.ndarray, post_img: np.ndarray,
-               bld_mask: np.ndarray, dmg_mask: np.ndarray
-               ) -> List[Dict[str, np.ndarray]]:
+def slice_tile(n: int, random_c: bool, pre_img: np.ndarray,
+               post_img: np.ndarray, bld_mask: np.ndarray,
+               dmg_mask: np.ndarray) -> List[Dict[str, np.ndarray]]:
     """Slices each tile into `n` equal parts and creates patches.
 
     Args:
@@ -87,7 +69,7 @@ def slice_tile(n: int, random_c: bool, pre_img: np.ndarray, post_img: np.ndarray
     return patch_list
 
 
-def slice_dataset(splits_json_path: str, output_path: str) -> None:
+def slice_dataset(splits_json_path: FilePath, output_path: FilePath) -> None:
     """Slices each tile into 20 patches of the same size.
 
     Args:
@@ -107,35 +89,20 @@ def slice_dataset(splits_json_path: str, output_path: str) -> None:
         num_tile = len(dataset)
         log.info(f'{split_name} dataset length before cropping: {num_tile}.')
 
-        clean_folder(output_path, split_name)
-        split_folder = os.path.join(output_path, split_name)
+        output_path.clean_folder(split_name)
+        split_folder = output_path.join(split_name)
 
         for dis_id, tile_id, data in tqdm(iter(dataset), total=num_tile):
             patch_list = slice_tile(4, split_name != "test", **data)
-            PatchDataset.save_patches(dis_id, tile_id, patch_list, split_folder)
+            PatchDataset.save_patches(
+                dis_id, tile_id, patch_list, split_folder)
         length = 16 * num_tile
-        log.info(f'Done slicing for {split_name}, length after cropping: {length}.')
+        log.info(
+            f'Done slicing for {split_name}, length after cropping: {length}.')
 
-    splits_all_disasters = read_json(splits_json_path)
+    splits_all_disasters = splits_json_path.read_json()
     for setName in splits_all_disasters.keys():
         # could be parallelized
         iterate_and_slice(setName)
 
     log.info('Done')
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Create slices from a xBD dataset.')
-    parser.add_argument(
-        'split_json_path',
-        type=str,
-        help=('Path to the json file with the train/val/test split.')
-    )
-    parser.add_argument(
-        'output_dir',
-        type=str,
-        help=('Path to folder for new sliced data.')
-    )
-    args = parser.parse_args()
-    slice_dataset(args.split_json_path, args.output_dir)

@@ -3,7 +3,8 @@ import os
 import logging
 import sys
 from tqdm import tqdm
-from utils.common.files import is_dir
+
+from utils.common.pathManager import FilePath
 
 
 class TqdmToLog:
@@ -40,13 +41,14 @@ class LoggerSingleton:
         '%(asctime)s %(name)-12s %(levelname)-8s %(message)s',
         datefmt='%m-%d-%Y %H:%M',
     )
-    console_out = False;
+    console_out = False
 
-    def new_tqdm_handler(cls, folder_path):
+    def new_tqdm_handler(cls, folder_path: FilePath):
         file_name = cls._instance.name.replace(" ", "_").strip("")
         os.makedirs(folder_path, exist_ok=True)
         file = os.path.join(folder_path, f"{file_name}.txt")
-        tqdm_handler = TqdmLoggingHandler(filename=file, mode='w', console_out=cls.console_out)
+        tqdm_handler = TqdmLoggingHandler(
+            filename=file, mode='w', console_out=cls.console_out)
         tqdm_handler.setLevel(cls._level)
         tqdm_handler.setFormatter(cls._formatter)
         cls._instance.addHandler(tqdm_handler)
@@ -58,8 +60,8 @@ class LoggerSingleton:
         stream_handler.setFormatter(cls._formatter)
         cls._instance.addHandler(stream_handler)
 
-    def new_file_handler(cls, folder_path):
-        is_dir(folder_path)
+    def new_file_handler(cls, folder_path: FilePath):
+        folder_path.must_be_dir()
         file_name = cls._instance.name.replace(" ", "_").strip("")
         file = os.path.join(folder_path, f"{file_name}.txt")
         file_handler = logging.FileHandler(filename=file, mode='a')
@@ -76,13 +78,14 @@ class LoggerSingleton:
         if name is not None:
             cls._instance.name = name
         if folder_path is not None:
-            cls.new_tqdm_handler(cls, folder_path=folder_path)
+
+            cls.new_tqdm_handler(cls, folder_path=FilePath(folder_path))
             if not cls.console_out:
                 cls.console_out = True
         return cls._instance
 
 
-class TqdmLoggingHandler(logging.Handler):#
+class TqdmLoggingHandler(logging.Handler):
     """
     The logger class uses only one handler, "TqdmLoggingHandler". This handler
     utilizes the method tqdm.write() for writing into both the standard output
@@ -90,7 +93,7 @@ class TqdmLoggingHandler(logging.Handler):#
     messages without any problems throw the console.
 """
 
-    def __init__(self, filename, mode, console_out :bool):
+    def __init__(self, filename, mode, console_out: bool):
         super().__init__()
         self.filename = filename
         self.f: TextIOWrapper = open(filename, mode)
@@ -100,7 +103,7 @@ class TqdmLoggingHandler(logging.Handler):#
     def emit(self, record):
         try:
             msg = self.format(record)
-            if(not self.console_out):
+            if (not self.console_out):
                 tqdm.write(msg, file=sys.stdout)
             tqdm.write(msg, file=self.f)
             self.f.flush()

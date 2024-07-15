@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from imblearn.over_sampling import RandomOverSampler
 from imgaug.augmentables.bbs import BoundingBox, BoundingBoxesOnImage
 import imgaug.augmenters as iaa
@@ -18,18 +20,14 @@ ALPHA = 1
 
 seq = iaa.Sequential([
     iaa.Crop(px=(50, 50)),  # Recorte aleatorio de 50 píxeles en ambos ejes
-    # Rotación aleatoria entre -25 y +25 grados
-    iaa.Affine(rotate=(-25, 25)),
-    # Escalamiento aleatorio entre 0.9 y 1.2 en ambos ejes
-    iaa.Affine(scale=(0.9, 1.2)),
+    iaa.Affine(rotate=(-25, 25)),  # Rotación aleatoria entre -25 y +25 grados
+    iaa.Affine(scale=(0.9, 1.2)),# Escalamiento aleatorio entre 0.9 y 1.2 en ambos ejes
     iaa.Fliplr(p=0.5),  # Volteo horizontal con probabilidad del 50%
-    # iaa.Affine(translate_percent={"x": (-5, 5), "y": (-5, 5)}),
-    # Desplazamiento aleatorio entre -5% y +5%
+    iaa.Affine(translate_percent={"x": (-5, 5), "y": (-5, 5)}),# Desplazamiento aleatorio entre -5% y +5%
 ])
 
 color_seq = iaa.Sequential([
-    # Multiplicar los valores de matiz y saturación
-    iaa.MultiplyHueAndSaturation((0.6, 1.4)),
+    iaa.MultiplyHueAndSaturation((0.6, 1.4)), # Multiplicar los valores de matiz y saturación
     iaa.contrast.LinearContrast((0.75, 1.25)),  # Cambio aleatorio de contraste
     iaa.MultiplyBrightness((0.75, 1.25))  # Cambio aleatorio de brillo
 ])

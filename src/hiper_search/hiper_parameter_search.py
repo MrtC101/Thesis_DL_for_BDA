@@ -3,21 +3,12 @@ import sys
 from os.path import join
 from joblib import Parallel, delayed
 import torch
-os.environ["parallelism"] = ""
-
-# Environment variables
-os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
-os.environ["SRC_PATH"] = join(os.environ["PROJ_PATH"], "src")
-os.environ["DATA_PATH"] = join(os.environ["PROJ_PATH"], "data")
-os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
 from train.train_pipeline import k_cross_validation, train_definitive
-from postprocessing.postprocess_pipeline import postprocess
-from preprocessing.preprocessing_pipeline import preprocess
 from utils.loggers.console_logger import LoggerSingleton
 from sklearn.model_selection import ParameterGrid
 
@@ -83,58 +74,10 @@ def ParalelSearch(param_list):
     best_params = param_list[best_index]
     return best_params
     
-def parameter_search(configs : dict):
+def parameter_search(split_sliced_json_path, mean_std_json_path, configs : dict):
     log = LoggerSingleton("Parameter Serach", 
                           folder_path=join(os.environ["OUT_PATH"], "hiper_console_logs"))
-    #split_raw_json_path, split_sliced_json_path, mean_std_json_path = preprocess(**pre_config)
-    split_raw_json_path = "/home/mrtc101/Desktop/tesina/repo/hiper_siames/data/xBD/splits/raw_splits.json"
-    split_sliced_json_path = "/home/mrtc101/Desktop/tesina/repo/hiper_siames/data/xBD/splits/sliced_splits.json"
-    mean_std_json_path = "/home/mrtc101/Desktop/tesina/repo/hiper_siames/data/xBD/dataset_statistics/all_tiles_mean_stddev.json"
     param_list = create_params(split_sliced_json_path, mean_std_json_path, configs)
-    
-    #best_params = ParalelSearch(param_list)
-    
-    best_params = SequentialSearch(param_list)
-    
-    # Train definitive model
-    pred_path = os.path.join(os.environ['OUT_PATH'],"definitive_model")
-    definitive_acc_score = train_definitive(pred_path, best_params)
-    log.info(f"Accuracy for the final model : {definitive_acc_score}")
-    
-    save_path = os.path.join(os.environ['OUT_PATH'],"predictions")
-    postprocess(split_raw_json_path, pred_path, save_path)
-    
-
-if __name__ == "__main__":
-    # Configuration dictionary for paths used during model training
-    weights_config = {
-        'weights_seg': [1, 15],
-        'weights_damage': [1, 35, 70, 150, 120],
-        'weights_loss': [0, 0, 1],
-    }
-    hardware_config ={
-        'device': 'cpu',
-        'torch_threads': 12,
-        'torch_op_threads': 12,
-        'batch_workers': 0,
-        'new_optimizer' : False
-    }
-    visual_config = {
-        'num_chips_to_viz': 2,
-        'labels_dmg': [ 0, 1, 2, 3, 4],
-        'labels_bld': [1], # not include 0 because is binary 
-    }
-    pre_config = {
-        "disaster_num": 20,
-        "border_width": 1,
-    }
-    post_config = {
-        
-    }
-    configs = dict(
-        list(weights_config.items()) +
-        list(hardware_config.items()) +
-        list(visual_config.items()) +
-        list(pre_config.items())
-                   )
-    parameter_search(configs)
+    best_params = ParalelSearch(param_list)
+    #best_params = SequentialSearch(param_list)
+    return

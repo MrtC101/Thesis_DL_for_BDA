@@ -167,6 +167,7 @@ class MetricManager:
                 met.to_csv(os.path.join(
                     metric_dir, f'{file_prefix}_{key}.csv'),
                       mode=mode, header=header, index=False)
+                met.to_latex()
 
     @staticmethod
     def save_loss(loss_metrics,metric_dir,filename):

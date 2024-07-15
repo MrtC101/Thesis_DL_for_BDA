@@ -3,17 +3,16 @@
 
 import os
 import sys
+import pandas as pd
 import torch
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from tqdm import trange
 
-from utils.metrics.curve_computer import make_metric_curves
-
+from utils.metrics.curve_computer import pixel_metric_curves
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-
 
 from models.trainable_model import TrainModel
 from train.epoch_manager import EpochManager
@@ -114,6 +113,9 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
     # setup output directories
     checkpoint_dir, tb_logger_dir, config_dir, metric_dir = output_directories(output_folder_path)
     dump_json(os.path.join(config_dir, 'configs.txt'), configs)
+    df = pd.DataFrame(data=[list(configs.keys()),list(configs.values())]).transpose()
+    df.columns = ["Parameters","Values"]
+    df.to_latex(os.path.join(config_dir, 'configs.tex'))
 
     # Device  
     device = torch.device(configs['device'] if torch.cuda.is_available() else "cpu")
@@ -206,7 +208,7 @@ def train_model( train_loader: TrainDataLoader, val_loader: TrainDataLoader,
         MetricManager.save_loss([test_loss], metric_dir,"test_loss.csv")
         MetricManager.save_metrics([test_metrics], metric_dir, "test")
         best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
-        make_metric_curves(test_loader, model, metric_dir)
+        pixel_metric_curves(test_loader, model, metric_dir)
         
     tb_logger.flush()
     tb_logger.close()    
