@@ -81,7 +81,7 @@ class MetricComputer:
         
         for th, conf_tensor in conf_dict.items():
             for i_label in range(conf_tensor.shape[0]):
-                tp, fp, fn, tn, tot = map(float, conf_tensor[i_label])
+                tp, fp, fn, tn = map(float, conf_tensor[i_label])
                 sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
                 specificity = tn / (fp + tn) if (fp + tn) > 0 else 0
                 curves[i_label][th] = (1 - specificity, sensitivity)  # FPR, TPR
@@ -95,27 +95,28 @@ class MetricComputer:
         
         return roc_curves
     
+    @staticmethod
+    def _compute_ap(precision, recall):
+        ap = 0.0
+        for i in range(len(recall)):
+            if i == 0:
+                ap += precision[i] * recall[i]
+            else:
+                ap += precision[i] * (recall[i] - recall[i-1])
+        return ap
+    
+    @staticmethod
     def compute_PR(conf_dict: dict[torch.Tensor]):
         pr_curves = {}
-        
-        for th, conf_tensor in conf_dict.items():
-            y_scores = []
-            y_true_all = []
-            
-            for i_label in range(conf_tensor.shape[0]):
-                tp, fp, fn, tn, tot = map(float, conf_tensor[i_label])
-                sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
-                precision = tp / (tp + fp) if (tp + fp) > 0 else 0
-                recall = tp / (tp + fn) if (tp + fn) > 0 else 0
-                
-                y_scores.append(sensitivity)  # Scores are the sensitivities here for illustration
-                y_true_all.append(1 if tp + fn > 0 else 0)  # For simplicity, assume class presence
-        
-            # Calcular precisión, recuperación y puntuaciones
-            precision, recall, _ = precision_recall_curve(y_true_all, y_scores)
-            ap = average_precision_score(y_true_all, y_scores)
-            
-            pr_curves[th] = (precision, recall, ap)
-        
+        conf = torch.stack([t for t in conf_dict.values()],dim=0)
+        conf_list = torch.unbind(conf,dim=1)
+        for i_label in range(conf.shape[1]):
+            tp, fp, fn, tn = torch.unbind(conf_list[i_label],dim=1)
+            precision = tp / (tp + fp)
+            precision = torch.where(torch.isnan(precision), torch.tensor(1.0), precision)
+            recall = tp / (tp + fn)
+            recall = torch.where(torch.isnan(recall), torch.tensor(0.0), recall)
+            base_precision = tp.max() / (tp.max() + tn.max())
+            pr_curves[i_label] = (recall, precision, base_precision,
+                                  MetricComputer._compute_ap(precision,recall)) 
         return pr_curves
-

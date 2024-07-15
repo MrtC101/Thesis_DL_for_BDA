@@ -1,73 +1,66 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import os
-import sys
-import argparse
+import random
+from typing import Tuple
 from tqdm import tqdm
-from os.path import join
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-
-from utils.common.files import is_dir
+from utils.pathManagers.rawManager import RawPathManager
+from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
 
 log = LoggerSingleton()
 
-"""
-DISASTERS_OF_INTEREST = ('guatemala-volcano_', 'hurricane-florence_',
-    'hurricane-harvey_', 'mexico-earthquake_', 'midwest-flooding_',
-    'palu-tsunami_', 'santa-rosa-wildfire_', 'socal-fire_',
-    'lower-puna-volcano_', 'nepal-flooding_', 'pinery-bushfire_',
-    'portugal-wildfire_', 'sunda-tsunami_', 'woolsey-fire_')
-"""
-"""
-DISASTERS_OF_INTEREST = ('midwest-flooding_','guatemala-volcano_',
-    'hurricane-matthew_','hurricane-michael_', 'hurricane-florence_',
-    'hurricane-harvey_', 'santa-rosa-wildfire_', 'socal-fire_',
-    'lower-puna-volcano_', 'nepal-flooding_', 'pinery-bushfire_',
-    'portugal-wildfire_', 'woolsey-fire_')
-"""
 
-def delete_not_in(data_path: str) -> None:
-    """Deletes all files from data_path directory that don't starts with a
-    disaster of interest.
+def delete_not_in(data_path: FilePath,
+                  disasters_of_interest: Tuple[str]) -> None:
+    """ Deletes all files from `data_path` directory that don't start with
+    a disaster identifier from `disaster_of_interest` list.
 
     Args:
-        data_path : Path to the xBD dataset directory 
-        with subset directories.
-
+        data_path (str) : Path to the xBD dataset directory.
+        disasters_of_interest (List[str]) : List of disasters identifiers as
+        'Mexico-earthquake'
     Raises:
         AssertionException: If Path is not a Folder
+    """
+    # Changes the title fo the logger.
+    data_path = FilePath(data_path)
+    data_path.must_be_dir()
+    for subset_path in tqdm(data_path.get_folder_paths()):
+        log.info(f"Cleaning {subset_path}/ folder.")
+        for folder_path in subset_path.get_folder_paths():
+            for file in folder_path.get_files_names():
+                if not file.startswith(disasters_of_interest):
+                    folder_path.join(file).remove()
+    return
+
+
+def leave_only_n(data_path: FilePath, n: int) -> None:
+    """Pick n random disaster tiles and deletes all the rest of files from
+    disaster Dataset.
+
+    Args:
+        data_path: Path to the directory to the xBD dataset that contains
+        subsets of xBD dataset.
+        n: number of disasters that will be left in the folder.
 
     Example:
-        >>> delete_not_in("data/xBD/raw")
+        >>> leave_only_n("data/xBD/raw",45)
     """
+    data = RawPathManager.load_paths(data_path)
+    tot_tiles = [tile for tiles in data.values() for tile in tiles.values()]
+    total_tiles = len(tot_tiles)
+    if (total_tiles > n):
+        log.info(
+            f"Deleting {total_tiles-n} tiles of {total_tiles} total tiles.")
 
-    log.name = "Clean Folder"
-    DISASTERS_OF_INTEREST = ('mexico-earthquake_','palu-tsunami_', 'sunda-tsunami_')
-    is_dir(data_path)
-    for subset in tqdm(os.listdir(data_path)):
-        subset_path = join(data_path, subset)
-        log.info(f"Cleaning {subset_path}/ folder.")
+        ids = set(random.sample(range(total_tiles), n))
+        for id in tqdm(ids):
+            tile = tot_tiles[id]
+            for file in tile.values():
+                FilePath(file).remove()
 
-        for folder in os.listdir(subset_path):
-            folder_path = join(subset_path, folder)
-
-            if (not os.path.isfile(folder_path)):
-                for file in os.listdir(folder_path):
-                    if not file.startswith(DISASTERS_OF_INTEREST):
-                        os.remove(join(folder_path, file))
-            else:
-                continue
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(
-        description='Deletes all files from data_path directory that don\'t \
-            starts with a disaster of interest.')
-    parser.add_argument(
-        'data_path',
-        help=('Path to the directory that contains both the `images` and `labels` folders.')
-    )
-    args = parser.parse_args()
-    delete_not_in(args.data_path)
+        log.info(f"Files {total_tiles-n}  removed. {n} tiles left.")
+    else:
+        log.info(f"There are {total_tiles} total tiles.\
+                 From {len(list(data.keys()))} disasters. Skipped..")
+    return
