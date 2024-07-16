@@ -10,16 +10,18 @@ from torch.utils.data import Dataset
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
+from utils.common.pathManager import FilePath
 from utils.pathManagers.predictedManager import PredictedPathManager
-from utils.common.files import read_json, is_json
 
 
 class PredictedDataset(Dataset):
-    """Class that implements the corresponding methods to access raw xBD dataset data."""
+    """Class that implements the corresponding methods to access raw xBD 
+    dataset data."""
 
-    def __init__(self, split_raw_json_path: str, predicted_patches_folder_path: str):
-        is_json(split_raw_json_path)
-        splits_all_disasters = read_json(split_raw_json_path)
+    def __init__(self, split_raw_json_path: FilePath,
+                 predicted_patches_folder_path: FilePath):
+        split_raw_json_path.is_json()
+        splits_all_disasters = split_raw_json_path.read_json()
         tiles = splits_all_disasters["test"]
 
         predicted_dict = PredictedPathManager.load_paths(
@@ -33,8 +35,9 @@ class PredictedDataset(Dataset):
         return len(self.tile_list)
 
     def same_shape(self, dis_id, tile_id, img1, img2) -> bool:
-        assert img1.shape[:2] == img2.shape[:2], \
-            f'Images from {dis_id}_{tile_id} should be the same size, {img1.shape} != {img2.shape}.'
+        assert img1.shape[:2] == img2.shape[:2], f'Images from' + \
+            f'{dis_id}_{tile_id} should be the same size,' + \
+            f'{img1.shape} != {img2.shape}.'
         return True
 
     @staticmethod
@@ -61,11 +64,11 @@ class PredictedDataset(Dataset):
         data["bld_mask"] = cv2.imread(tile["pre"]["mask"])[:, :, 0]
         data["dmg_mask"] = cv2.imread(tile["post"]["mask"])[:, :, 0]
         if "json" in tile["pre"].keys():
-            data["bld_json"] = read_json(tile["pre"]["json"])
+            data["bld_json"] = FilePath(tile["pre"]["json"]).read_json()
         else:
             data["bld_json"] = None
         if "json" in tile["post"].keys():
-            data["dmg_json"] = read_json(tile["post"]["json"])
+            data["dmg_json"] = FilePath(tile["post"]["json"]).read_json()
         else:
             data["dmg_json"] = None
         data["pre_img"] = torch.Tensor(data["pre_img"]).to(torch.uint8)

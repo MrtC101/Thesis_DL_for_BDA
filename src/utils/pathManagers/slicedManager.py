@@ -1,15 +1,7 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import os
-import sys
-
 from tqdm import tqdm
-
 from utils.common.pathManager import FilePath
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-
 from utils.common.defaultDictFactory import nested_defaultdict
 
 

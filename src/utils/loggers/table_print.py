@@ -34,9 +34,13 @@ def mid_bar(table, col_width, tot_col):
     return table
 
 
-def metric_header(table, df, col_width, tot_col):
+def metric_header(table, df: pd.DataFrame, col_width, tot_col):
+    if ('epoch' in df.columns):
+        ep = int(df['epoch'][0])
+    else:
+        ep = ""
     table += "\u2551"
-    content = f"class \\ epoch {int(df['epoch'][0])}"
+    content = f"class \\ epoch {ep}"
     table += f"{content:^{col_width}}"
     for col_name in df.columns:
         if col_name != "epoch" and col_name != "class":
@@ -78,7 +82,7 @@ def to_table(curr_type, df: pd.DataFrame, odd: bool, decim_digits: int) -> str:
 
     Returns:
         str: The formatted table.
-    """    
+    """
     """ 
         \u2550 = '═'
         \u2551 = '║'
@@ -93,7 +97,10 @@ def to_table(curr_type, df: pd.DataFrame, odd: bool, decim_digits: int) -> str:
         \u256C = '╬'
     """
     col_width = 20
-    tot_col = len(df.columns) - 1
+    if ('epoch' in df.columns):
+        tot_col = len(df.columns) - 1
+    else:
+        tot_col = len(df.columns)
     tot_width = col_width * tot_col
 
     table = "\n"

@@ -3,47 +3,50 @@
 from collections import OrderedDict
 import os
 import sys
-import math
 import torch
 from torchvision import transforms
 from torchvision.io import read_image
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
+
+from utils.common.pathManager import FilePath
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from utils.common.files import read_json, is_json
 
 class TrainDataset(Dataset):
-    """Class that implements the corresponding methods to access raw xBD dataset data."""
+    """Class that implements the corresponding methods to }
+    access raw xBD dataset data."""
 
-    def __init__(self, split_name: str, splits_json_path: str, mean_stdv_json_path : str):
+    def __init__(self, split_name: str, splits_json_path: FilePath,
+                 mean_stdv_json_path: FilePath):
         self.split_name = split_name
         self.splits_json_path = splits_json_path
-        is_json(splits_json_path)
-        splits_all_disasters = read_json(splits_json_path)
+        splits_json_path.must_be_json()
+        splits_all_disasters = splits_json_path.read_json()
         data = splits_all_disasters[split_name]
 
-        is_json(mean_stdv_json_path)
-        self.data_mean_stddev = read_json(mean_stdv_json_path)
+        mean_stdv_json_path.must_be_json()
+        self.data_mean_stddev = mean_stdv_json_path.read_json()
 
         self.tile_list = [(dis_id, tile_id, patch_id, files)
                           for dis_id in data.keys()
                           for tile_id in data[dis_id].keys()
                           for patch_id, files in data[dis_id][tile_id].items()]
-        
+
         self.patch_list = [(dis_id, tile_id, tile_dict)
                            for dis_id in data.keys()
                            for tile_id, tile_dict in data[dis_id].items()]
 
-        self.normalize=True
+        self.normalize = True
 
     def __len__(self):
         return len(self.tile_list)
 
-    def _normalization(self, statistic : dict, prefix : str, image : torch.Tensor) -> torch.Tensor:
+    def _normalization(self, statistic: dict, prefix: str,
+                       image: torch.Tensor) -> torch.Tensor:
         """A np.array of an image with format (w,h,c)."""
-        
+
         mean = statistic[prefix]["mean"]
         stdv = statistic[prefix]["stdv"]
 
@@ -61,40 +64,40 @@ class TrainDataset(Dataset):
         norm_img = normalization(image)
         return norm_img
 
-    def set_normalize(self, normalize : bool) -> None:
+    def set_normalize(self, normalize: bool) -> None:
         self.normalize = normalize
 
-    def __getitem__(self, i : int) -> tuple:
+    def __getitem__(self, i: int) -> tuple:
         """
             Returns a tuple (disaster_id, tile_id, patch_id, data)
         """
         disaster_id, tile_id, patch_id, patch = self.tile_list[i]
-        
+
         pre_img = read_image(patch["pre_img"])
         post_img = read_image(patch["post_img"])
         bld_mask = read_image(patch["bld_mask"]).squeeze(0)
         dmg_mask = read_image(patch["dmg_mask"]).squeeze(0)
 
-        if(self.normalize):
+        if (self.normalize):
             tile_stat_dict = self.data_mean_stddev[disaster_id][tile_id]
             pre_img = self._normalization(tile_stat_dict, "pre", pre_img)
             post_img = self._normalization(tile_stat_dict, "post", post_img)
-           
-        #Clean 5 label unidentified from data
-        bld_mask[bld_mask == 5] = 0 
-        dmg_mask[dmg_mask == 5] = 0 
+
+        # Clean 5 label unidentified from data
+        bld_mask[bld_mask == 5] = 0
+        dmg_mask[dmg_mask == 5] = 0
 
         bld_mask = bld_mask.to(torch.int64)
         dmg_mask = dmg_mask.to(torch.int64)
 
         data = {
-            "pre_img" : pre_img,
-            "post_img" : post_img,
-            "bld_mask" : bld_mask,
-            "dmg_mask" : dmg_mask,
-        }        
-        return disaster_id, tile_id, patch_id, data   
-        
+            "pre_img": pre_img,
+            "post_img": post_img,
+            "bld_mask": bld_mask,
+            "dmg_mask": dmg_mask,
+        }
+        return disaster_id, tile_id, patch_id, data
+
     def get_by_id(self, i):
         disaster_id, tile_id, tile_dict = self.patch_list[i]
         keys_list = sorted(int(k) for k in tile_dict.keys())

@@ -80,8 +80,6 @@ def slice_dataset(splits_json_path: FilePath, output_path: FilePath) -> None:
         >>> slice_dataset("data/xBD/splits/raw_splits.json","data/xBD/sliced")
     """
 
-    log.name = "Create data patches (chips)"
-
     def iterate_and_slice(split_name):
         log.info(f'Starting slicing for {split_name}')
 

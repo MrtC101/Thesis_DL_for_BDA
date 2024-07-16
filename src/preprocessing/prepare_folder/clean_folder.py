@@ -17,7 +17,7 @@ def delete_not_in(data_path: FilePath,
 
     Args:
         data_path (str) : Path to the xBD dataset directory.
-        disasters_of_interest (List[str]) : List of disasters identifiers as
+        disasters_of_interest (Tuple[str]) : List of disasters identifiers as
         'Mexico-earthquake'
     Raises:
         AssertionException: If Path is not a Folder

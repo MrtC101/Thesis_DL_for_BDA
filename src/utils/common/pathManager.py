@@ -103,8 +103,9 @@ class FilePath(str):
     def is_dir(self) -> bool:
         return os.path.isdir(self)
 
-    def create_folder(self):
+    def create_folder(self) -> 'FilePath':
         os.makedirs(self, exist_ok=True)
+        return self
 
     def join(self, *kargs) -> 'FilePath':
         path = os.path.join(self, *kargs)

@@ -22,21 +22,25 @@ def log_Title(title: str):
     log.info("="*50)
 
 
-def preprocess(total_tiles: int,
-               disasters_of_interest: List[str]) -> Tuple[str, str, str]:
-    """Pipeline sequence for data preprocessing.
+def preprocess(total_tiles: int, num_aug: int,
+               disasters_of_interest: List[str],
+               out_path: FilePath) -> Tuple[str, str, str, str, str]:
+    """
+    Pipeline sequence for data preprocessing.
 
     Args:
         total_tiles (int): Total number of tiles to use for training the model.
-        disasters_of_interest (List[str]): List of disasters identifiers
-          strings for each disaster type that will be used for training
-          the model.
-          For example: `'midwest-flooding_'`
+        num_aug (int): Number of augmented images to create.
+        disasters_of_interest (List[str]): List of disaster identifiers 
+            as strings for each disaster type that will be used for training 
+            the model. For example: ['midwest-flooding'].
 
     Returns:
-        Tuple[str, str, str]: Paths to the json files representing splits
-        of tiles, splits of patches, and statistical data from tiles.
+        Tuple[str, str, str, str, str]: Paths to the JSON files representing 
+        splits of tiles, splits of patches, and statistical data from tiles.
     """
+    pre_path = out_path.join("preprocessing")
+    LoggerSingleton("PREPROCESSING", folder_path=pre_path)
 
     # folder cleaning
     log_Title("Deleting disasters that are not of interest")
@@ -59,20 +63,26 @@ def preprocess(total_tiles: int,
 
     # Data augmentation
     log_Title("Data augmentation")
-    aug_splits_json_path = make_augmentations(tile_splits_json_path,
-                                              xbd_path, 10)
+    aug_tile_split_json_path = make_augmentations(tile_splits_json_path,
+                                                  xbd_path, num_aug)
 
     log_Title("Creating data statistics")
-    data_dicts_path = create_data_dicts(aug_splits_json_path, xbd_path)
+    data_dicts_path = create_data_dicts(aug_tile_split_json_path, xbd_path)
     mean_std_json_path = data_dicts_path.join("all_tiles_mean_stddev.json")
 
     # Cropping
     log_Title("Creating data patches")
     patch_path = xbd_path.join("sliced")
-    slice_dataset(tile_splits_json_path, patch_path)
+    slice_dataset(aug_tile_split_json_path, patch_path)
 
     log_Title("Split patches")
     patch_split_json_path = split_sliced_dataset(
         patch_path, tile_splits_json_path, xbd_path)
 
-    return tile_splits_json_path, aug_splits_json_path, patch_split_json_path, mean_std_json_path
+    log_Title("Split augmented patches")
+    aug_patch_split_json_path = split_sliced_dataset(
+        patch_path, aug_tile_split_json_path, xbd_path)
+
+    return (tile_splits_json_path, patch_split_json_path,
+            aug_tile_split_json_path, aug_patch_split_json_path,
+            mean_std_json_path)
