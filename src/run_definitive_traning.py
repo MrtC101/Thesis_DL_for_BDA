@@ -1,8 +1,5 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from utils.loggers.console_logger import LoggerSingleton
-from utils.common.pathManager import FilePath
-from train.train import train_definitive
 import os
 import sys
 from os.path import join
@@ -15,13 +12,26 @@ os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
+from utils.common.pathManager import FilePath
+from utils.common.timeManager import measure_time
+from training.train_pipeline import train_definitive
 
-def train_definitive_model(configuration: dict) -> float:
+if __name__ == "__main__":
     out_path = FilePath(os.environ["OUT_PATH"])
-    s_path = out_path.join("hyper_parameter_search")
-    log = LoggerSingleton("HYPERPARAMETER_SEARCH", folder_path=s_path)
-    # Train definitive model
-    pred_path = out_path.join("definitive_model")
-    definitive_acc_score = train_definitive(pred_path, configuration)
-    log.info(f"Accuracy for the final model : {definitive_acc_score}")
-    return definitive_acc_score
+    paths = out_path.join("data_paths.json").read_json()
+    tile_splits_json_path = FilePath(paths['tile_splits_json_path'])
+    patch_split_json_path = FilePath(paths['patch_split_json_path'])
+    aug_tile_split_json_path = FilePath(paths['aug_tile_split_json_path'])
+    aug_patch_split_json_path = FilePath(paths['aug_patch_split_json_path'])
+    mean_std_json_path = FilePath(paths['mean_std_json_path'])
+
+    best_config = out_path.join("best_params.json").read_json()
+
+    paths_dict = {
+        "split_json": aug_patch_split_json_path,
+        "mean_json": mean_std_json_path,
+        "out_dir": out_path.join("definitive_model"),
+        "checkpoint": None
+    }
+    definitive_acc_score = measure_time(train_definitive, best_config,
+                                        paths_dict)

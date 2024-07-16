@@ -1,11 +1,5 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from training.hiper_search_pipeline import parameter_search
-from training.train_pipeline import train_definitive
-from utils.common.timeManager import measure_time
-from utils.common.pathManager import FilePath
-from preprocessing.preprocessing_pipeline import preprocess
-from postprocessing.postprocess_pipeline import postprocess
 import os
 import sys
 from os.path import join
@@ -17,6 +11,13 @@ os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+
+from training.hiper_search_pipeline import parameter_search
+from training.train_pipeline import train_definitive
+from utils.common.timeManager import measure_time
+from utils.common.pathManager import FilePath
+from preprocessing.preprocessing_pipeline import preprocess
+from postprocessing.postprocess_pipeline import postprocess
 
 """
 disasters_of_interest = (
@@ -80,7 +81,13 @@ if __name__ == "__main__":
         "out_dir": out_path,
         "checkpoint": None
     }
-    best_config = measure_time(parameter_search, 2, configs, paths_dict)
+    hyperparameter_config = {
+        'init_learning_rate': [0.0005],
+        'tot_epochs': [1],
+        'batch_size': [25]
+    }
+    best_config = measure_time(parameter_search, 2, hyperparameter_config,
+                               configs, paths_dict)
 
     paths_dict["split_json"] = aug_patch_split_json_path
     paths_dict['out_dir'] = out_path.join("definitive_model")
