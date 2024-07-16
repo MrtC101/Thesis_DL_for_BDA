@@ -117,7 +117,7 @@ def superposed_img(dis_id, tile_id, pre_img, pred_img, save_path):
         in the first row and 'curr_table' in the second row."""
     superposed_image = cv2.addWeighted(pre_img.numpy(), 0.8, pred_img.numpy(), 0.5, 0)
     file_path = os.path.join(save_path, f"{dis_id}_{tile_id}_superposed.png")
-    LabelMaskVisualizer.save_arr_img(superposed_image, file_path)
+    LabelMaskVisualizer.save_arr_img(superposed_image.numpy(), file_path)
 
 def plot_roc_curves(type, roc_curves, out):
     plt.figure(figsize=(10, 10),dpi=100)
