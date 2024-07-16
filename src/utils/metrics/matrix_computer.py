@@ -6,6 +6,7 @@ import concurrent.futures
 import torch
 from tqdm import tqdm
 from postprocessing.bbs.bounding_boxes import BoundingBox
+from utils.loggers.console_logger import LoggerSingleton
 from utils.metrics.common import Level
 import matplotlib
 
@@ -101,8 +102,9 @@ class MatrixComputer:
     @staticmethod
     def match_polygons(gt_buildings, gt_label_matrix, pd_label_matrix, th):
         """
-            Match each ground truth polygon with the max IoU predicted polygon, 
-            without repetition and only if its IoU is higher than the given threshold.
+            Match each ground truth polygon with the max IoU predicted polygon,
+            without repetition and only if its IoU is higher than the given
+            threshold.
         """
         pd_len = pd_label_matrix.unique().numel() - 1
         relation = torch.zeros(
@@ -163,21 +165,30 @@ class MatrixComputer:
         - pd_labels: Series con las etiquetas de los polígonos predichos.
         - IoU_df: DataFrame con los valores de IoU entre los polígonos coincidentes.
         """
+        log = LoggerSingleton()
+
         gt_buildings = get_buildings(target_mask, labels_set)
         gt_label_matrix = get_instance_mask(gt_buildings)
         pd_buildings = get_buildings(pred_mask, labels_set)
         pd_label_matrix = get_instance_mask(pd_buildings)
+        log.info('\n' +
+                 f"{len(gt_buildings)} buildings found in ground truth mask" +
+                 '\n' +
+                 f"{len(pd_buildings)} buildings found in predicted mask")
+        log.info("Matching labels for each building.")
         IoU_df = MatrixComputer.match_polygons(gt_buildings, gt_label_matrix,
                                                pd_label_matrix, iou_threshold)
+
         gt_labels = pd.Series([l for _, l in gt_buildings])
         pd_labels = pd.Series([l for _, l in pd_buildings])
         return gt_labels, pd_labels, IoU_df
 
     @staticmethod
-    def patches_obj_conf_mtrx(level, labels_set, n_masks, gt_bld_mask, gt_dmg_mask,
-                              pd_bld_mask, pd_dmg_mask):
-        """ Because computing a confusion matrix for the hole batch of patches is computationally
-        expensive, we are randomly sampling n. The result is the sum of all matrices."""
+    def patches_obj_conf_mtrx(level, labels_set, n_masks, gt_bld_mask,
+                              gt_dmg_mask, pd_bld_mask, pd_dmg_mask):
+        """ Because computing a confusion matrix for the hole batch of patches
+         is computationally expensive, we are randomly sampling n.
+        The result is the sum of all matrices."""
         patch_ids = [random.randint(0, len(pd_bld_mask)-1)
                      for _ in range(n_masks)]
         # iterates over the shard
@@ -246,7 +257,7 @@ class MatrixComputer:
             rel_df = IoU_df.loc[curr_gt.index]
             matched_ids = rel_df[rel_df["pid"] > -1]["pid"]
             curr_prd = pd_labels.loc[matched_ids]
-            
+
             for prd in range(l_size):
                 l_p = labels_set[prd]
                 mat[gt][prd] = (curr_prd == l_p).sum()
@@ -254,7 +265,8 @@ class MatrixComputer:
             mat[gt][l_size] = (rel_df["pid"] == -1).sum()  # Undetected
             mat[gt][size - 1] = len(curr_gt)
 
-            ghost = pd_labels.loc[~pd_labels.index.isin(matched_ids)][pd_labels == l_g]
+            ghost = pd_labels.loc[~pd_labels.index.isin(
+                matched_ids)][pd_labels == l_g]
             mat[l_size][gt] = len(ghost)  # Ghost predictions
 
         for prd in range(l_size):
@@ -265,11 +277,12 @@ class MatrixComputer:
         # Unpredicted
         mat[size - 1][l_size] = torch.sum(mat[:, l_size])
         # Totales por fila y columna
-        mat[size - 1][size - 1] = torch.sum(mat[:size, size - 1]) + torch.sum(mat[size - 1, :size])
+        mat[size - 1][size -
+                      1] = torch.sum(mat[:size, size - 1]) + torch.sum(mat[size - 1, :size])
 
         # Convertir a DataFrame de pandas
         mat_df = pd.DataFrame(mat.numpy(), columns=labels_set + ['Undetected', 'Total'],
-                            index=labels_set + ['Ghost', 'Total'])
+                              index=labels_set + ['Ghost', 'Total'])
         return mat_df
 
     @staticmethod
@@ -293,7 +306,7 @@ class MatrixComputer:
         fn = torch.sum(bin_true_tensor & ~bin_pred_tensor, axis)
         fp = torch.sum(~bin_true_tensor & bin_pred_tensor, axis)
         tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis)
-        return torch.stack([tp, fp, fn, tn], axis=0).transpose(0,1)
+        return torch.stack([tp, fp, fn, tn], axis=0).transpose(0, 1)
 
     @staticmethod
     def compute_bin_matrices_obj(bin_pred_tensor: torch.Tensor,
