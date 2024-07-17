@@ -1,9 +1,9 @@
 # Copyright (c) 2024 Martín Cogo Belver.
 # Martín Cogo Belver has rights reserved over this modifications.
-import datetime
 import os
 import re
 import shutil
+from datetime import datetime
 from time import localtime, strftime
 import torch
 import torch.nn as nn
@@ -39,18 +39,18 @@ class TrainModel(SiamUnet):
         self.upconv1_c.bias.data.fill_(0.01)
         self.conv_c.bias.data.fill_(0.01)
 
-        self.conv4_c.apply(SiamUnet.init_weights)
-        self.conv3_c.apply(SiamUnet.init_weights)
-        self.conv2_c.apply(SiamUnet.init_weights)
-        self.conv1_c.apply(SiamUnet.init_weights)
+        def init_weights(m):
+            """Inits a weights of the current layer with xavier uniform"""
+            if type(m) == nn.Linear:
+                torch.nn.init.xavier_uniform_(m.weight)
+                m.bias.data.fill_(0.01)
 
-    def init_weights(m):
-        """Inits a weights of the current layer with xavier uniform"""
-        if type(m) == nn.Linear:
-            torch.nn.init.xavier_uniform_(m.weight)
-            m.bias.data.fill_(0.01)
+        self.conv4_c.apply(init_weights)
+        self.conv3_c.apply(init_weights)
+        self.conv2_c.apply(init_weights)
+        self.conv1_c.apply(init_weights)
 
-    def find_last(checkpoint_dir: str) -> str:
+    def find_last(self, checkpoint_dir: str) -> str:
         """
         Finds the latest checkpoint file based on the date in the filename.
 
@@ -71,8 +71,7 @@ class TrainModel(SiamUnet):
             if file_name != 'model_best.pth.tar':
                 match = date_pattern.search(file_name)
                 if match:
-                    file_date = datetime.strptime(
-                        match.group(1), '%Y-%m-%d-%H-%M-%S')
+                    file_date = datetime.strptime(match.group(1), '%Y-%m-%d-%H-%M-%S')
                     if latest_date is None or file_date > latest_date:
                         latest_date = file_date
                         latest_file_name = file_name
@@ -106,9 +105,9 @@ class TrainModel(SiamUnet):
         if not new_optimizer:
             # don't load the optimizer settings so that a newly
             # specified lr can take effect
-            self.print_network()
+            #self.print_network()
             self.freeze_model_param()
-            self.print_network()
+            #self.print_network()
 
             for tag, value in self.named_parameters():
                 tag = tag.replace('.', '/')

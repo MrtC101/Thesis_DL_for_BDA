@@ -42,7 +42,7 @@ def _start_k_fold(folds: int, index: int,
     return index, score
 
 
-def parameter_search(folds: int, param_list: dict, paths_dict: dict) -> dict:
+def parameter_search(folds: int, param_list: dict, paths_dict: dict, parallel=False) -> dict:
     """
     Perform hyperparameter search using k-fold cross-validation.
 
@@ -58,10 +58,13 @@ def parameter_search(folds: int, param_list: dict, paths_dict: dict) -> dict:
         "hyperparameter_console_logs")
     log = LoggerSingleton("HYPERPARAMETER_SEARCH", log_out)
     log.info(f"Cantidad de configuraciones: {len(param_list)}.")
-    results = [_start_k_fold(folds, i, config, paths_dict) for i, config in tqdm(param_list)]
-    #results = Parallel(n_jobs=-1)(delayed(_start_k_fold)
-    #                              (folds, i, config, paths_dict)
-    #                              for i, config in tqdm(param_list))
+    if parallel:
+        results = Parallel(n_jobs=-1)(delayed(_start_k_fold)
+                                  (folds, i, config, paths_dict)
+                                  for i, config in tqdm(param_list))
+    else:
+        results = [_start_k_fold(folds, i, config, paths_dict) for i, config in tqdm(param_list)]
+
     best_index, best_acc = min(results, key=lambda x: x[1])
 
     log.info(f"Configuration number {best_index}" +

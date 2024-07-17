@@ -115,9 +115,8 @@ class SiamUnet(nn.Module):
                 ]
             )
         )
-
-    #Used for debugging
     """
+    #Used for debugging
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
         b = nn.Conv2d(3, 5, kernel_size=1)(x2)
@@ -127,8 +126,9 @@ class SiamUnet(nn.Module):
         for c in range(0, b.shape[1]):
             b[:, c, :, :] = torch.mul(b[:, c, :, :], preds_seg_pre)
 
-        return a, a, b
+        return a, a, b    
     """
+    
     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
             tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """

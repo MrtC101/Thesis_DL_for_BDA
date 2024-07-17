@@ -83,7 +83,9 @@ def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint : bool
     Returns:
         tuple: (optimizer, starting_epoch, best_acc)
     """
-    if checkpoint:
+       
+    files = len(checkpoint_path.get_files_names())
+    if checkpoint and files > 0:
         log.info(f'Loading checkpoint from {checkpoint_path}')
         return model.resume_from_checkpoint(checkpoint_path, device,
                                             init_learning_rate,
