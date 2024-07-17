@@ -1,7 +1,7 @@
 #!/bin/bash
 
 folder_path="/home/mcogo/scratch"
-train_py="${folder_path}/src/run_all.py"
+train_py="${folder_path}/src/run_definitive_traning.py"
 output_file="${folder_path}/out/time.txt"
 
 # Initialize conda

@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name="sat_img"
+#SBATCH --job-name="sat_img_pre"
 #SBATCH --output=/home/mcogo/scratch/out/sat_img.out
 #SBATCH --error=/home/mcogo/scratch/out/sat_img.err
 #SBATCH --mail-type=ALL 
@@ -10,7 +10,7 @@
 #SBATCH --nodes=1
 ## Cantidad de procesos que se ejecutarán por nodo,
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=64
+#SBATCH --cpus-per-task=5
 
 ##Partición o cola en la cual se quiere enviar el trabajo.
 #SBATCH --partition=XL
@@ -18,4 +18,4 @@
 ##SBATCH --requeue
 
 ## Ejecutar codigo
-/bin/bash -c /home/mcogo/scratch/submit/start.sh
+/bin/bash -c /home/mcogo/scratch/submit/pre/start_pre.sh

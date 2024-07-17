@@ -85,8 +85,6 @@ class RawPathManager(dict):
         file_path = folder_path.join(file_name)
         file_path.must_be_file()
         dis_id, tile_id, prefix, file_type = self._split_file_name(file_name)
-        assert len(dis_id.split("-")) == 2, \
-            "Incorrect disaster identifier (location-disaster)"
         if (dis_id not in self.keys()):
             self[dis_id] = ZoneDict()
         self[dis_id].add(tile_id, prefix, file_type, file_path)
