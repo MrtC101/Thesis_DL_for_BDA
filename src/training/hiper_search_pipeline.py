@@ -6,7 +6,7 @@ from utils.loggers.console_logger import LoggerSingleton
 from sklearn.model_selection import ParameterGrid
 
 
-def _create_params(hyperparameter_config: dict, configs: dict) -> list[dict]:
+def create_params(hyperparameter_config: dict, configs: dict) -> list[dict]:
     """
     Create a list of configuration dictionaries for hyperparameter
       optimization.
@@ -19,7 +19,7 @@ def _create_params(hyperparameter_config: dict, configs: dict) -> list[dict]:
           hyperparameter combinations.
     """
     param_combinations = list(ParameterGrid(hyperparameter_config))
-    return [{**configs, **params} for params in param_combinations]
+    return [(i, {**configs, **params}) for i, params in enumerate(param_combinations)]
 
 
 def _start_k_fold(folds: int, index: int,
@@ -42,8 +42,7 @@ def _start_k_fold(folds: int, index: int,
     return index, score
 
 
-def parameter_search(folds: int, hyperparameter_config: list,
-                     configs: dict, paths_dict: dict) -> dict:
+def parameter_search(folds: int, param_list: dict, paths_dict: dict) -> dict:
     """
     Perform hyperparameter search using k-fold cross-validation.
 
@@ -58,12 +57,11 @@ def parameter_search(folds: int, hyperparameter_config: list,
     log_out = FilePath(paths_dict['out_dir']).join(
         "hyperparameter_console_logs")
     log = LoggerSingleton("HYPERPARAMETER_SEARCH", log_out)
-    param_list = _create_params(hyperparameter_config, configs)
     log.info(f"Cantidad de configuraciones: {len(param_list)}.")
-    #results = [_start_k_fold(folds, i, config, paths_dict) for i, config in enumerate(tqdm(param_list))]
-    results = Parallel(n_jobs=-1)(delayed(_start_k_fold)\
+    # results = [_start_k_fold(folds, i, config, paths_dict) for i, config in tqdm(param_list)]
+    results = Parallel(n_jobs=-1)(delayed(_start_k_fold)
                                   (folds, i, config, paths_dict)
-                                  for i, config in enumerate(tqdm(param_list)))
+                                  for i, config in tqdm(param_list))
     best_index, best_acc = min(results, key=lambda x: x[1])
 
     log.info(f"Configuration number {best_index}" +

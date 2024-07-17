@@ -1,7 +1,7 @@
 #!/bin/bash
 
 folder_path="/home/mcogo/scratch"
-train_py="${folder_path}/src/run_all.py"
+train_py="${folder_path}/src/run_parameter_search.py"
 output_file="${folder_path}/out/time.txt"
 
 # Initialize conda
@@ -10,6 +10,8 @@ conda activate develop
 
 # src path var
 export PROJ_PATH="$folder_path"
+export START_CONF="0"
+export END_CONF="2"
 
 # Start timer
 start=$(date +%s)

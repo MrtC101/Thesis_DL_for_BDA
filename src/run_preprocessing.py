@@ -3,7 +3,9 @@
 import os
 import sys
 from os.path import join
-os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+
+#os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+
 os.environ["SRC_PATH"] = join(os.environ["PROJ_PATH"], "src")
 os.environ["DATA_PATH"] = join(os.environ["PROJ_PATH"], "data")
 os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
@@ -43,9 +45,16 @@ if __name__ == "__main__":
     out_path = FilePath(os.environ["OUT_PATH"])
     disasters_of_interest: tuple = (
         'mexico-earthquake',
+        'nepal-flooding',
+        'midwest-flooding',
+        'santa-rosa-wildfire',
+        'portugal-wildfire',
+        'socal-fire',
+        'woolsey-fire',
+        'pinery-bushfire',
     )
     disaster_num = 10 * 100000
-    num_aug = 5
+    num_aug = 10
 
     paths = measure_time(preprocess, disaster_num, num_aug,
                          disasters_of_interest, out_path)

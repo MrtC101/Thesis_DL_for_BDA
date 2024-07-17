@@ -1,6 +1,6 @@
 #!/bin/bash
 
-#SBATCH --job-name="sat_img"
+#SBATCH --job-name="sat_img_post"
 #SBATCH --output=/home/mcogo/scratch/out/sat_img.out
 #SBATCH --error=/home/mcogo/scratch/out/sat_img.err
 #SBATCH --mail-type=ALL 
@@ -18,4 +18,4 @@
 ##SBATCH --requeue
 
 ## Ejecutar codigo
-/bin/bash -c /home/mcogo/scratch/submit/start.sh
+/bin/bash -c /home/mcogo/scratch/submit/post/start_post.sh

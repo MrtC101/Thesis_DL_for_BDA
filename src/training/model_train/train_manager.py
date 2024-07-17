@@ -67,8 +67,8 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir,
     return best_acc
 
 
-def resume_model(model: TrainModel, checkpoint_path: FilePath, device,
-                 init_learning_rate, tb_logger, new_optimizer):
+def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint : bool,
+                  device, init_learning_rate, tb_logger, new_optimizer):
     """
     Resume the model from a checkpoint or start from scratch.
 
@@ -83,7 +83,7 @@ def resume_model(model: TrainModel, checkpoint_path: FilePath, device,
     Returns:
         tuple: (optimizer, starting_epoch, best_acc)
     """
-    if checkpoint_path and checkpoint_path.isfile():
+    if checkpoint:
         log.info(f'Loading checkpoint from {checkpoint_path}')
         return model.resume_from_checkpoint(checkpoint_path, device,
                                             init_learning_rate,
@@ -149,7 +149,7 @@ def train_model(configs: dict[str],
 
     # resume from a checkpoint if provided
     optimizer, starting_epoch, best_acc = \
-        resume_model(model, paths['checkpoint'],
+        resume_model(model, checkpoint_dir, configs["checkpoint"],
                      device,
                      configs['init_learning_rate'],
                      tb_logger,

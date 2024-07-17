@@ -45,8 +45,9 @@ def json_to_mask(label_path: FilePath,
         dmg_label = labels.get_num_by_key(damage_class)
         # Read the coordinates
         shapes.append((wkt.loads(building['wkt']), dmg_label))
-
-    mask_img = rasterize(shapes, size, fill=0)
+    mask_img = np.zeros(shape=size, dtype=np.uint8)
+    if len(shapes) > 0:
+        mask_img = rasterize(shapes, size, fill=0)
     return mask_img
 
 
@@ -59,8 +60,8 @@ def mask_tiles(labels_dir: FilePath, targets_dir: FilePath) -> None:
         targets_dir: path to the new targets folder.
     """
     # list out label files for the disaster of interest
-    log.info(f'{len(labels_dir.get_file_paths())} json files found\
-              in labels directory.')
+    log.info(f"{len(labels_dir.get_file_paths())} json files found in labels" +
+             " directory.")
     for label_path in tqdm(labels_dir.get_file_paths()):
         file_name = label_path.basename().split('.json')[0]
         target_path = targets_dir.join(f'{file_name}_target.png')
@@ -93,8 +94,8 @@ def create_masks(raw_path: FilePath) -> None:
         targets_dir = subset_path.join('targets')
 
         if (not labels_dir.is_dir()):
-            log.info(f"Skiping folder {subset_path},\
-                      there is no folder 'images' or 'labels'.")
+            log.info(f"Skiping folder {subset_path}," +
+                     "there is no folder 'images' or 'labels'.")
             # Move folder to skip it
             shutil.move(subset_path, join(raw_path, "..", subset))
 
