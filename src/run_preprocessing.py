@@ -4,7 +4,7 @@ import os
 import sys
 from os.path import join
 
-#os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
 
 os.environ["SRC_PATH"] = join(os.environ["PROJ_PATH"], "src")
 os.environ["DATA_PATH"] = join(os.environ["PROJ_PATH"], "data")
@@ -53,7 +53,7 @@ if __name__ == "__main__":
         'woolsey-fire',
         'pinery-bushfire',
     )
-    disaster_num = 10 * 100000
+    disaster_num = 15
     num_aug = 10
 
     paths = measure_time(preprocess, disaster_num, num_aug,
