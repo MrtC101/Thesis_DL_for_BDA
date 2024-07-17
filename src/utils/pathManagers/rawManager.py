@@ -1,11 +1,6 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from utils.common.files import is_dir, is_file
-from os.path import join
-import os
-import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
+from utils.common.pathManager import FilePath
 
 
 class TileFilesDict(dict):
@@ -34,11 +29,12 @@ class TileFilesDict(dict):
             pnt_str = ""
             exp_str = ""
             for i, pnt in enumerate(present):
-                exp_str += expected[i] + ","
+                exp_str += expected[i] + ", "
                 if not pnt:
-                    pnt_str += expected[i] + ","
-            raise ValueError(f"{exp_str[:-1]} files were expected, but \
-                             {pnt_str[:-1]} not present in dataset folder.")
+                    pnt_str += expected[i] + ", "
+            raise ValueError(f"{exp_str[:-1]} files were expected," +
+                             f"but {pnt_str[:-1]} not present in" +
+                             "dataset folder.")
 
 
 class TileDict(dict):
@@ -46,21 +42,13 @@ class TileDict(dict):
         Class that represents the relationship between
         pre and post disaster Files.
     """
-    tile_id: str
-
-    def __init__(self, tile_id):
-        super().__init__()
-        self.tile_id = tile_id
 
     def add(self, time_prefix, file_type, path):
-        assert time_prefix in [
-            "pre", "post"], f"Only pre and post allowed. Not {time_prefix}."
+        assert time_prefix in ["pre", "post"], \
+            f"Only pre and post allowed. Not {time_prefix}."
         if (time_prefix not in self.keys()):
             self[time_prefix] = TileFilesDict()
         self[time_prefix].add(file_type, path)
-
-    def get_id(self):
-        return self.tile_id
 
     def check(self):
         expected = ["pre", "post"]
@@ -69,66 +57,48 @@ class TileDict(dict):
             exp_str = ""
             for i, pnt in enumerate(present):
                 if (pnt):
-                    exp_str += expected[i] + ","
+                    exp_str += expected[i] + ", "
             raise ValueError(
-                f"{exp_str[:-1]} disaster files for {self.tile_id} were \
-                    expected, but not present in dataset folder.")
+                f"{exp_str[:-1]} disaster were expected but not present.")
         for tileFiles in self.values():
             tileFiles.check()
 
 
 class ZoneDict(dict):
-    zone_name: str
-    disaster_type: str
-
-    def __init__(self, id):
-        super().__init__()
-        parts = id.split('-')
-        assert len(parts) == 2, f"{id} is not an allowed zone id."
-        self.zone_name, self.disaster_type = id.split('-')
 
     def add(self, tile_id, time_prefix, file_type, file_path):
         if (tile_id not in self.keys()):
-            self[tile_id] = TileDict(tile_id)
+            self[tile_id] = TileDict()
         self[tile_id].add(time_prefix, file_type, file_path)
-
-    def get_id(self):
-        return f"{self.zone_name}-{self.disaster_type}"
 
     def check(self):
         for id, tile in self.items():
             try:
                 tile.check()
             except ValueError as e:
-                raise ValueError(f"Error for tile {id} of zone \
-                                 {self.get_id()}: " + str(e))
+                raise ValueError(f"Error for tile {id} " + str(e))
 
 
-class DisasterDict(dict):
+class RawPathManager(dict):
 
-    def add(self, folder_path, file_name):
-        file_path = join(folder_path, file_name)
-        is_file(file_path)
-        zone = self._split_file_name(file_name)
-        if (zone["id"] not in self.keys()):
-            self[zone["id"]] = ZoneDict(zone["id"])
-        tiles = self[zone["id"]]
-        tiles.add(zone["tile_id"], zone["time_prefix"],
-                  zone["file_type"], file_path)
+    def add(self, folder_path: FilePath, file_name: str):
+        file_path = folder_path.join(file_name)
+        file_path.must_be_file()
+        dis_id, tile_id, prefix, file_type = self._split_file_name(file_name)
+        assert len(dis_id.split("-")) == 2, \
+            "Incorrect disaster identifier (location-disaster)"
+        if (dis_id not in self.keys()):
+            self[dis_id] = ZoneDict()
+        self[dis_id].add(tile_id, prefix, file_type, file_path)
 
     def _split_file_name(self, file_name):
         parts: list[str] = file_name.split('_')
-        assert (len(parts) == 4 or len(parts) ==
-                5), f"{file_name} is not an xBD dataset file"
-        zone_nom = {
-            "id": parts[0],
-            "tile_id": parts[1],
-            "time_prefix": parts[2],
-            "file_type": parts[3]
-        }
+        assert (len(parts) == 4 or len(parts) == 5), \
+            f"{file_name} is not an xBD dataset file"
+        file_type = parts[3]
         if (len(parts) == 5):
-            zone_nom["file_type"] = f"{parts[3]}_{parts[4]}"
-        return zone_nom
+            file_type = f"{parts[3]}_{parts[4]}"
+        return parts[0], parts[1], parts[2], file_type
 
     def check(self):
         """ Checks that every tile from each disaster have 6 files.
@@ -136,55 +106,17 @@ class DisasterDict(dict):
         for tileDict in self.values():
             tileDict.check()
 
-    def to_dict(self) -> dict:
+    @staticmethod
+    def load_paths(data_path: FilePath) -> 'RawPathManager':
         """
-            Iterates throw the DisasterDict and returns a dict object with
-            only all paths of files related to each disaster zone.
+            Creates a DisasterDict that stores each file path.
         """
-        path_dict: dict = {}
-        zone: ZoneDict
-        for zone_id, zone in self.items():
-            tile: TileDict
-            for tile_id, tile in zone.items():
-                files: TileFilesDict
-                for timestamp, files in tile.items():
-                    for type, file_path in files.items():
-                        if zone_id not in path_dict.keys():
-                            path_dict[zone_id] = []
-                        path_dict[zone_id].append(file_path)
-        return path_dict
-
-    def to_split_dict(self) -> dict:
-        split_dict: dict = {}
-        zone: ZoneDict
-        for zone_id, zone in self.items():
-            tile: TileDict
-            for tile_id, tile in zone.items():
-                new_id = zone_id+"_"+tile_id
-                split_dict[new_id] = tile
-        return split_dict
-
-
-class RawPathManager:
-
-    @classmethod
-    def load_paths(cls, data_path: str) -> DisasterDict:
-        """
-            Creates a DisasterDict that stores each file path
-        """
-        is_dir(data_path)
-
-        dataset_subsets = os.listdir(data_path)
-        disaster_zone_dict = DisasterDict()
-        for subset in dataset_subsets:
-            for folder in ["images", "labels", "targets"]:
-                folder_path = join(data_path, subset, folder)
-                is_dir(data_path)
-                for file in os.listdir(folder_path):
+        data_path.must_be_dir()
+        disaster_zone_dict = RawPathManager()
+        for subset_path in data_path.get_folder_paths():
+            for folder_path in subset_path.get_folder_paths():
+                folder_path.must_be_dir()
+                for file in folder_path.get_files_names():
                     disaster_zone_dict.add(folder_path, file)
+        disaster_zone_dict.check()
         return disaster_zone_dict
-
-
-if __name__ == "__main__":
-    XBD = RawPathManager.load_dataset("/home/mrtc101/Desktop/tesina/repo/my_siames/data/xBD/raw/")
-    XBD.to_dict()

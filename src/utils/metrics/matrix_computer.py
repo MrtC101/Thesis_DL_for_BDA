@@ -1,332 +1,334 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from collections import OrderedDict, defaultdict
 import random
-
 import pandas as pd
-import rasterio
-import shapely
-import rasterio.features
-import numpy as np
-import shapely.geometry
-from shapely.geometry import Polygon
-
+import concurrent.futures
+import torch
+from tqdm import tqdm
+from postprocessing.bbs.bounding_boxes import BoundingBox
+from utils.loggers.console_logger import LoggerSingleton
 from utils.metrics.common import Level
+import matplotlib
+
+from postprocessing.bbs.polygon_manager import get_buildings, get_instance_mask
+matplotlib.use("TkAgg")
 
 
 class MatrixComputer:
 
+    # PIXEL LEVEL
     @staticmethod
-    def conf_mtrx_for_px_level(level, labels_set, pred_bld_mask, pred_dmg_mask,
-                               y_bld_mask, y_dmg_mask):
-        """Confusion pixel level metrics for masks"""
+    def patches_px_conf_mtrx(level, labels_set, gt_bld_mask, gt_dmg_mask, pd_bld_mask, pd_dmg_mask):
+        """This method computes a confusión matrix for the hole batch of patches masks
+        TODO:desc"""
         conf_mtrx_list = []
-        for cls in labels_set:
+        for label in labels_set:
             if level == Level.PX_BLD:
-                conf_mtrx = MatrixComputer.conf_mtrx_px_bld_mask(
-                    pred_bld_mask, y_bld_mask, cls)
+                conf_mtrx = MatrixComputer.\
+                    conf_mtrx_px_by_cls(
+                        gt_bld_mask, gt_bld_mask, pd_bld_mask, label)
             elif level == Level.PX_DMG:
-                conf_mtrx = MatrixComputer.conf_mtrx_px_cls_mask(
-                    pred_dmg_mask, y_dmg_mask, y_bld_mask, cls)
+                conf_mtrx = MatrixComputer.\
+                    conf_mtrx_px_by_cls(
+                        gt_bld_mask, gt_dmg_mask, pd_dmg_mask, label)
             conf_mtrx_list.append(conf_mtrx)
         return pd.DataFrame(conf_mtrx_list)
 
     @staticmethod
-    def conf_mtrx_px_bld_mask(y_preds, y_true, cls):
-        """Computes the confusion matrix for the predicted building mask.(Pixel Level)"""
-        y_true_binary = y_true.detach().clone()
-        y_preds_binary = y_preds.detach().clone()
-
-        # compute confusion metric
-        true_pos_cls = ((y_true_binary == y_preds_binary) &
-                        (y_true_binary == 1)).float().sum().item()
-        false_neg_cls = ((y_true_binary != y_preds_binary) &
-                         (y_true_binary == 1)).float().sum().item()
-        true_neg_cls = ((y_true_binary == y_preds_binary) &
-                        (y_true_binary == 0)).float().sum().item()
-        false_pos_cls = ((y_true_binary != y_preds_binary) &
-                         (y_true_binary == 0)).float().sum().item()
-
-        # compute total pixels
-        total_pixels = 1
-        for item in y_true_binary.size():
-            total_pixels *= item
-        return {'class': cls, 'true_pos': true_pos_cls,
-                'true_neg': true_neg_cls, 'false_pos': false_pos_cls,
-                'false_neg': false_neg_cls, 'total': total_pixels}
+    def tile_px_conf_mtrx(gt_bld_mask: torch.Tensor, gt_dmg_mask: torch.Tensor,
+                          pd_dmg_mask: torch.Tensor, labels_set: int):
+        """Computes the confusion matrix for the predicted mask.(Pixel Level)"""
+        conf_mtrx_list = []
+        for label in labels_set:
+            conf = MatrixComputer.\
+                conf_mtrx_px_by_cls(gt_bld_mask.unsqueeze(0), gt_dmg_mask.unsqueeze(0),
+                                    pd_dmg_mask.unsqueeze(0), label)
+            conf_mtrx_list.append(conf)
+        return pd.DataFrame(conf_mtrx_list)
 
     @staticmethod
-    def conf_mtrx_px_cls_mask(y_preds, y_dmg_mask, y_bld_mask, cls):
-        """Computes the confusion matrix for predicted damage mask.(Pixel Level)"""
-        # Convert any other class to 0
-        y_true_binary = y_dmg_mask.detach().clone()
-        y_true_binary[y_true_binary != cls] = -1
-        y_true_binary[y_true_binary == cls] = 1
-        y_true_binary[y_true_binary == -1] = 0
+    def conf_mtrx_px_by_cls(gt_bld_mask, gt_mask, pd_mask, label):
+        """Computes a confusión matrix for a batch of images with a one vs all approach.
 
-        y_preds_binary = y_preds.detach().clone()
-        y_preds_binary[y_preds_binary != cls] = -1
-        y_preds_binary[y_preds_binary == cls] = 1
-        y_preds_binary[y_preds_binary == -1] = 0
+            Args:
+                gt_bld_mask : Ground truth building mask
+                gt_mask : Ground truth mask for buildings or for damages
+                pd_mask : Predicted mask for buildings or for damages
 
-        # compute confusion metric
-        true_pos_cls = ((y_true_binary == y_preds_binary) & (
-            y_true_binary == 1) & (y_bld_mask == 1)).float().sum().item()
-        false_neg_cls = ((y_true_binary != y_preds_binary) & (
-            y_true_binary == 1) & (y_bld_mask == 1)).float().sum().item()
-        true_neg_cls = ((y_true_binary == y_preds_binary) & (
-            y_true_binary == 0) & (y_bld_mask == 1)).float().sum().item()
-        false_pos_cls = ((y_true_binary != y_preds_binary) & (
-            y_true_binary == 0) & (y_bld_mask == 1)).float().sum().item()
+        """
+        bld_mat = (gt_bld_mask == 1)
+        gt_mat = (gt_mask == label) & bld_mat
+        pd_mat = (pd_mask == label) & bld_mat
+        axis = (0, 1, 2)
+        tp = torch.sum(gt_mat & pd_mat, axis)
+        fn = torch.sum(gt_mat & ~pd_mat, axis)
+        fp = torch.sum(~gt_mat & pd_mat, axis)
+        tn = torch.sum(~bld_mat & ~(pd_mask == label), axis)
+        total_pixels = tp + fn + fp + tn
+        return {'class': label,
+                'true_pos': int(tp),
+                'false_pos': int(fp),
+                'false_neg': int(fn),
+                'true_neg': int(tn),
+                'total': int(total_pixels)}
 
-        # compute total pixels
-        total_pixels = y_bld_mask.float().sum().item()
-        return {'class': cls, 'true_pos': true_pos_cls,
-                'true_neg': true_neg_cls, 'false_pos': false_pos_cls,
-                'false_neg': false_neg_cls, 'total': total_pixels}
-
-    # Compute confusión Matrixes
     @staticmethod
-    def conf_mtrx_for_obj_level(level, labels_set, n_masks, pred_bld_mask, pred_dmg_mask,
-                                y_bld_mask, y_dmg_mask):
-        """Creates a confusión matrix for the current predicted masks."""
-        # Because computing a confusion matrix for each building of each image in the batch is
-        # computationally expensive, we are randomly sampling n images from the batch and
-        # calculating one matrix for each of those images. Then, we obtain the average matrix
-        # from all the calculated matrices.
-        patch_ids = [random.randint(0, len(pred_bld_mask)-1)
+    def px_multiclass_conf_mtrx(dmg_mask: torch.Tensor, pred_mask: torch.Tensor,
+                                dmg_labels: list[int]) -> pd.DataFrame:
+        l_size = len(dmg_labels)
+        mat = torch.zeros(size=(l_size + 1, l_size + 1), dtype=torch.int32)
+
+        # Llenar la matriz de confusión
+        for gt in range(l_size):
+            for prd in range(l_size):
+                bin_true = dmg_mask == dmg_labels[gt]
+                bin_pred = pred_mask == dmg_labels[prd]
+                mat[gt][prd] = torch.sum(bin_true & bin_pred).item()
+
+        # Sumar los totales por fila y columna
+        for gt in range(l_size):
+            mat[gt][l_size] = torch.sum(mat[gt, :l_size]).item()
+        for prd in range(l_size):
+            mat[l_size][prd] = torch.sum(mat[:l_size, prd]).item()
+
+        mat[l_size][l_size] = torch.sum(mat[:l_size, :l_size]).item()
+        # Convertir a DataFrame de pandas
+        mat_df = pd.DataFrame(mat.numpy(), columns=dmg_labels + ['Total'],
+                              index=dmg_labels + ['Total'])
+        return mat_df
+
+    # OBJECT LEVEL
+
+    @staticmethod
+    def match_polygons(gt_buildings, gt_label_matrix, pd_label_matrix, th):
+        """
+            Match each ground truth polygon with the max IoU predicted polygon,
+            without repetition and only if its IoU is higher than the given
+            threshold.
+        """
+        pd_len = pd_label_matrix.unique().numel() - 1
+        relation = torch.zeros(
+            size=(len(gt_buildings), pd_len), dtype=torch.float)
+
+        # Fill relation matrix
+        for gid, (gt_poly, _) in enumerate(tqdm(gt_buildings)):
+            gt_bb = BoundingBox.create(gt_poly)
+            x1, y1, x2, y2 = gt_bb.get_components()
+            candidates = pd_label_matrix[y1:y2, x1:x2].unique()
+            best_pid, best_iou = -1, 0.0
+            for pid in candidates:
+                if pid > 0:
+                    intersection = ((gt_label_matrix == gid + 1)
+                                    & (pd_label_matrix == pid)).sum()
+                    union = ((gt_label_matrix == gid + 1) |
+                             (pd_label_matrix == pid)).sum()
+                    iou = intersection / union if union > 0 else 0.0
+                    if iou > best_iou and iou >= th:
+                        best_pid = int(pid)
+                        best_iou = iou
+            pid, iou = best_pid, best_iou
+            if pid > -1:
+                relation[gid][pid-1] = iou
+
+        building_list = []
+        for pid in range(pd_len):
+            gid = torch.argmax(relation[:, pid])
+            iou = relation[gid][pid]
+            relation[:, pid] = 0.0
+            relation[gid][pid] = iou
+
+        for gid in range(len(gt_buildings)):
+            pid = torch.argmax(relation[gid])
+            iou = relation[gid][pid]
+            building_list.append({
+                'gid': int(gid),
+                'pid': int(pid) if iou >= th else -1,
+                'iou': int(iou)
+            })
+
+        return pd.DataFrame(building_list)
+
+    @staticmethod
+    def evaluate_polygon_iou(target_mask, pred_mask, labels_set, iou_threshold: float = 0.5):
+        """
+        Evalúa la coincidencia entre polígonos en las máscaras ground truth y predichas
+        utilizando un umbral de IoU.
+
+        Parámetros:
+        - target_mask: La máscara ground truth.
+        - pred_mask: La máscara predicha.
+        - labels_set: El conjunto de etiquetas de los polígonos.
+        - iou_threshold: El umbral de IoU para considerar una coincidencia (por defecto 0.5).
+
+        Retorna:
+        - gt_labels: Series con las etiquetas de los polígonos ground truth.
+        - pd_labels: Series con las etiquetas de los polígonos predichos.
+        - IoU_df: DataFrame con los valores de IoU entre los polígonos coincidentes.
+        """
+        log = LoggerSingleton()
+
+        gt_buildings = get_buildings(target_mask, labels_set)
+        gt_label_matrix = get_instance_mask(gt_buildings)
+        pd_buildings = get_buildings(pred_mask, labels_set)
+        pd_label_matrix = get_instance_mask(pd_buildings)
+        log.info('\n' +
+                 f"{len(gt_buildings)} buildings found in ground truth mask" +
+                 '\n' +
+                 f"{len(pd_buildings)} buildings found in predicted mask")
+        log.info("Matching labels for each building.")
+        IoU_df = MatrixComputer.match_polygons(gt_buildings, gt_label_matrix,
+                                               pd_label_matrix, iou_threshold)
+
+        gt_labels = pd.Series([l for _, l in gt_buildings])
+        pd_labels = pd.Series([l for _, l in pd_buildings])
+        return gt_labels, pd_labels, IoU_df
+
+    @staticmethod
+    def patches_obj_conf_mtrx(level, labels_set, n_masks, gt_bld_mask,
+                              gt_dmg_mask, pd_bld_mask, pd_dmg_mask):
+        """ Because computing a confusion matrix for the hole batch of patches
+         is computationally expensive, we are randomly sampling n.
+        The result is the sum of all matrices."""
+        patch_ids = [random.randint(0, len(pd_bld_mask)-1)
                      for _ in range(n_masks)]
         # iterates over the shard
-        curr_conf_matrices = []
+        conf_matrix = None
         for i in patch_ids:
-            if level == Level.OBJ_BLD:
-                pred_polys, true_polys = MatrixComputer.get_buildings(
-                    pred_bld_mask[i], y_bld_mask[i], labels_set)
-                allowed_classes = labels_set
-            elif level == Level.OBJ_DMG:
-                pred_polys, true_polys = MatrixComputer.get_buildings(
-                    pred_dmg_mask[i], y_dmg_mask[i], labels_set)
-                allowed_classes = labels_set
-            results, list_preds, list_labels = MatrixComputer.evaluate_polys(
-                pred_polys, true_polys, allowed_classes, 0.1)
-            for label_class in results:
-                if label_class != -1:
-                    curr_conf_mtrx = MatrixComputer.conf_mtrx_obj_cls_mask(results, label_class)
-                    conf_mtrx = OrderedDict({"img_idx": i})
-                    conf_mtrx.update(curr_conf_mtrx)
-                    curr_conf_matrices.append(conf_mtrx)
-        return pd.DataFrame(curr_conf_matrices)
+            target_mask = gt_bld_mask[i] if level == Level.OBJ_BLD else gt_dmg_mask[i]
+            pred_mask = pd_bld_mask[i] if level == Level.OBJ_BLD else pd_dmg_mask[i]
+            # level == Level.OBJ_DMG
+            gt_labels, pd_labels, IoU_df = MatrixComputer.\
+                evaluate_polygon_iou(target_mask, pred_mask, labels_set)
+            cls_conf_mtrx = MatrixComputer.\
+                conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set)
 
-    @staticmethod
-    def conf_mtrx_obj_cls_mask(results, cls):
-        true_pos_cls = results[cls]['tp'] if 'tp' in results[cls].keys() else 0
-        true_neg_cls = results[cls]['tn'] if 'tn' in results[cls].keys() else 0
-        false_pos_cls = results[cls]['fp'] if 'fp' in results[cls].keys() else 0
-        false_neg_cls = results[cls]['fn'] if 'fn' in results[cls].keys() else 0
-        return {'class': cls, 'true_pos': true_pos_cls, 'true_neg': true_neg_cls,
-                'false_pos': false_pos_cls, 'false_neg': false_neg_cls, 'total': results[-1]}
-
-    @staticmethod
-    def get_polygons_with_class(mask, labels):
-        # tuples of (shapely polygon, damage_class_num)
-        curr_labels =[i for i in labels if i in list(np.unique(mask))] 
-        polygons_and_class = []
-        for c in curr_labels and curr_labels:
-            # default is 4-connected for connectivity
-
-            shapes = rasterio.features.shapes(mask, mask=(mask == c))
-            for shape_geojson, pixel_val in shapes:
-                shape = shapely.geometry.shape(shape_geojson)
-                assert isinstance(shape, Polygon)
-                polygons_and_class.append((shape, int(pixel_val)))
-
-        return polygons_and_class
-
-    @staticmethod
-    def get_buildings(pred_mask, true_mask, labels_set):
-        """
-        For each tile, polygonize the prediction and label mask.
-
-        Args:
-
-        Returns:
-            pred_polygons_and_class: list of tuples of shapely Polygon representing
-                the geometry of the prediction, and the predicted class
-            label_polygons_and_class: list of tuples of shapely Polygon representing
-                the ground truth geometry, and the class
-        """
-        pred_mask = np.array(pred_mask).astype(np.uint8)
-        true_mask = np.array(true_mask).astype(np.uint8)
-        true_polygons_and_class = MatrixComputer.get_polygons_with_class(true_mask, labels_set)
-
-        # 1. Detect the connected components by all non-background classes to determine the
-        # predicted building blobs first (if we do this per class, a building with some pixels
-        # predicted to be in another class will result in more buildings than connected components)
-
-        background_and_others_mask = np.where(pred_mask > 0, 1, 0).astype(np.int16)
-        # all non-background classes become 1
-
-        # default is 4-connected for connectivity
-        # see https://www.mathworks.com/help/images/pixel-connectivity.html
-        # specify the `mask` parameter, otherwise the background will be returned as a shape
-        connected_components = rasterio.features.shapes(background_and_others_mask,
-                                                        mask=pred_mask > 0)
-        polygons = []
-        for component_geojson, pixel_val in connected_components:
-            # reference: https://shapely.readthedocs.io/en/stable/manual.html#python-geo-interface
-            shape = shapely.geometry.shape(component_geojson)
-            assert isinstance(shape, Polygon)
-            if shape.area > 20:
-                polygons.append(shape)
-
-        # 2. The majority class for each building blob is assigned to be that building's
-        # predicted class.
-        polygons_and_class = MatrixComputer.get_polygons_with_class(pred_mask, labels_set)
-
-        # we take the class of the shape with the maximum overlap with the building polygon to
-        # be the class of the building - majority vote
-        polygons_max_overlap = [0.0] * len(polygons)  # indexed by polygon_i
-        polygons_max_overlap_class = [None] * len(polygons)
-        # TODO : IS THIS A KIND OF INSTERSECTION OVER UNION?
-        assert isinstance(polygons, list)  # need"): the order constant
-
-        for polygon_i, polygon in enumerate(polygons):
-            for shape, shape_class in polygons_and_class:
-                if not shape.is_valid:
-                    shape = shape.buffer(0)
-                if not polygon.is_valid:
-                    polygon = polygon.buffer(0)
-                intersection_area = polygon.intersection(shape).area
-                if intersection_area > polygons_max_overlap[polygon_i]:
-                    polygons_max_overlap[polygon_i] = intersection_area
-                    polygons_max_overlap_class[polygon_i] = shape_class
-
-        pred_polygons_and_class = []  # include all classes
-        for polygon_i, (max_overlap_area, clss) in \
-                enumerate(zip(polygons_max_overlap, polygons_max_overlap_class)):
-            pred_polygons_and_class.append((polygons[polygon_i], clss))
-        return pred_polygons_and_class, true_polygons_and_class
-
-    @staticmethod
-    def evaluate_polys(pred_polygons_and_class: list, label_polygons_and_class: list,
-                       allowed_classes, iou_threshold: float = 0.5):
-        """
-        Method
-        - For each predicted polygon, we find the maximum value of IoU it has with any ground truth
-        polygon within the tile. This ground truth polygon is its "match".
-        - Using the threshold IoU specified (typically and by default 0.5), if a prediction has
-        overlap above the threshold AND the correct class, it is considered a true positive.
-        All other predictions, no matter what their IOU is with any gt, are false positives.
-            - Note that it is possible for one ground truth polygon to be the match for
-            multiple predictions, especially if the IoU threshold is low, but each prediction
-            only has one matching ground truth polygon.
-        - For ground truth polygon not matched by any predictions, it is a false negative.
-        - Given the TP, FP, and FN counts for each class, we can calculate the precision and recall
-        for each tile *for each class*.
-
-
-        - To plot a confusion table, we output two lists, one for the predictions and one for the
-        ground truth polygons (because the set of polygons to confuse over are not the same...)
-        1. For the list of predictions, each item is associated with the ground truth class of
-        the polygon that it matched, or a "false positive" attribute.
-        2. For the list of ground truth polygons, each is associated with the predicted class of
-        the polygon it matched, or a "false negative" attribute.
-
-        Args:
-            pred_polygons_and_class: list of tuples of shapely Polygon representing the geometry of
-                the prediction, and the predicted class
-            label_polygons_and_class: list of tuples of shapely Polygon representing the ground
-                truth geometry, and the class
-            allowed_classes: which classes should be evaluated
-            iou_threshold: Intersection over union threshold above which a predicted
-                polygon is considered true positive
-
-        Returns:
-            results: a dict of dicts, keyed by the class number, and points to a dict with counts of
-                true positives "tp", false positives "fp", and false negatives "fn"
-            list_preds: a list with one entry for each prediction. Each entry is of the form
-                {'pred': 3, 'label': 3}. This information is for a confusion matrix based on the
-                predicted polygons.
-            list_labels: same as list_preds, while each entry corresponds to a ground truth polygon.
-                The value for 'pred' is None if this polygon is a false negative.
-        """
-
-        # the matched label polygon's IoU with the pred polygon, and the label polygon's index
-        pred_max_iou_w_label = [(0.0, None)] * len(pred_polygons_and_class)
-
-        for i_pred, (pred_poly, pred_class) in enumerate(pred_polygons_and_class):
-
-            # cannot skip pred_class if it's not in the allowed list, as the list above
-            # relies on their indices
-
-            for i_label, (label_poly, label_class) in enumerate(label_polygons_and_class):
-
-                if not pred_poly.is_valid:
-                    pred_poly = pred_poly.buffer(0)
-                if not label_poly.is_valid:
-                    label_poly = label_poly.buffer(0)
-
-                intersection = pred_poly.intersection(label_poly)
-                # they should not have zero area
-                union = pred_poly.union(label_poly)
-                iou = intersection.area / union.area
-
-                if iou > pred_max_iou_w_label[i_pred][0]:
-                    pred_max_iou_w_label[i_pred] = (iou, i_label)
-
-        # class: {tp, fp, fn} counts
-        results = defaultdict(lambda: defaultdict(int))
-        results[-1] = len(pred_polygons_and_class)
-        i_label_polygons_matched = set()
-        list_preds = []
-        list_labels = []
-
-        for i_pred, (pred_poly, pred_class) in enumerate(pred_polygons_and_class):
-
-            if pred_class not in allowed_classes:
-                continue
-
-            max_iou, matched_i_label = pred_max_iou_w_label[i_pred]
-
-            item = {
-                'pred': pred_class,
-                'label': label_polygons_and_class[matched_i_label][1]
-                if matched_i_label is not None else None
-            }
-
-            if matched_i_label is not None:
-                list_labels.append(item)
-
-            list_preds.append(item)
-
-            if max_iou > iou_threshold and \
-                    label_polygons_and_class[matched_i_label][1] == pred_class:
-                # true positive
-                i_label_polygons_matched.add(matched_i_label)
-                results[pred_class]['tp'] += 1
-                for cls in allowed_classes:
-                    if cls != pred_class:
-                        results[cls]['tn'] += 1
+            if conf_matrix is None:
+                conf_matrix = cls_conf_mtrx.copy()
             else:
-                # false positive - all other predictions
-                # note that it is a FP for the prediction's class
-                results[pred_class]['fp'] += 1
-                # print(matched_i_label)
-                # results[matched_i_label]['fn'] += 1  # note that it is a FP for the
-                # prediction's class
+                for key in conf_matrix.keys():
+                    conf_matrix[key] += cls_conf_mtrx[key]
+        return conf_matrix
 
-        # calculate the number of false negatives - how many label polygons are not matched by
-        # any predictions
-        for i_label, (label_poly, label_class) in enumerate(label_polygons_and_class):
+    @staticmethod
+    def conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set):
+        conf_mrtx = []
+        for c in labels_set:
+            gt_s = gt_labels[gt_labels == c]
+            pd_s = pd_labels[pd_labels == c]
+            relation = IoU_df.loc[gt_s.index]
+            tp = (relation["pid"] > -1).sum()
+            fn = len(gt_s) - tp
+            fp = len(pd_s) - tp
+            tn = 0
+            # Calculating true negatives is typically not done in object detection
 
-            if label_class not in allowed_classes:
-                continue
+            conf_mrtx.append({
+                'class': c,
+                'true_pos': tp,
+                'false_pos': fp,
+                'false_neg': fn,
+                'true_neg': tn,
+                'total': len(gt_s)+len(pd_s)
+            })
 
-            if i_label not in i_label_polygons_matched:
-                results[label_class]['fn'] += 1
-                list_labels.append({
-                    'pred': None,
-                    'label': label_class
-                })
+        return pd.DataFrame(conf_mrtx)
 
-        return results, list_preds, list_labels
+    @staticmethod
+    def obj_multiclass_conf_mtrx(gt_labels, pd_labels, IoU_df, labels_set) -> pd.DataFrame:
+        """
+        Calcula la matriz de confusión multiclass a nivel de objeto.
+
+        Parámetros:
+        - gt_labels: Series con las etiquetas de los polígonos ground truth.
+        - pd_labels: Series con las etiquetas de los polígonos predichos.
+        - IoU_df: DataFrame con los valores de IoU entre los polígonos coincidentes.
+        - labels_set: Conjunto de etiquetas de los polígonos.
+
+        Retorna:
+        - mat_df: DataFrame con la matriz de confusión.
+        """
+        l_size = len(labels_set)
+        size = l_size + 2  # +2 para 'Undetected' y 'Total'
+        mat = torch.zeros(size=(size, size), dtype=torch.int32)
+
+        for gt in range(l_size):
+            l_g = labels_set[gt]
+            curr_gt = gt_labels[gt_labels == l_g]
+            rel_df = IoU_df.loc[curr_gt.index]
+            matched_ids = rel_df[rel_df["pid"] > -1]["pid"]
+            curr_prd = pd_labels.loc[matched_ids]
+
+            for prd in range(l_size):
+                l_p = labels_set[prd]
+                mat[gt][prd] = (curr_prd == l_p).sum()
+
+            mat[gt][l_size] = (rel_df["pid"] == -1).sum()  # Undetected
+            mat[gt][size - 1] = len(curr_gt)
+
+            ghost = pd_labels.loc[~pd_labels.index.isin(
+                matched_ids)][pd_labels == l_g]
+            mat[l_size][gt] = len(ghost)  # Ghost predictions
+
+        for prd in range(l_size):
+            mat[size - 1][prd] = torch.sum(mat[:, prd])  # Total predicted
+
+        # Ghost predictions
+        mat[l_size][size - 1] = torch.sum(mat[l_size])
+        # Unpredicted
+        mat[size - 1][l_size] = torch.sum(mat[:, l_size])
+        # Totales por fila y columna
+        mat[size - 1][size -
+                      1] = torch.sum(mat[:size, size - 1]) + torch.sum(mat[size - 1, :size])
+
+        # Convertir a DataFrame de pandas
+        mat_df = pd.DataFrame(mat.numpy(), columns=labels_set + ['Undetected', 'Total'],
+                              index=labels_set + ['Ghost', 'Total'])
+        return mat_df
+
+    @staticmethod
+    def tile_obj_conf_matrices(dmg_mask, pred_mask, labels_set, iou_threshold=0.5):
+        """Returns a confusión matrix for one image"""
+        gt_labels, pd_labels, IoU_df = MatrixComputer.\
+            evaluate_polygon_iou(dmg_mask, pred_mask,
+                                 labels_set, iou_threshold)
+        conf_mrtx = MatrixComputer.\
+            conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set)
+        multi_conf_mtrx = MatrixComputer.\
+            obj_multiclass_conf_mtrx(gt_labels, pd_labels, IoU_df, labels_set)
+        return conf_mrtx, multi_conf_mtrx
+
+    # BINARY MASKS
+    @staticmethod
+    def compute_bin_matrices_px(bin_pred_tensor: torch.Tensor,
+                                bin_true_tensor: torch.Tensor) -> torch.Tensor:
+        axis = (1, 2)
+        tp = torch.sum(bin_true_tensor & bin_pred_tensor, axis)
+        fn = torch.sum(bin_true_tensor & ~bin_pred_tensor, axis)
+        fp = torch.sum(~bin_true_tensor & bin_pred_tensor, axis)
+        tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis)
+        return torch.stack([tp, fp, fn, tn], axis=0).transpose(0, 1)
+
+    @staticmethod
+    def compute_bin_matrices_obj(bin_pred_tensor: torch.Tensor,
+                                 bin_true_tensor: torch.Tensor) -> torch.Tensor:
+        tp_list = []
+        fp_list = []
+        fn_list = []
+        tn_list = []
+        tot_list = []
+        for i in range(0, bin_pred_tensor.shape[0]):
+            matrx_dict = MatrixComputer.evaluate_polys(
+                bin_true_tensor[i], bin_pred_tensor[i], [1])[0]
+            tp_list.append(matrx_dict["true_pos"])
+            fp_list.append(matrx_dict["false_pos"])
+            fn_list.append(matrx_dict["false_neg"])
+            tn_list.append(matrx_dict["true_neg"])
+            tot_list.append(matrx_dict["total"])
+
+        tp = torch.tensor(tp_list, dtype=torch.int32)
+        fp = torch.tensor(fp_list, dtype=torch.int32)
+        fn = torch.tensor(fn_list, dtype=torch.int32)
+        tn = torch.tensor(tn_list, dtype=torch.int32)
+        tot = torch.tensor(tot_list, dtype=torch.int32)
+
+        return torch.stack([tp, fp, fn, tn, tot], axis=0)
