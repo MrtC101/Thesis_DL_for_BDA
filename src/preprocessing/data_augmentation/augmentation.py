@@ -125,7 +125,7 @@ def make_augmentations(splits_json_path: FilePath, xbd_path: FilePath,
     tile_list = [(dis_id, tile_id, tile)
                  for dis_id, tiles in tile_dict["train"].items()
                  for tile_id, tile in tiles.items()]
-    ids = random.sample(range(len(tile_list)), n)
+    ids = random.choices(range(len(tile_list)), k=n)
     log.info(f"Creating {n} new augmented images.")
     for id in tqdm(ids):
         dis_id, tile_id, tiles = tile_list[id]

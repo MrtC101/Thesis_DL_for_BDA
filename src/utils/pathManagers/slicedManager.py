@@ -9,10 +9,10 @@ class SlicedPathManager:
 
     def _add_original_images(self, subset, patch_dict, patch, split_dict):
         dis_id, tile_id, patch_id = patch.split("_")
-        for time in ["pre", "post"]:
-            img_path = split_dict[subset][dis_id][tile_id][time]["image"]
-            patch_dict[subset][dis_id][tile_id][patch_id][f"org_{time}"] = \
-                img_path
+        if tile_id in split_dict[subset][dis_id].keys():
+            for time in ["pre", "post"]:
+                img_path = split_dict[subset][dis_id][tile_id][time]["image"]
+                patch_dict[subset][dis_id][tile_id][patch_id][f"org_{time}"] = img_path
 
     def _add_patch_files(self, subset, sliced_dict, file, file_path):
         file_name: str = file.split(".")[0]
