@@ -1,10 +1,7 @@
 Me falta:
 
-- Implementar todo el loggin que sea necesario
-- Pulir todas las nuevas implementaciones Ya que una vez terminadas no se vuelve a tocar.
-- MEJORAR CODIGO DE WEB 
-- Documentar código
 - Modificar hiper search para que sean totalmente independientes.
+- Pulir todas las nuevas implementaciones Ya que una vez terminadas no se vuelve a tocar.
 
 !!!IMPORTANTE UNA VEZ SE MANDA A PROCESAR NO SE VUELVE A TOCAR EL CODIGO    
 - Definir el subconjunto con imágenes de entrenamiento.

@@ -83,7 +83,7 @@ if __name__ == "__main__":
     }
     hyperparameter_config = {
         'init_learning_rate': [0.0005],
-        'tot_epochs': [1],
+        'tot_epochs': [3],
         'batch_size': [25]
     }
     best_config = measure_time(parameter_search, 2, hyperparameter_config,
