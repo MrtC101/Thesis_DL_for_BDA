@@ -48,7 +48,7 @@ if __name__ == "__main__":
         'mexico-earthquake',
     )
     disaster_num = 10 * 100000
-    num_aug = 0
+    num_aug = 5
 
     paths = measure_time(preprocess, disaster_num, num_aug,
                          disasters_of_interest, out_path)

@@ -8,7 +8,7 @@ log = LoggerSingleton()
 
 
 def split_sliced_dataset(sliced_path: FilePath, raw_split_json: FilePath,
-                         out_path: FilePath) -> None:
+                         out_path: FilePath, file_name: str) -> None:
     """Uses the raw_split JSON file to split the raw dataset to create a new
     sliced_splits.json file.
     Args:
@@ -23,7 +23,7 @@ def split_sliced_dataset(sliced_path: FilePath, raw_split_json: FilePath,
 
     # loads sliced dataset
     sliced_dict = SlicedPathManager().load_paths(sliced_path, raw_split_json)
-    split_file = split_path.join("sliced_splits.json")
+    split_file = split_path.join(file_name)
     split_file.save_json(sliced_dict)
     log.info(f"New split saved {split_file}")
     return split_file
