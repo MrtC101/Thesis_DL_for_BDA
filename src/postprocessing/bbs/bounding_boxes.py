@@ -9,6 +9,7 @@ from typing import List, Tuple
 from postprocessing.bbs.polygon_manager import get_buildings
 from utils.visualization.label_to_color import LabelDict
 
+
 @dataclass
 class Point:
     x: int
@@ -16,9 +17,10 @@ class Point:
 
     def __eq__(self, other: 'Point') -> bool:
         return self.x == other.x and self.y == other.y
-    
+
     def __lt__(self, other: 'Point') -> bool:
         return self.x < other.x and self.y < self.y
+
 
 class BoundingBox:
 
@@ -27,17 +29,17 @@ class BoundingBox:
         self.y1 = max(y1, 0)
         self.x2 = min(x2, 1024)
         self.y2 = min(y2, 1024)
-    
+
     def get_min(self) -> Point:
         return Point(self.x1, self.y1)
-    
+
     def get_max(self) -> Point:
         return Point(self.x2, self.y2)
 
     def get_components(self) -> Tuple[int, int, int, int]:
         "returns x1,y1,x2,y2"
         return self.x1, self.y1, self.x2, self.y2
-    
+
     @staticmethod
     def create(poly: shapely.Polygon) -> 'BoundingBox':
         x_e, y_e = poly.exterior.xy
@@ -51,6 +53,7 @@ class BoundingBox:
     def __repr__(self) -> str:
         return f"{self.get_min()} -- {self.get_max()}"
 
+
 def get_bbs_from_json(label_dict: dict) -> pd.DataFrame:
     """Create a pandas DataFrame with bounding boxes from JSON."""
     buildings_list = label_dict['features']['xy']
@@ -61,10 +64,13 @@ def get_bbs_from_json(label_dict: dict) -> pd.DataFrame:
             uid = build["properties"]["uid"]
             poly = loads(build["wkt"])
             x1, y1, x2, y2 = BoundingBox.create(poly).get_components()
-            bbs_list.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "label": label, "uid": uid})
+            bbs_list.append({"x1": x1, "y1": y1, "x2": x2,
+                            "y2": y2, "label": label, "uid": uid})
     return pd.DataFrame(bbs_list, columns=["x1", "y1", "x2", "y2", "label", "uid"])
 
+
 labels_dict = LabelDict()
+
 
 def get_bbs_from_mask(mask, parallel=True) -> pd.DataFrame:
     """Create a pandas DataFrame with bounding boxes from predicted mask."""
@@ -73,5 +79,6 @@ def get_bbs_from_mask(mask, parallel=True) -> pd.DataFrame:
     for id, (bld, lab_num) in enumerate(bld_list):
         x1, y1, x2, y2 = BoundingBox.create(bld).get_components()
         label = labels_dict.get_key_by_num(lab_num)
-        bbs_list.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "label": label, "uid": id})
+        bbs_list.append({"x1": x1, "y1": y1, "x2": x2,
+                        "y2": y2, "label": label, "uid": id})
     return pd.DataFrame(bbs_list, columns=["x1", "y1", "x2", "y2", "label", "uid"])

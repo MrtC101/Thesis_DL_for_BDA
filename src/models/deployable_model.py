@@ -18,7 +18,7 @@ from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from models.saimunte_model import SiamUnet
+from models.siam_unet_model import SiamUnet
 from utils.visualization.label_to_color import LabelDict
 
 
@@ -27,11 +27,11 @@ class DeployModel(SiamUnet):
     label_dict = LabelDict()
 
     def load_weights(self, weights_path):
-        device = torch.device(
-            "gpu") if torch.cuda.is_available() else torch.device("cpu")
+        device = torch.device("cuda") if torch.cuda.is_available() \
+            else torch.device("cpu")
         assert os.path.isfile(weights_path), \
             f"{weights_path} is not a file."
-        checkpoint = torch.load(weights_path)
+        checkpoint = torch.load(weights_path, map_location=device)
         self.load_state_dict(checkpoint['state_dict'])
         self.freeze_model_param()
         self.device = device
@@ -63,8 +63,9 @@ class DeployModel(SiamUnet):
             Generates a png transparent background image for each class of bounding boxes.
             (La idea es tener una iamgen con las bounding boxes de con la misma clase)
         """
+        print("bbs:", len(bbs_df))
         for cls in self.label_dict.keys_list:
-            if not cls in ["background", "un-classified"]:
+            if cls not in ["background", "un-classified"]:
                 # Filtrar las bounding boxes para la clase actual
                 cur_df = bbs_df[bbs_df["label"] == cls]
                 boxes = torch.tensor(
@@ -78,7 +79,8 @@ class DeployModel(SiamUnet):
                 # Dibujar las bounding boxes en la imagen
                 if len(cur_df) > 0:
                     image_with_boxes = draw_bounding_boxes(image_with_boxes,
-                                                           boxes, colors=color, width=2)
+                                                           boxes, colors=color,
+                                                           width=2)
 
                 # Convertir el tensor a una imagen numpy
                 img_np = image_with_boxes.permute(1, 2, 0).numpy()
@@ -127,7 +129,8 @@ class DeployModel(SiamUnet):
                 patch_list.append(patch)
         return patch_list
 
-    def _preprocess(self, pre_img: torch.Tensor, post_img: torch.Tensor) -> list[torch.Tensor]:
+    def _preprocess(self, pre_img: torch.Tensor,
+                    post_img: torch.Tensor) -> list[torch.Tensor]:
         pre_norm = self._normalize_image(pre_img)
         post_norm = self._normalize_image(post_img)
         pre_patches_list = self._crop_image(pre_norm)

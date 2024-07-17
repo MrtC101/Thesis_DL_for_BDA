@@ -9,7 +9,7 @@ import torch.utils
 import torch.utils.tensorboard
 import torch.utils.tensorboard.summary
 
-from models.saimunte_model import SiamUnet
+from models.siam_unet_model import SiamUnet
 
 
 class TrainModel(SiamUnet):
