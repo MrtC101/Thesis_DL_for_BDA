@@ -3,7 +3,9 @@
 import os
 import sys
 from os.path import join
+
 os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+
 os.environ["SRC_PATH"] = join(os.environ["PROJ_PATH"], "src")
 os.environ["DATA_PATH"] = join(os.environ["PROJ_PATH"], "data")
 os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
@@ -11,17 +13,13 @@ os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+
 from utils.common.timeManager import measure_time
 from utils.common.pathManager import FilePath
-from utils.loggers.console_logger import LoggerSingleton
 from preprocessing.preprocessing_pipeline import preprocess
 
-
-if __name__ == "__main__":
-    out_path = FilePath(os.environ["OUT_PATH"]).join("preprocessing")
-    log = LoggerSingleton("PREPROCESSING", folder_path=out_path)
-
-    DISASTERS_OF_INTEREST = (
+"""
+disasters_of_interest = (
         # 'guatemala-volcano',
         # 'hurricane-florence',
         # 'midwest-flooding',
@@ -31,7 +29,7 @@ if __name__ == "__main__":
         # 'hurricane-michael',
         # 'santa-rosa-wildfire',
         # 'palu-tsunami',
-        'mexico-earthquake',
+        # 'mexico-earthquake',
         # 'joplin-tornado',
         # 'lower-puna-volcano',
         # 'moore-tornado',
@@ -42,15 +40,32 @@ if __name__ == "__main__":
         # 'tuscaloosa-tornado',
         # 'woolsey-fire'
     )
-    disaster_num = 10 * 100000
-    num_aug = 0
-    tile_splits_json_path, aug_splits_json_path, \
-        patch_split_json_path, mean_std_json_path = \
-        measure_time(preprocess, disaster_num, num_aug, DISASTERS_OF_INTEREST)
+"""
+if __name__ == "__main__":
+    out_path = FilePath(os.environ["OUT_PATH"])
+    disasters_of_interest: tuple = (
+        'mexico-earthquake',
+        'nepal-flooding',
+        'midwest-flooding',
+        'santa-rosa-wildfire',
+        'portugal-wildfire',
+        'socal-fire',
+        'woolsey-fire',
+        'pinery-bushfire',
+    )
+    disaster_num = 15
+    num_aug = 10
+
+    paths = measure_time(preprocess, disaster_num, num_aug,
+                         disasters_of_interest, out_path)
+    (tile_splits_json_path, patch_split_json_path,
+     aug_tile_split_json_path, aug_patch_split_json_path,
+     mean_std_json_path) = paths
 
     paths = {
         "tile_splits_json_path": tile_splits_json_path,
-        "aug_splits_json_path": aug_splits_json_path,
+        "aug_tile_split_json_path": aug_tile_split_json_path,
+        "aug_patch_split_json_path": aug_patch_split_json_path,
         "patch_split_json_path": patch_split_json_path,
         "mean_std_json_path": mean_std_json_path
     }

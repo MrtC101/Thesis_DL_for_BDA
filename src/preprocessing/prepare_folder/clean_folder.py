@@ -55,12 +55,14 @@ def leave_only_n(data_path: FilePath, n: int) -> None:
 
         ids = set(random.sample(range(total_tiles), n))
         for id in tqdm(ids):
-            tile = tot_tiles[id]
-            for file in tile.values():
-                FilePath(file).remove()
+            disaster = tot_tiles[id]
+            for tile in disaster.values():
+                for file in tile.values():
+                    FilePath(file).remove()
 
         log.info(f"Files {total_tiles-n}  removed. {n} tiles left.")
     else:
-        log.info(f"There are {total_tiles} total tiles.\
-                 From {len(list(data.keys()))} disasters. Skipped..")
+        log.info(f"There are {len(total_tiles)} of {n} requiere tiles. Skipped...")
+    log.info(f"There are {total_tiles} total tiles." +
+             f"From {len(list(data.keys()))} disasters. ")
     return

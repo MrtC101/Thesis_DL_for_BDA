@@ -3,10 +3,11 @@ import torch
 import torch.nn as nn
 import torch.utils
 
+
 class SiamUnet(nn.Module):
 
     def __init__(self, in_channels: int = 3, out_channels_s: int = 2,
-                out_channels_c: int = 5, init_features: int = 16) -> None:
+                 out_channels_c: int = 5, init_features: int = 16) -> None:
         super(SiamUnet, self).__init__()
 
         features = init_features
@@ -71,7 +72,6 @@ class SiamUnet(nn.Module):
 
         self.softmax = torch.nn.Softmax(dim=1)
 
-    
     @staticmethod
     def _block(in_channels: int, features: int, name: str) -> nn.Sequential:
         """
@@ -115,8 +115,7 @@ class SiamUnet(nn.Module):
                 ]
             )
         )
-
-
+    """
     #Used for debugging
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
@@ -127,13 +126,12 @@ class SiamUnet(nn.Module):
         for c in range(0, b.shape[1]):
             b[:, c, :, :] = torch.mul(b[:, c, :, :], preds_seg_pre)
 
-        return a, a, b
-    
-
+        return a, a, b    
     """
-     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
+    
+    def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
             tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        \"""
+        """
         Forward pass through the Siamese U-Net.
 
         Args:
@@ -142,7 +140,7 @@ class SiamUnet(nn.Module):
 
         Returns:
             tuple: A tuple of logits tensors masks for segmentation and classification.
-        \"""
+        """
 
         # UNet on x1
         enc1_1 = self.encoder1(x1)
@@ -220,18 +218,13 @@ class SiamUnet(nn.Module):
                 out_class[:, c, :, :], preds_seg_pre)
 
         return out_seg_1, out_seg_2, out_class
-    """
-
-    """
-    Returns logits
-    """
     
     def compute_predictions(self, logit_masks) -> tuple:
         """
             Returns:
                 tuple: A tuple of predictions tensor masks for segmentation and classification.
         """
-        
+
         return tuple(torch.argmax(self.softmax(logit_mask), dim=1) for logit_mask in logit_masks)
 
     def freeze_model_param(self):

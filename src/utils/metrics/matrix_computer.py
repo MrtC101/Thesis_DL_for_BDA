@@ -131,15 +131,19 @@ class MatrixComputer:
                 relation[gid][pid-1] = iou
 
         building_list = []
-        for pid in range(pd_len):
-            gid = torch.argmax(relation[:, pid])
-            iou = relation[gid][pid]
-            relation[:, pid] = 0.0
-            relation[gid][pid] = iou
+        if len(gt_buildings) > 0:
+            for pid in range(pd_len):
+                gid = torch.argmax(relation[:, pid])
+                iou = relation[gid][pid]
+                relation[:, pid] = 0.0
+                relation[gid][pid] = iou
 
         for gid in range(len(gt_buildings)):
-            pid = torch.argmax(relation[gid])
-            iou = relation[gid][pid]
+            if pd_len > 0:
+                pid = torch.argmax(relation[gid])
+                iou = relation[gid][pid]
+            else:
+                iou = 0.0
             building_list.append({
                 'gid': int(gid),
                 'pid': int(pid) if iou >= th else -1,

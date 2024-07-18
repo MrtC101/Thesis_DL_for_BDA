@@ -76,12 +76,16 @@ def preprocess(total_tiles: int, num_aug: int,
     slice_dataset(aug_tile_split_json_path, patch_path)
 
     log_Title("Split patches")
-    patch_split_json_path = split_sliced_dataset(
-        patch_path, tile_splits_json_path, xbd_path)
+    patch_split_json_path = split_sliced_dataset(patch_path,
+                                                 tile_splits_json_path,
+                                                 xbd_path,
+                                                 "sliced_splits.json")
 
     log_Title("Split augmented patches")
-    aug_patch_split_json_path = split_sliced_dataset(
-        patch_path, aug_tile_split_json_path, xbd_path)
+    aug_patch_split_json_path = split_sliced_dataset(patch_path,
+                                                     aug_tile_split_json_path,
+                                                     xbd_path,
+                                                     "aug_sliced_splits.json")
 
     return (tile_splits_json_path, patch_split_json_path,
             aug_tile_split_json_path, aug_patch_split_json_path,

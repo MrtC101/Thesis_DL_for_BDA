@@ -1,8 +1,10 @@
+web_page/static/image/predicted
 data/xBD/dataset_statistics
 data/xBD/shards
 data/xBD/sliced
 data/xBD/splits
 data/xBD/raw/
+data/
 out/*
 setup.cfg
 *.editorconfig

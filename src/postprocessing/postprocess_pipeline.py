@@ -34,7 +34,7 @@ def save_mask(out_dir: FilePath, dis_id: str, tile_id: str,
               pred_mask: torch.Tensor):
     pred_path = out_dir.join(f"{dis_id}_{tile_id}_pred_damage_mask.png")
     pred_img = LabelMaskVisualizer().draw_label_img(pred_mask)
-    LabelMaskVisualizer.save_arr_img(pred_img, pred_path)
+    LabelMaskVisualizer.save_arr_img(pred_img.numpy(), pred_path)
 
 
 def save_bbs(out_dir: FilePath, dis_id: str, tile_id: str, prefix: str,
