@@ -1,2 +1,2 @@
-alias re=./recive.sh
-alias send=./send.sh
+alias re=./submit/toko/recive.sh
+alias send=./submit/toko/send.sh
