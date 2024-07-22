@@ -2,10 +2,8 @@
 # Licensed under the MIT License.
 import os
 import sys
-from os.path import join
-
-os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
-os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
+#os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+#os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
@@ -18,16 +16,20 @@ if __name__ == "__main__":
 
     out_path = FilePath(os.environ["OUT_PATH"])
     params_json = out_path.join("param_list.json")
-
+    weights_dict = out_path.join("train_weights.json").read_json()
+    weights = [1] # w for label 0
+    lab_w = [round(w) for w in weights_dict.values()]
+    lab_w.reverse() 
+    weights.extend(lab_w) # weights for all classes
     hyperparameter_config = {
-        'init_learning_rate': [0.0005, 0.001, 0.01, 0.1],
-        'tot_epochs': [100, 300, 500],
-        'batch_size': [16, 32, 64]
+        'init_learning_rate': [0.1],
+        'tot_epochs': [100],
+        'batch_size': [128]
     }
     # Configuration dictionaries for paths used during model training
     weights_config = {
         'weights_seg': [1, 15],
-        'weights_damage': [1, 35, 70, 150, 120],
+        'weights_damage': weights,
         'weights_loss': [0, 0, 1],
     }
     hardware_config = {

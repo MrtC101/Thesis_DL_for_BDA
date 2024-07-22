@@ -1,1 +1,0 @@
-rsync -avz --exclude data mcogo@toko.uncu.edu.ar:scratch/ .

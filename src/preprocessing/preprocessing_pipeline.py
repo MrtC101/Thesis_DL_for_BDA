@@ -5,9 +5,9 @@ from typing import List, Tuple
 from os.path import join
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
-from preprocessing.prepare_folder.clean_folder import delete_not_in, leave_only_n
+from preprocessing.prepare_folder.clean_folder import delete_not_in
 from preprocessing.prepare_folder.create_label_masks import create_masks
-from preprocessing.raw.split_raw_dataset import split_dataset
+from preprocessing.raw.split_raw_dataset import stratified_split_dataset
 from preprocessing.data_augmentation.augmentation import make_augmentations
 from preprocessing.raw.data_stdv_mean import create_data_dicts
 from preprocessing.sliced.make_smaller_tiles import slice_dataset
@@ -51,15 +51,11 @@ def preprocess(total_tiles: int, num_aug: int,
     log_Title("Creating target masks")
     create_masks(raw_path)
 
-    log_Title("Deleting extra disasters")
-    leave_only_n(raw_path, total_tiles)
-
     # Raw data
     log_Title("Split disasters")
-    tile_splits_json_path = split_dataset(raw_path, xbd_path, {
-        "train": 0.9,
-        "test": 0.1
-    })
+    split_prop = {"train": 0.9, "test": 0.1}
+    tile_splits_json_path = stratified_split_dataset(raw_path, xbd_path,
+                                                     split_prop, total_tiles)
 
     # Data augmentation
     log_Title("Data augmentation")
@@ -86,7 +82,7 @@ def preprocess(total_tiles: int, num_aug: int,
                                                      aug_tile_split_json_path,
                                                      xbd_path,
                                                      "aug_sliced_splits.json")
-
+    
     return (tile_splits_json_path, patch_split_json_path,
             aug_tile_split_json_path, aug_patch_split_json_path,
             mean_std_json_path)

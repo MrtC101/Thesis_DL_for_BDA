@@ -64,10 +64,8 @@ def parameter_search(folds: int, param_list: dict, paths_dict: dict, parallel=Fa
                                   for i, config in tqdm(param_list))
     else:
         results = [_start_k_fold(folds, i, config, paths_dict) for i, config in tqdm(param_list)]
-
+    
     best_index, best_acc = min(results, key=lambda x: x[1])
 
-    log.info(f"Configuration number {best_index}" +
+    log.info(f"Configuration number {best_index} " +
              f"with a validation loss of {best_acc:.4f}")
-    best_params = param_list[best_index]
-    return best_params

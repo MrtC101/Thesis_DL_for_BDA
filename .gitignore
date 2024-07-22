@@ -1,3 +1,5 @@
+cpu_exp/*
+debbug_exp/*
 experiments
 setup.cfg
 *.editorconfig

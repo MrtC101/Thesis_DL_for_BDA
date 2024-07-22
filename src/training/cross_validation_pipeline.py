@@ -25,7 +25,7 @@ def k_cross_validation(k: int, configs: dict[str, any],
     # Logger
     out_dir = FilePath(paths['out_dir'])
     exp_i = configs['configuration_num']
-    log = LoggerSingleton(f"CONFIG-{exp_i}", folder_path=out_dir)
+    log = LoggerSingleton(f"config-{exp_i}", folder_path=out_dir)
     set_threads(configs['torch_threads'], configs['torch_op_threads'])
 
     # Load Datasets
@@ -43,7 +43,8 @@ def k_cross_validation(k: int, configs: dict[str, any],
                             train_sampler=SubsetRandomSampler(train_idx),
                             val_sampler=SubsetRandomSampler(val_idx))
         scores.append(score)
-
+    for fold, score in enumerate(scores):
+        log.info(f"Accuracy for fold {fold}: {score:.4f}")
     mean_acc_score = (sum(scores) / k)
-    log.info(f"Score mean {mean_acc_score}")
+    log.info(f"Accuracy mean for configuration {exp_i}: {mean_acc_score:.4f}")
     return mean_acc_score

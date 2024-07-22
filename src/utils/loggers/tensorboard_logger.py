@@ -43,6 +43,17 @@ class TensorBoardLogger(SummaryWriter):
                 tag = f"{mode_value}/images/post_img_{idx}"
                 self.add_image(
                     tag, org_patche["post_img"], 0, dataformats='CHW')
+                tag = f"{mode_value}/images/post_img_{idx}"
+                bld_truth = self.viz.draw_label_img(org_patche["bld_mask"]) 
+                tag = f"{mode_value}/images/bld_mask_{idx}"
+                print(tag)
+                self.add_image(tag, bld_truth.permute(2,0,1).numpy(),
+                                0, dataformats='CHW')
+                print(tag)
+                dmg_truth = self.viz.draw_label_img(org_patche["dmg_mask"]) 
+                tag = f"{mode_value}/images/dmg_mask_{idx}"
+                self.add_image(tag, dmg_truth.permute(2,0,1).numpy(),
+                                0, dataformats='CHW')
 
         for idx, (dis_id, tile_id, patch_id, patch) in enumerate(patches):
 

@@ -159,13 +159,18 @@ class MetricManager:
             log.info(to_table(curr_type=key, df=metric_df,
                      odd=True, decim_digits=5))
             for index, row in metric_df.iterrows():
-                msg = f"{phase}/{key}_metrics"
-                tb_log.add_scalars(msg, dict(row), int(row["epoch"]))
+                params = row.copy()
+                epoch = params.pop("epoch")  # Remove 'epoch' from params, if needed
+                label = params.pop("class")
+                msg = f"{phase}/{key}_{label}_metrics"
+                tb_log.add_scalars(msg, params, int(epoch))
+
 
     @staticmethod
     def save_metrics(metrics: list, metric_dir: FilePath, file_prefix: str):
         """Save metrics in csv"""
         # save evalution metrics
+        log = LoggerSingleton()
         for epoch in range(len(metrics)):
             for key, met in metrics[epoch].items():
                 mode = "w" if not epoch > 0 else "a"
@@ -176,6 +181,7 @@ class MetricManager:
                            header=header,
                            index=False)
                 met.to_latex(metric_dir.join(f'{file_prefix}_{key}.tex'))
+                log.info(f"metrics saved {metric_dir.join(f'{file_prefix}_{key}.csv')}")
 
     @staticmethod
     def save_loss(loss_metrics: list, metric_dir: FilePath):
@@ -183,3 +189,5 @@ class MetricManager:
         path = metric_dir.join("loss.csv")
         df = pd.DataFrame(loss_metrics)
         df.to_csv(path, mode="w", index=False)
+        log = LoggerSingleton()
+        log.info(f"Loss saved {path}")

@@ -32,37 +32,3 @@ def delete_not_in(data_path: FilePath,
                 if not file.startswith(disasters_of_interest):
                     folder_path.join(file).remove()
     return
-
-
-def leave_only_n(data_path: FilePath, n: int) -> None:
-    """Pick n random disaster tiles and deletes all the rest of files from
-    disaster Dataset.
-
-    Args:
-        data_path: Path to the directory to the xBD dataset that contains
-        subsets of xBD dataset.
-        n: number of disasters that will be left in the folder.
-
-    Example:
-        >>> leave_only_n("data/xBD/raw",45)
-    """
-    data = RawPathManager.load_paths(data_path)
-    tot_tiles = [tile for tiles in data.values() for tile in tiles.values()]
-    total_tiles = len(tot_tiles)
-    if (total_tiles > n):
-        log.info(
-            f"Deleting {total_tiles-n} tiles of {total_tiles} total tiles.")
-
-        ids = set(random.sample(range(total_tiles), n))
-        for id in tqdm(ids):
-            disaster = tot_tiles[id]
-            for tile in disaster.values():
-                for file in tile.values():
-                    FilePath(file).remove()
-
-        log.info(f"Files {total_tiles-n}  removed. {n} tiles left.")
-    else:
-        log.info(f"There are {len(total_tiles)} of {n} requiere tiles. Skipped...")
-    log.info(f"There are {total_tiles} total tiles." +
-             f"From {len(list(data.keys()))} disasters. ")
-    return
