@@ -24,7 +24,7 @@ if __name__ == "__main__":
     hyperparameter_config = {
         'init_learning_rate': [0.1],
         'tot_epochs': [1],
-        'batch_size': [1, 5, 10]
+        'batch_size': [10, 50, 100]
     }
     # Configuration dictionaries for paths used during model training
     weights_config = {
