@@ -18,7 +18,7 @@ def pixel_metric_curves(loader : DataLoader, model : TrainModel, metric_dir : st
     model.eval()
     #columns=["tp","fp","fn","tn"]
     patch_conf_mtrx_dict = defaultdict(lambda : torch.zeros(size=(n_class,4),dtype=torch.int32))
-    for i in trange(0,int(len(dataset)/16)-1):
+    for i in trange(0, int(len(dataset)/16)):
         dis_id, tile_id, patch_dict = dataset.get_by_id(i)
         for patch_id, patch in patch_dict.items():
             x_pre = patch['pre_img']

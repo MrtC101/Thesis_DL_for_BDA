@@ -79,7 +79,6 @@ def comparative_figure(dis_id, tile_id, pre_img, post_img, pred_mask, gt_table, 
     title_size = 30
     subtitle_size = 25
 
-    viz = LabelMaskVisualizer()
     fig = plt.figure(figsize=(1524 / 100, 1024 / 100), dpi=100)
     gs = gridspec.GridSpec(2, 3, height_ratios=[0.7, 0.4])
     plt.suptitle(f"Disaster {dis_id} {tile_id}",
@@ -96,10 +95,8 @@ def comparative_figure(dis_id, tile_id, pre_img, post_img, pred_mask, gt_table, 
     ax2.set_title('Post-disaster Imagen', fontsize=subtitle_size)
 
     ax3 = fig.add_subplot(gs[0, 2])
-    if (len(pred_mask.shape) > 2):
-        pred_mask = pred_mask.reshape(-1)
-    ax3.imshow(pred_mask, cmap=viz.colormap,
-               norm=viz.normalizer, interpolation='none')
+    draw_mask = LabelMaskVisualizer.draw_label_img(pred_mask)
+    ax3.imshow(draw_mask)
     ax3.axis('off')
     ax3.set_title('Predicted Damage Mask', fontsize=subtitle_size)
 

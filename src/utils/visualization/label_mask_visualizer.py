@@ -13,29 +13,27 @@ matplotlib.use("Agg")  # Usar backend 'Agg' para entornos sin display
 
 class LabelMaskVisualizer:
     """Visualizes raster mask labels and predictions."""
-
-    def __init__(self):
-        """Constructs a raster label visualizer."""
-        self.label_map = LabelDict()
-        self.num_classes = len(self.label_map)
+    @staticmethod
+    def draw_label_img(label_tensor: torch.Tensor) -> torch.Tensor:
+        # Asumimos que LabelDict es una clase que define un mapeo de etiquetas a colores
+        label_map = LabelDict()
         required_colors = [mcolors.to_rgb(mcolors.CSS4_COLORS[color])
-                           for color in self.label_map.color_list]
-        self.colormap = mcolors.ListedColormap(required_colors)
-        self.normalizer = mcolors.Normalize(vmin=0, vmax=self.num_classes - 1)
+                           for color in label_map.color_list]
+        colormap = mcolors.ListedColormap(required_colors)
 
-    def draw_label_img(self, label_tensor: torch.Tensor) -> torch.Tensor:
-        """Visualizes a label mask or hardmax predictions of a model."""
-        img: torch.Tensor
-        if (len(label_tensor.shape) == 3) or (label_tensor.shape[0] == 1):
+        # Asegurarse de que label_tensor tiene la forma correcta
+        if len(label_tensor.shape) == 3 and label_tensor.shape[0] == 1:
             label_tensor = label_tensor.squeeze(0)
-        img = torch.zeros((label_tensor.shape[1],
-                           label_tensor.shape[0], 3), dtype=torch.uint8)
 
+        # Crear una imagen en blanco con el tamaño adecuado
+        img = torch.zeros(
+            (label_tensor.shape[1], label_tensor.shape[0], 3), dtype=torch.uint8)
+
+        # Aplicar colores a cada etiqueta única
         for label_i in label_tensor.unique():
-            color = self.colormap(label_i)[:3]
-            c_t = (torch.Tensor(color) * 255).to(torch.uint8)
-            mask = (label_tensor == label_i)
-            img[mask] = c_t
+            color = colormap(int(label_i))[:3]
+            color_tensor = (torch.tensor(color) * 255).to(torch.uint8)
+            img[label_tensor == label_i] = color_tensor
         return img
 
     @staticmethod

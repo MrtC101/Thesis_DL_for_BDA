@@ -40,12 +40,6 @@ class EpochManager:
         def decorator(*args):
             self = args[0]
             epoch = args[1]
-            if (self.mode.value == "train"):
-                self.tb_logger.add_scalars(
-                    f'{self.mode.value}/learning_rate',
-                    {"lr": self.optimizer.param_groups[0]["lr"]},
-                    epoch
-                )
             log = LoggerSingleton(name=f"{self.mode.value} Step")
             log.info(
                 f'{self.mode.value.upper()}  epoch: {epoch}/{self.tot_epochs}')
@@ -97,8 +91,8 @@ class EpochManager:
 
             logit_masks = self.model(x_pre, x_post)
 
-            loss = self.loss_manager.compute_loss(
-                logit_masks, x_pre, y_seg, y_cls)
+            loss = self.loss_manager.\
+                compute_loss(logit_masks, x_pre, y_seg, y_cls)
 
             if (self.mode == self.mode.TRAINING):
                 loss.backward()  # compute gradients

@@ -11,7 +11,7 @@ dependencies:
   - pip==23.3.1
   - pytorch
   - tqdm
-  - shapely
+  - shapely  #make-masks
   - tensorboard
   - scikit-learn
   - pandas
@@ -25,4 +25,3 @@ dependencies:
     - torchvision
     - rasterio  #object-level
     - opencv-python
-    - seaborn
