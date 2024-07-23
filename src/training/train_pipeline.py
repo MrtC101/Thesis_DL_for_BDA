@@ -97,7 +97,8 @@ def train_definitive(configs: dict[str, any], paths: dict[str, any]):
     out_dir = FilePath(paths['out_dir'])
     log_out = out_dir.join("console_logs")
     log = LoggerSingleton("DEFINITIVE MODEL", folder_path=log_out)
-
+    log.info(f"Using bet configuration with number {configs[0]}")
+    configs = configs[1]
     set_threads(configs['torch_threads'], configs['torch_op_threads'])
 
     # Load Dataset

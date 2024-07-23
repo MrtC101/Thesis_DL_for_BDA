@@ -2,12 +2,12 @@
 # Licensed under the MIT License.
 import os
 import sys
-#os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
-#os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
+# os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
+# os.environ["OUT_PATH"] = join(os.environ["PROJ_PATH"], "out")
 
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH")) 
+    sys.path.append(os.environ.get("SRC_PATH"))
 from training.hiper_search_pipeline import create_params
 from utils.common.pathManager import FilePath
 
@@ -17,14 +17,14 @@ if __name__ == "__main__":
     out_path = FilePath(os.environ["OUT_PATH"])
     params_json = out_path.join("param_list.json")
     weights_dict = out_path.join("train_weights.json").read_json()
-    weights = [1] # w for label 0
+    weights = [1]  # w for label 0
     lab_w = [round(w) for w in weights_dict.values()]
-    lab_w.reverse() 
-    weights.extend(lab_w) # weights for all classes
+    lab_w.reverse()
+    weights.extend(lab_w)  # weights for all classes
     hyperparameter_config = {
         'init_learning_rate': [0.1],
-        'tot_epochs': [100],
-        'batch_size': [128]
+        'tot_epochs': [1],
+        'batch_size': [1, 5, 10]
     }
     # Configuration dictionaries for paths used during model training
     weights_config = {

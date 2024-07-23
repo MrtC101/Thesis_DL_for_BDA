@@ -4,7 +4,7 @@ export NODE="toko03"
 export CPU_NUM=64
 export PARTITION="XL"
 export HOURS="72"
-export CONF_NUM=0
+export CONF_NUM=2
 
 # RUN VARS
 export PROJ_PATH="/home/mrtc101/Desktop/tesina/repo/to_toko"

@@ -42,27 +42,9 @@ disasters_of_interest = (
 if __name__ == "__main__":
     out_path = FilePath(os.environ["OUT_PATH"])
     disasters_of_interest: tuple = (
-        'guatemala-volcano',
-        'hurricane-florence',
-        'midwest-flooding',
-        'socal-fire',
-        'hurricane-matthew',
-        'hurricane-harvey',
-        'hurricane-michael',
-        'santa-rosa-wildfire',
-        'palu-tsunami',
         'mexico-earthquake',
-        'joplin-tornado',
-        'lower-puna-volcano',
-        'moore-tornado',
-        'nepal-flooding',
-        'pinery-bushfire',
-        'portugal-wildfire',
-        'sunda-tsunami',
-        'tuscaloosa-tornado',
-        'woolsey-fire'
     )
-    disaster_num = 9
+    disaster_num = 10
     num_aug = 0
 
     paths = measure_time(preprocess, disaster_num, num_aug,

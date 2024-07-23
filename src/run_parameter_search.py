@@ -34,4 +34,4 @@ if __name__ == "__main__":
     param_list = out_path.join("param_list.json").read_json()["param_list"]
     conf_num = int(os.environ["CONF_NUM"])
     current_params = param_list[conf_num: conf_num+1]
-    measure_time(parameter_search, 5, param_list, paths_dict)
+    measure_time(parameter_search, 5, current_params, paths_dict)

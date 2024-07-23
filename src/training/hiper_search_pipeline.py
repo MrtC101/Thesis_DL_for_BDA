@@ -36,7 +36,9 @@ def _start_k_fold(folds: int, index: int,
     Returns:
         tuple[int, float]: Index and score of the configuration.
     """
-    paths['out_dir'] = FilePath(paths['out_dir']).join(f'config-{index}')
+    out_dir = FilePath(paths['out_dir']).join(f'config-{index}')
+    out_dir.create_folder()
+    paths['out_dir'] = out_dir
     config['configuration_num'] = index
     score = k_cross_validation(folds, config, paths)
     return index, score
@@ -60,11 +62,12 @@ def parameter_search(folds: int, param_list: dict, paths_dict: dict, parallel=Fa
     log.info(f"Cantidad de configuraciones: {len(param_list)}.")
     if parallel:
         results = Parallel(n_jobs=-1)(delayed(_start_k_fold)
-                                  (folds, i, config, paths_dict)
-                                  for i, config in tqdm(param_list))
+                                      (folds, i, config, paths_dict)
+                                      for i, config in tqdm(param_list))
     else:
-        results = [_start_k_fold(folds, i, config, paths_dict) for i, config in tqdm(param_list)]
-    
+        results = [_start_k_fold(folds, i, config, paths_dict)
+                   for i, config in tqdm(param_list)]
+
     best_index, best_acc = min(results, key=lambda x: x[1])
 
     log.info(f"Configuration number {best_index} " +

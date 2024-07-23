@@ -99,8 +99,8 @@ class DeployModel(SiamUnet):
         n = random.randint(0, 10**10)
         pred_img = self._merge_patches(patch_batch)
         dmg_path = os.path.join(dir_path, f"dmg_img_{n}.png")
-        img = LabelMaskVisualizer().draw_label_img(pred_img)
-        LabelMaskVisualizer.save_arr_img(img.numpy(), dmg_path)
+        img = LabelMaskVisualizer.draw_label_img(pred_img)
+        LabelMaskVisualizer.save_tensor_img(img, dmg_path)
 
         bbs_df = get_bbs_from_mask(pred_img)
         pd_values = list(bbs_df.value_counts(subset=["label"]).items())
