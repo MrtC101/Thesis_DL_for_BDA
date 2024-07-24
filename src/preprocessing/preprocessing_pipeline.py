@@ -23,8 +23,7 @@ def log_Title(title: str):
 
 
 def preprocess(total_tiles: int, num_aug: int,
-               disasters_of_interest: List[str],
-               out_path: FilePath) -> Tuple[str, str, str, str, str]:
+               disasters_of_interest: List[str]) -> Tuple[str, str, str, str, str]:
     """
     Pipeline sequence for data preprocessing.
 
@@ -39,22 +38,22 @@ def preprocess(total_tiles: int, num_aug: int,
         Tuple[str, str, str, str, str]: Paths to the JSON files representing 
         splits of tiles, splits of patches, and statistical data from tiles.
     """
-    pre_path = out_path.join("preprocessing")
+    pre_path = FilePath(join(os.environ["OUT_PATH"])).join("preprocessing")
     LoggerSingleton("PREPROCESSING", folder_path=pre_path)
 
     # folder cleaning
-    log_Title("Deleting disasters that are not of interest")
-    xbd_path = FilePath(join(os.environ["DATA_PATH"], "xBD"))
-    raw_path = FilePath(join(xbd_path, "raw"))
-    delete_not_in(raw_path, disasters_of_interest)
+    # log_Title("Deleting disasters that are not of interest")
+    # delete_not_in(raw_path, disasters_of_interest)
 
     log_Title("Creating target masks")
-    create_masks(raw_path)
+    xbd_path = FilePath(join(os.environ["XBD_PATH"]))
+    create_masks(xbd_path)
 
     # Raw data
     log_Title("Split disasters")
+    data_path = FilePath(join(os.environ["DATA_PATH"]))
     split_prop = {"train": 0.9, "test": 0.1}
-    tile_splits_json_path = stratified_split_dataset(raw_path, xbd_path,
+    tile_splits_json_path = stratified_split_dataset(xbd_path, data_path,
                                                      split_prop, total_tiles)
 
     # Data augmentation

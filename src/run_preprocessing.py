@@ -38,12 +38,11 @@ if __name__ == "__main__":
     disasters_of_interest: tuple = (
         'mexico-earthquake',
     )
-    disaster_num = 50
-    num_aug = 1
+    disaster_num = 10
+    num_aug = 0
 
-    out_path = FilePath(os.environ["OUT_PATH"])
     paths = measure_time(preprocess, disaster_num, num_aug,
-                         disasters_of_interest, out_path)
+                         disasters_of_interest)
     (tile_splits_json_path, patch_split_json_path,
      aug_tile_split_json_path, aug_patch_split_json_path,
      mean_std_json_path) = paths
@@ -55,4 +54,5 @@ if __name__ == "__main__":
         "patch_split_json_path": patch_split_json_path,
         "mean_std_json_path": mean_std_json_path
     }
+    out_path = FilePath(os.environ["OUT_PATH"])
     out_path.join("data_paths.json").save_json(paths)

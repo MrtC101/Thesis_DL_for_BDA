@@ -99,10 +99,7 @@ def create_masks(raw_path: FilePath) -> None:
             # Move folder to skip it
             shutil.move(subset_path, join(raw_path, "..", subset))
 
-        if targets_dir.is_dir():
-            targets_dir.remove()
-        targets_dir.create_folder()
-
-        mask_tiles(labels_dir, targets_dir)
-
+        if not targets_dir.is_dir():
+            targets_dir.create_folder()
+            mask_tiles(labels_dir, targets_dir)
         log.info(f"Masks for {subset}/ folder created.")

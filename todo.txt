@@ -1,10 +1,10 @@
 Me falta:
-- Implementar analisis de metricas, para sacar el mejor fold.
-- Adaptación de run deffinitive
-- debugging toko del post processing.
-
-- Propongo 3 experimentos. cada experimentos probablemetne tarde entre 7 y 15 días en completarse.
-(Exploración de hiperparametros pobre)
-
-- Redactar documento mientras se realiza computo.
+- Corregir errores de log y metricas con latex
+- Implementar pre con data fuera
+- Experimentos sin aug en toko
+- Experimentos sin aug en Mendieta
+- Implementar balance con augmentación de datos
+- Experimentos con aug en toko
+- Experimentos con aug en Mendieta 
 - Decorar página web.
+- Redactar documento mientras se realiza computo.

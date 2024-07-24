@@ -1,5 +1,5 @@
 node:
-  node_name: "toko03"
+  node_name: "toko07"
   cpu_num: 64
   partition: "XL"
   hours: 72

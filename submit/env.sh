@@ -1,9 +1,10 @@
 function re() {
     # recive files from toko
     rsync -avz \
-    --exclude cpu_exp \
-    --exclude 'debbug_exp/data' \
-    --exclude 'debbug_exp/out/*/*/checkpoints' \
+    --exclude 'cpu_exp/data' \
+    --exclude 'cpu_exp/out/*/*/checkpoints' \
+    --exclude 'cpu_exp/out/*/checkpoints' \
+    --exclude '*/__pycache__/*' \
     mcogo@toko.uncu.edu.ar:scratch/ .
 }
 
@@ -18,6 +19,11 @@ function send() {
     --exclude recive.sh \
     --exclude send.sh \
     --exclude out \
+    --exclude submit/env.sh \
+    --exclude notebooks \
+    --exclude todo.txt \
+    --exclude README.md \
+    --exclude LICENSE \
     . mcogo@toko.uncu.edu.ar:scratch/
 }
 alias send=send
