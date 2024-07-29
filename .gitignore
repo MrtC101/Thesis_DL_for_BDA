@@ -1,11 +1,11 @@
-cpu_exp/*
-debbug_exp/*
+data/
+debugg/
 experiments
 setup.cfg
 *.editorconfig
 
 # Byte-compiled / optimized / DLL files
-__pycache__/
+**/__pycache__
 *.py[cod]
 
 # C extensions

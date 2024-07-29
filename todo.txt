@@ -1,10 +1,23 @@
 Me falta:
-- Corregir errores de log y metricas con latex
-- Implementar pre con data fuera
+- Implementar balance con augmentación de datos
+
 - Experimentos sin aug en toko
 - Experimentos sin aug en Mendieta
-- Implementar balance con augmentación de datos
+
 - Experimentos con aug en toko
 - Experimentos con aug en Mendieta 
-- Decorar página web.
+
+- Decorar página web
+- Terminar notebooks
 - Redactar documento mientras se realiza computo.
+
+exp - 1:
+epochs = 20
+batch = 16, 32
+lr = 0.001, 0.0001
+kfold = 1, 2
+aug = 0
+img = 200
+exp2 con augmentación
+exp1 en mendieta.
+exp2 en mendieta

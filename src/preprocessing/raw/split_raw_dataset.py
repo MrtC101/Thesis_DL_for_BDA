@@ -19,11 +19,11 @@ def get_buildings(tiles_dict: dict):
         bld_list = label_json['features']['xy']
         if not len(bld_list) > 0:
             buildings.append([tile_id, "no-buildings"])
-        for building in bld_list:
+        for i, building in enumerate(bld_list):
             dmg_label = building['properties'].get(
                 'subtype', 'no-damage')
-            buildings.append([tile_id, dmg_label])
-    df = pd.DataFrame(buildings, columns=["tile_id", "label"])
+            buildings.append([tile_id, i, dmg_label])
+    df = pd.DataFrame(buildings, columns=["tile_id", "list_id", "label"])
     df.set_index(["tile_id"], inplace=True)
     return df
 
@@ -112,11 +112,12 @@ def save_proportions(splits_dict: dict, out_path: FilePath):
     weights_df[weights_df.isna()] = 0.0
     weights = {label: w for label, w in weights_df.items()
                if label in ['destroyed', 'major-damage', 'minor-damage', 'no-damage']}
-    path = out_path.join("..", "..", "out")
+    path = out_path.join("..", "out")
     path.join("train_weights.json").save_json(weights)
 
 
-def stratified_split_dataset(raw_path, out_path, split, n):
+def stratified_split_dataset(xbd_path, data_path, split_prop,
+                             disasters_of_interest, total_tiles):
     """
     Splits dataset into stratified train and test sets.
 
@@ -129,9 +130,9 @@ def stratified_split_dataset(raw_path, out_path, split, n):
     Returns:
     str: Path to the JSON file with the splits.
     """
-    disasters = RawPathManager.load_paths(raw_path)
-    test_n = math.ceil(n * split["test"])
-    train_n = math.floor(n * split["train"])
+    disasters = RawPathManager.load_paths(xbd_path, disasters_of_interest)
+    test_n = math.ceil(total_tiles * split_prop["test"])
+    train_n = math.floor(total_tiles * split_prop["train"])
 
     splits_dict = defaultdict(lambda: defaultdict(lambda: {}))
     for dis_id, tiles_dict in disasters.items():
@@ -139,15 +140,16 @@ def stratified_split_dataset(raw_path, out_path, split, n):
             tiles_dict, test_n)
         splits_dict["train"][dis_id] = create_train_split(
             tiles_dict, dis_id, train_n)
-        msg = f"{dis_id} length {len(tiles_dict)}, desired length {n}, "
+        msg = f"{dis_id} length {len(tiles_dict)}," + \
+        " desired length {total_tiles}, "
         tot_len = 0
         for key, set in splits_dict.items():
             tot_len += len(set[dis_id])
             msg += f"{key} {len(set[dis_id])} "  # For loggin strings
         log.info(msg + f", stratified length {tot_len}")
 
-    save_proportions(splits_dict, out_path)
-    return save_splits(splits_dict, out_path)
+    save_proportions(splits_dict, data_path)
+    return save_splits(splits_dict, data_path)
 
 
 def leave_only_n(data_path: FilePath, n: int) -> None:

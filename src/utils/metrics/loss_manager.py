@@ -18,14 +18,23 @@ class LossManager():
         self.losses_seg_post = AverageMeter()
         self.losses_dmg = AverageMeter()
 
-    def compute_loss(self, pred_masks: list[torch.Tensor], x_pre: torch.Tensor,
-                     y_seg: torch.Tensor, y_mask: torch.Tensor) -> torch.nn.CrossEntropyLoss:
+    def compute_loss(self, predicted_masks: list[torch.Tensor], input_data: torch.Tensor,
+                     segmentation_targets: torch.Tensor, mask_targets: torch.Tensor) -> torch.nn.CrossEntropyLoss:
         """Computes loss function"""
-        true_masks = [y_seg, y_seg, y_mask]
-        losses = [c(pm, tm) for c, pm, tm in zip(self.criterions, pred_masks, true_masks)]
+        # List of true masks corresponding to the predicted masks
+        true_masks = [segmentation_targets,
+                      segmentation_targets, mask_targets]
+        # Calculate individual losses for each pair of predicted and true masks
+        individual_losses = [
+            criterion(pred_mask, true_mask)
+            for criterion, pred_mask, true_mask in zip(self.criterions, predicted_masks, true_masks)
+        ]
+        # Combine individual losses with their corresponding weights
         combined_loss = sum(weight * loss for weight,
-                            loss in zip(self.weights, losses))
-        self.update_losses(combined_loss, losses, x_pre.size(0))
+                            loss in zip(self.weights, individual_losses))
+        # Update the tracked losses
+        self.update_losses(
+            combined_loss, individual_losses, input_data.size(0))
         return combined_loss
 
     def update_losses(self, combined_loss, losses, x_pre_size):
@@ -39,6 +48,7 @@ class LossManager():
         obj = {
             'seg_pre': self.losses_seg_pre.avg,
             'seg_post': self.losses_seg_post.avg,
-            'dmg': self.losses_dmg.avg
+            'dmg': self.losses_dmg.avg,
+            'tot_loss': self.combined_losses.avg
         }
         tb_log.add_scalars(f'{phase}/loss', obj, epoch)

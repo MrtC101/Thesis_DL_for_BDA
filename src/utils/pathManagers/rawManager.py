@@ -20,7 +20,8 @@ class TileFilesDict(dict):
             self["mask"] = path
         else:
             ext = file_type.split(".")[1]
-            raise Exception(f".{ext} is not an allowed format. File:{path}")
+            raise Exception(
+                f".{ext} is not an allowed format. File:{path}")
 
     def check(self):
         expected = ["image", "json", "mask"]
@@ -84,7 +85,8 @@ class RawPathManager(dict):
     def add(self, folder_path: FilePath, file_name: str):
         file_path = folder_path.join(file_name)
         file_path.must_be_file()
-        dis_id, tile_id, prefix, file_type = self._split_file_name(file_name)
+        dis_id, tile_id, prefix, file_type = self._split_file_name(
+            file_name)
         if (dis_id not in self.keys()):
             self[dis_id] = ZoneDict()
         self[dis_id].add(tile_id, prefix, file_type, file_path)
@@ -105,7 +107,7 @@ class RawPathManager(dict):
             tileDict.check()
 
     @staticmethod
-    def load_paths(data_path: FilePath) -> 'RawPathManager':
+    def load_paths(data_path: FilePath, disasters: tuple) -> 'RawPathManager':
         """
             Creates a DisasterDict that stores each file path.
         """
@@ -115,6 +117,7 @@ class RawPathManager(dict):
             for folder_path in subset_path.get_folder_paths():
                 folder_path.must_be_dir()
                 for file in folder_path.get_files_names():
-                    disaster_zone_dict.add(folder_path, file)
+                    if file.startswith(disasters):
+                        disaster_zone_dict.add(folder_path, file)
         disaster_zone_dict.check()
         return disaster_zone_dict
