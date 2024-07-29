@@ -1,5 +1,6 @@
 import os
 import json
+import yaml
 import threading
 import shutil
 import numpy as np
@@ -10,7 +11,7 @@ class FilePath(str):
 
     def basename(self):
         return os.path.basename(self)
-    
+
     def remove(self):
         if self.is_dir():
             shutil.rmtree(self)
@@ -18,7 +19,7 @@ class FilePath(str):
             os.remove(self)
         else:
             raise FileNotFoundError(f"{self} does not exist.")
-            
+
     def must_be_file(self) -> None:
         """Check if the path is a valid file."""
         if not os.path.exists(self):
@@ -40,16 +41,6 @@ class FilePath(str):
         """Check if the file has a .json extension."""
         return self.lower().endswith(".json")
 
-    def must_be_npy(self) -> None:
-        """Check if the file is a .npy file."""
-        self.must_be_file()  # Ensure the path is a file
-        if not self.is_npy():
-            raise ValueError(f"{self} must be a .npy file.")
-
-    def is_npy(self) -> bool:
-        """Check if the file has a .npy extension."""
-        return self.lower().endswith(".npy")
-
     def save_json(self, dict_obj: dict) -> None:
         """Save a dictionary to a JSON file."""
         if not self.is_json():
@@ -65,6 +56,16 @@ class FilePath(str):
             with open(self) as file:
                 return json.load(file)
 
+    def must_be_npy(self) -> None:
+        """Check if the file is a .npy file."""
+        self.must_be_file()  # Ensure the path is a file
+        if not self.is_npy():
+            raise ValueError(f"{self} must be a .npy file.")
+
+    def is_npy(self) -> bool:
+        """Check if the file has a .npy extension."""
+        return self.lower().endswith(".npy")
+
     def save_npy(self, array: np.ndarray) -> None:
         """Save a NumPy array to a .npy file."""
         if not self.is_npy():
@@ -76,6 +77,34 @@ class FilePath(str):
         if not self.is_npy():
             raise ValueError(f"{self} is not a .npy file.")
         return np.load(self)
+
+    def must_be_yaml(self) -> None:
+        """Check if the file is a YAML file."""
+        self.must_be_file()  # Ensure the path is a file
+        if not self.is_yaml():
+            raise ValueError(f"{self} must be a YAML file.")
+
+    def is_yaml(self) -> bool:
+        """Check if the file has a .yaml extension."""
+        return self.lower().endswith((".yaml", ".yml"))
+
+    def save_yaml(self, dict_obj: dict) -> None:
+        """Save a dictionary to a YAML file."""
+        if not self.is_yaml():
+            raise ValueError(f"{self} is not a JSON file.")
+        with open(self, 'w') as file:
+            yaml.dump(dict_obj, file, indent=4)
+
+    def read_yaml(self) -> dict:
+        """Read a YAML file into a dictionary."""
+        if not self.is_yaml():
+            raise ValueError(f"{self} is not a YAML file.")
+        with self.lock:
+            try:
+                with open(self, 'r') as file:
+                    return yaml.safe_load(file)
+            except Exception as e:
+                raise RuntimeError(f"Failed to read {self}: {e}")
 
     def must_be_dir(self):
         path = self

@@ -1,0 +1,10 @@
+*/checkpoints/*
+*/__pycache__/*
+notebooks
+debugg
+data
+submit/env.sh
+submit/exclude.txt
+.vscode
+.gitignore
+.git

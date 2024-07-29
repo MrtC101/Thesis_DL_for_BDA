@@ -3,24 +3,6 @@ from tqdm import tqdm
 from utils.common.pathManager import FilePath
 from training.cross_validation_pipeline import k_cross_validation
 from utils.loggers.console_logger import LoggerSingleton
-from sklearn.model_selection import ParameterGrid
-
-
-def create_params(hyperparameter_config: dict, configs: dict) -> list[dict]:
-    """
-    Create a list of configuration dictionaries for hyperparameter
-      optimization.
-
-    Args:
-        configs (dict): Base configuration dictionary with default settings.
-
-    Returns:
-        list[dict]: List of configuration dictionaries with different
-          hyperparameter combinations.
-    """
-    param_combinations = list(ParameterGrid(hyperparameter_config))
-    return [(i, {**configs, **params}) for i, params in enumerate(param_combinations)]
-
 
 def _start_k_fold(folds: int, index: int,
                   config: dict, paths: dict) -> tuple[int, float]:
@@ -60,15 +42,16 @@ def parameter_search(folds: int, param_list: dict, paths_dict: dict, parallel=Fa
         "hyperparameter_console_logs")
     log = LoggerSingleton("HYPERPARAMETER_SEARCH", log_out)
     log.info(f"Cantidad de configuraciones: {len(param_list)}.")
+
     if parallel:
         results = Parallel(n_jobs=-1)(delayed(_start_k_fold)
-                                      (folds, i, config, paths_dict)
-                                      for i, config in tqdm(param_list))
+                                    (folds, i, config, paths_dict)
+                                    for i, config in tqdm(param_list))
     else:
         results = [_start_k_fold(folds, i, config, paths_dict)
-                   for i, config in tqdm(param_list)]
+                for i, config in tqdm([param_list])]
 
     best_index, best_acc = min(results, key=lambda x: x[1])
 
     log.info(f"Configuration number {best_index} " +
-             f"with a validation loss of {best_acc:.4f}")
+            f"with a validation loss of {best_acc:.4f}")

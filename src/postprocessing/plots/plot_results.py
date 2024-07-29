@@ -1,4 +1,6 @@
+import matplotlib.axes
 from torchvision.utils import draw_bounding_boxes
+from utils.common.pathManager import FilePath
 from utils.visualization.label_to_color import LabelDict
 from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 import pandas as pd
@@ -9,6 +11,7 @@ import cv2
 import matplotlib.pyplot as plt
 import matplotlib
 import torch
+import seaborn as sns
 matplotlib.use("Agg")
 
 labels_dict = LabelDict()
@@ -128,7 +131,8 @@ def superposed_img(dis_id, tile_id, pre_img, pred_img, save_path):
         in the first row and 'curr_table' in the second row."""
     superposed_image = cv2.addWeighted(
         pre_img.numpy(), 0.8, pred_img.numpy(), 0.5, 0)
-    file_path = os.path.join(save_path, f"{dis_id}_{tile_id}_superposed.png")
+    file_path = os.path.join(
+        save_path, f"{dis_id}_{tile_id}_superposed.png")
     LabelMaskVisualizer.save_arr_img(superposed_image, file_path)
 
 
@@ -176,3 +180,54 @@ def plot_pr_curves(type, pr_curves, out):
     plt.grid(True)
     # especificiar si es parche o tile.
     plt.savefig(os.path.join(out, f"{type}_PR_curves.png"))
+
+
+def plot_loss(tr_l: pd.DataFrame, vl_l: pd.DataFrame, metric_dir: FilePath):
+    tr_l = tr_l.set_index("epoch")
+    vl_l = vl_l.set_index("epoch")
+    tr_l = tr_l.rename(columns={"loss": "train_loss"})
+    vl_l = vl_l.rename(columns={"loss": "val_loss"})
+    f_df = pd.concat([tr_l, vl_l], axis=1)
+
+    ax: matplotlib.axes.Axes
+    fig, ax = plt.subplots(figsize=(7, 4), dpi=100)
+    ax.plot(f_df, label=f_df.columns)
+    ax.set_title("Loss Over Epoch")
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('Loss')
+    ax.legend()
+    ax.grid(True)
+    fig.savefig(metric_dir.join("loss_plots.png"))
+
+
+def plot_harmonic_mean(tr_m: pd.DataFrame, vl_m: pd.DataFrame, metric_dir: FilePath):
+    tr = tr_m[tr_m["class"] == 0][["epoch","f1_harmonic_mean"]]
+    tr = tr.rename(columns={"f1_harmonic_mean": "f1_h_train"})
+    tr = tr.set_index("epoch")
+    vl = vl_m[vl_m["class"] == 0][["epoch","f1_harmonic_mean"]]
+    vl = vl.rename(columns={"f1_harmonic_mean": "f1_h_val"})
+    vl = vl.set_index("epoch")
+    metrics_df = pd.concat([tr, vl], axis=1)
+    ax: matplotlib.axes.Axes
+    fig, ax = plt.subplots(figsize=(7, 4), dpi=100)
+    ax.plot(metrics_df, label=metrics_df.columns)
+    ax.set_title('F1 Harmonic Mean Over Epochs')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel('F1 Harmonic Mean')
+    ax.legend()
+    ax.grid(True)
+    fig.savefig(metric_dir.join("f1_h_mean_plots.png"))
+
+
+def plot_metric_per_class(tr_m: pd.DataFrame, metric: str, prefix: str, metric_dir: FilePath):
+    tr_m['class'] = tr_m['class'].apply(labels_dict.get_key_by_num)
+    tr = tr_m.pivot(index='epoch', columns='class', values=metric)
+    ax: matplotlib.axes.Axes
+    fig, ax = plt.subplots(figsize=(7, 4), dpi=100)
+    ax.plot(tr, label=tr.columns)
+    ax.set_title(f'{metric.capitalize()} per Class over Epoch')
+    ax.set_xlabel('Epoch')
+    ax.set_ylabel(f'{metric}')
+    ax.legend()
+    ax.grid(True)
+    fig.savefig(metric_dir.join(f"{prefix}_{metric}_plots.png"))

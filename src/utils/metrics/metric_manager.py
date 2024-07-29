@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 import pandas as pd
 import torch
+from postprocessing.plots.plot_results import plot_harmonic_mean, plot_loss, plot_metric_per_class
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
 from utils.metrics.common import Level
@@ -102,7 +103,8 @@ class MetricManager:
         else:
             for lvl in levels:
                 key = lvl.value["matrix_key"]
-                matrices[key] = get_confusion_matrix_for_level(lvl, batch_idx)
+                matrices[key] = get_confusion_matrix_for_level(
+                    lvl, batch_idx)
         return matrices
 
     def compute_metrics_for(self, level: Level, conf_df: pd.Series):
@@ -134,7 +136,8 @@ class MetricManager:
 
         def compute_metrics_for_level(lvl):
             key = lvl.value["matrix_key"]
-            matrix = self.compute_metrics_for(lvl, confusion_matrices_df[key])
+            matrix = self.compute_metrics_for(
+                lvl, confusion_matrices_df[key])
             matrix.insert(0, "epoch", epoch)
             return matrix
 
@@ -160,15 +163,17 @@ class MetricManager:
                      odd=True, decim_digits=5))
             for index, row in metric_df.iterrows():
                 params = row.copy()
-                epoch = params.pop("epoch")  # Remove 'epoch' from params, if needed
+                # Remove 'epoch' from params, if needed
+                epoch = params.pop("epoch")
                 label = params.pop("class")
                 msg = f"{phase}/{key}_{label}_metrics"
                 tb_log.add_scalars(msg, params, int(epoch))
 
-
     @staticmethod
-    def save_metrics(metrics: list, metric_dir: FilePath, file_prefix: str):
+    def save_metrics(metrics: list, loss: list, metric_dir: FilePath, file_prefix: str):
         """Save metrics in csv"""
+        csv_dir = metric_dir.join("csv").create_folder()
+        tex_dir = metric_dir.join("tex").create_folder()
         # save evalution metrics
         log = LoggerSingleton()
         for epoch in range(len(metrics)):
@@ -176,18 +181,22 @@ class MetricManager:
                 mode = "w" if not epoch > 0 else "a"
                 header = not epoch > 0
                 met: pd.DataFrame
-                met.to_csv(metric_dir.join(f'{file_prefix}_{key}.csv'),
+                met.to_csv(csv_dir.join(f'{file_prefix}_{key}.csv'),
                            mode=mode,
                            header=header,
                            index=False)
-                met.to_latex(metric_dir.join(f'{file_prefix}_{key}.tex'))
-                log.info(f"metrics saved {metric_dir.join(f'{file_prefix}_{key}.csv')}")
-
-    @staticmethod
-    def save_loss(loss_metrics: list, metric_dir: FilePath):
-        """Save metrics in csv"""
-        path = metric_dir.join("loss.csv")
-        df = pd.DataFrame(loss_metrics)
-        df.to_csv(path, mode="w", index=False)
-        log = LoggerSingleton()
-        log.info(f"Loss saved {path}")
+                met.to_latex(tex_dir.join(f'{file_prefix}_{key}.tex'))
+        df = pd.DataFrame(loss)
+        df.to_csv(csv_dir.join(f"{file_prefix}_loss.csv"),
+                  mode="w", index=False)
+        df.to_latex(tex_dir.join(f"{file_prefix}_loss.tex"))
+        log.info(f"Loss & Metrics saved")
+        if file_prefix == "val":
+            tr_l = pd.read_csv(csv_dir.join(f"train_loss.csv"))
+            vl_l = pd.read_csv(csv_dir.join(f"val_loss.csv"))
+            plot_loss(tr_l, vl_l, metric_dir)
+            tr_m = pd.read_csv(csv_dir.join(f"train_dmg_pixel_level.csv"))
+            vl_m = pd.read_csv(csv_dir.join(f"val_dmg_pixel_level.csv"))
+            plot_harmonic_mean(tr_m, vl_m, metric_dir)
+            plot_metric_per_class(tr_m, 'f1', "train", metric_dir)
+            plot_metric_per_class(vl_m, 'f1', "val", metric_dir)

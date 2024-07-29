@@ -1,10 +1,23 @@
 Me falta:
-- Implementar analisis de metricas, para sacar el mejor fold.
-- Adaptación de run deffinitive
-- debugging toko del post processing.
+- Implementar balance con augmentación de datos
 
-- Propongo 3 experimentos. cada experimentos probablemetne tarde entre 7 y 15 días en completarse.
-(Exploración de hiperparametros pobre)
+- Experimentos sin aug en toko
+- Experimentos sin aug en Mendieta
 
+- Experimentos con aug en toko
+- Experimentos con aug en Mendieta 
+
+- Decorar página web
+- Terminar notebooks
 - Redactar documento mientras se realiza computo.
-- Decorar página web.
+
+exp - 1:
+epochs = 20
+batch = 16, 32
+lr = 0.001, 0.0001
+kfold = 1, 2
+aug = 0
+img = 200
+exp2 con augmentación
+exp1 en mendieta.
+exp2 en mendieta

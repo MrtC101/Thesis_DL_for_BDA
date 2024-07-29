@@ -11,7 +11,7 @@ from utils.metrics.common import Level
 import matplotlib
 
 from postprocessing.bbs.polygon_manager import get_buildings, get_instance_mask
-matplotlib.use("TkAgg")
+#matplotlib.use("TkAgg")
 
 
 class MatrixComputer:

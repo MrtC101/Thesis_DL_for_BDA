@@ -67,8 +67,8 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir,
     return best_acc
 
 
-def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint : bool,
-                  device, init_learning_rate, tb_logger, new_optimizer):
+def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint: bool,
+                 device, init_learning_rate, tb_logger, new_optimizer):
     """
     Resume the model from a checkpoint or start from scratch.
 
@@ -83,7 +83,7 @@ def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint : bool
     Returns:
         tuple: (optimizer, starting_epoch, best_acc)
     """
-       
+
     files = len(checkpoint_path.get_files_names())
     if checkpoint and files > 0:
         log.info(f'Loading checkpoint from {checkpoint_path}')
@@ -134,10 +134,12 @@ def train_model(configs: dict[str],
     """
 
     out_dir = FilePath(paths['out_dir'])
-    log = LoggerSingleton(out_dir.basename().capitalize(), folder_path=out_dir)
+    log = LoggerSingleton(
+        out_dir.basename().capitalize(), folder_path=out_dir)
 
     # setup output directories
-    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = get_dirs(out_dir)
+    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = get_dirs(
+        out_dir)
     save_configs(config_dir, configs)
 
     # Device & Model
@@ -147,13 +149,14 @@ def train_model(configs: dict[str],
     # log.info(model.model_summary())
 
     # samples are for tensorboard visualization of same images through epochs
-    tb_logger = TensorBoardLogger(tb_logger_dir, configs['num_chips_to_viz'])
+    tb_logger = TensorBoardLogger(
+        tb_logger_dir, configs['num_chips_to_viz'])
 
     # resume from a checkpoint if provided
     optimizer, starting_epoch, best_acc = \
         resume_model(model, checkpoint_dir, configs["checkpoint"],
                      device,
-                     configs['init_learning_rate'],
+                     configs['learning_rate'],
                      tb_logger,
                      configs['new_optimizer'])
     log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, " +
@@ -161,16 +164,17 @@ def train_model(configs: dict[str],
 
     # loss functions
     w_seg = torch.FloatTensor(configs['weights_seg'])
-    w_damage = torch.FloatTensor(configs['weights_damage'])
+    w_damage = torch.FloatTensor(configs['weights_dmg'])
     criterion_seg = nn.CrossEntropyLoss(weight=w_seg).to(device=device)
-    criterion_damage = nn.CrossEntropyLoss(weight=w_damage).to(device=device)
+    criterion_damage = nn.CrossEntropyLoss(
+        weight=w_damage).to(device=device)
     criterions = [criterion_seg, criterion_seg, criterion_damage]
 
     # managers
     loss_manager = LossManager(configs['weights_loss'], criterions)
     metric_manager = MetricManager(configs['labels_bld'],
                                    configs['labels_dmg'])
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=2000)
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=10)
 
     epochs = configs['tot_epochs']
 
@@ -193,32 +197,33 @@ def train_model(configs: dict[str],
     # Metrics
     train_metrics = []
     val_metrics = []
-    loss_metrics = []
+    train_loss = []
+    val_loss = []
 
     for epoch in trange(starting_epoch, epochs+1, desc="Epoch"):
         # TRAINING
-        train_epoch_metrics, tr_loss = training.run_epoch(epoch)
+        train_epoch_metrics, tr_epoch_loss = training.run_epoch(epoch)
         train_metrics.append(train_epoch_metrics)
+        train_loss.append({"epoch": epoch, "loss": tr_epoch_loss})
         # VALIDATION
         with torch.no_grad():
-            val_epoch_metrics, val_loss = validation.run_epoch(epoch)
+            val_epoch_metrics, val_epoch_loss = validation.run_epoch(
+                epoch)
         val_metrics.append(val_epoch_metrics)
+        val_loss.append({"epoch": epoch, "loss": val_epoch_loss})
 
-        scheduler.step(val_loss)  # decay Learning Rate
+        scheduler.step(val_epoch_loss)  # decay Learning Rate
 
         log.info(f"epoch {epoch}/{configs['tot_epochs']}:" +
-                 f"train loss:{tr_loss:3f};" +
-                 f"val loss:{val_loss:3f};")
-        loss_metrics.append({"epoch": epoch,
-                             "tr_loss": tr_loss,
-                             "val_loss": val_loss})
+                 f"train loss:{tr_epoch_loss:3f};" +
+                 f"val loss:{val_epoch_loss:3f};")
         # CHECKPOINT
         best_acc = save_if_best(val_epoch_metrics, best_acc,
                                 checkpoint_dir, model, optimizer, epoch)
 
-    MetricManager.save_loss(loss_metrics, metric_dir)
-    MetricManager.save_metrics(train_metrics, metric_dir, "train")
-    MetricManager.save_metrics(val_metrics, metric_dir, "val")
+    MetricManager.save_metrics(
+        train_metrics, train_loss, metric_dir, "train")
+    MetricManager.save_metrics(val_metrics, val_loss, metric_dir, "val")
 
     # TESTING
     if (test_loader is not None):
@@ -228,9 +233,10 @@ def train_model(configs: dict[str],
             mode=EpochManager.Mode.TESTING, loader=test_loader, **sheared_vars)
         with torch.no_grad():
             test_metrics, test_loss = testing.run_epoch(1, predicted_dir)
+        MetricManager.save_metrics([test_metrics],
+                                   [{"epoch": epoch, "loss": test_loss}],
+                                   metric_dir, "test")
         log.info(f"Loss over testing split: {test_loss:3f};")
-        MetricManager.save_loss([test_loss], metric_dir)
-        MetricManager.save_metrics([test_metrics], metric_dir, "test")
         best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
         pixel_metric_curves(test_loader, model, metric_dir)
 

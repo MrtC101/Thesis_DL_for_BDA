@@ -8,12 +8,33 @@ packages, to implement the data preprocessing,
 model training and testing pipeline for this project.
 """
 import torch
+import multiprocessing
 from training.model_train.train_manager import train_model
 from utils.common.pathManager import FilePath
 from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.train_dataset import TrainDataset
 
+
+def set_threads():
+    """
+    Configure PyTorch threads for performance.
+
+    Args:
+        torch_threads: Number of threads for PyTorch.
+        torch_op_threads: Number of inter-op threads for PyTorch.
+    """
+    physical_cores = multiprocessing.cpu_count()
+    if torch.get_num_threads() < physical_cores or \
+       torch.get_num_interop_threads() < physical_cores:
+        log = LoggerSingleton()
+        log.info(f'Using PyTorch version {torch.__version__}.')
+        torch.set_num_threads(physical_cores)
+        log.info(
+            f"Number of threads for TorchScripts: {torch.get_num_threads()}")
+        torch.set_num_interop_threads(physical_cores)
+        log.info("Number of threads for PyTorch internal operations: " +
+                 f"{torch.get_num_interop_threads()}")
 
 def start_train(configs: dict, paths: dict, xBD_train, xBD_test=None,
                 train_sampler=None, val_sampler=None):
@@ -62,26 +83,6 @@ def start_train(configs: dict, paths: dict, xBD_train, xBD_test=None,
     return score
 
 
-def set_threads(torch_threads, torch_op_threads):
-    """
-    Configure PyTorch threads for performance.
-
-    Args:
-        torch_threads: Number of threads for PyTorch.
-        torch_op_threads: Number of inter-op threads for PyTorch.
-    """
-    if (torch.get_num_threads() < torch_threads or
-       torch.get_num_interop_threads() < torch_op_threads):
-        log = LoggerSingleton()
-        log.info(f'Using PyTorch version {torch.__version__}.')
-        torch.set_num_threads(torch_threads)
-        log.info(
-            f"Number of threads for TorchScripts: {torch.get_num_threads()}")
-        torch.set_num_interop_threads(torch_op_threads)
-        log.info("Number of threads for PyTorch internal operations: " +
-                 f"{torch.get_num_interop_threads()}")
-
-
 def train_definitive(configs: dict[str, any], paths: dict[str, any]):
     """
     Perform a training of the model.
@@ -99,12 +100,14 @@ def train_definitive(configs: dict[str, any], paths: dict[str, any]):
     log = LoggerSingleton("DEFINITIVE MODEL", folder_path=log_out)
     log.info(f"Using bet configuration with number {configs[0]}")
     configs = configs[1]
-    set_threads(configs['torch_threads'], configs['torch_op_threads'])
+    set_threads()
 
     # Load Dataset
-    xBD_train = TrainDataset('train', paths['split_json'], paths['mean_json'])
+    xBD_train = TrainDataset(
+        'train', paths['split_json'], paths['mean_json'])
     log.info(f'xBD_disaster_dataset train length: {len(xBD_train)}')
-    xBD_test = TrainDataset('test', paths['split_json'], paths['mean_json'])
+    xBD_test = TrainDataset(
+        'test', paths['split_json'], paths['mean_json'])
     log.info(f'xBD_disaster_dataset test length: {len(xBD_test)}')
 
     return start_train(configs, paths, xBD_train, xBD_test)
