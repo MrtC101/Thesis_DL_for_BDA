@@ -26,5 +26,4 @@ if __name__ == "__main__":
         "checkpoint": None
     }
 
-    definitive_acc_score = measure_time(
-        train_definitive, best_config, paths_dict)
+    definitive_acc_score = measure_time(train_definitive, best_config, paths_dict)

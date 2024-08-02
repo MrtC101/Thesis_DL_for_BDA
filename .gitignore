@@ -3,6 +3,8 @@ debugg/
 experiments
 setup.cfg
 *.editorconfig
+not_aug
+aug
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__

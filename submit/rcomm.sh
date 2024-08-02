@@ -9,7 +9,8 @@ function get() {
 
     # Recibe archivos desde el servidor remoto
     rsync -avz \
-    --exclude-from=exclude.txt \
+    #--exclude-from=/home/mrtc101/Desktop/tesina/repo/to_mendieta/submit/exclude.txt \
+    --exclude-from=/home/mrtc101/Desktop/tesina/repo/to_toko/submit/exclude.txt \
     "${user_url}:scratch/" .
 }
 
@@ -25,9 +26,12 @@ function send() {
     # Elimina caches y envía archivos
     find . -type d -name '__pycache__' -exec rm -r {} +
     rsync -avz \
-    --exclude-from=exclude.txt \
+    #--exclude-from=/home/mrtc101/Desktop/tesina/repo/to_mendieta/submit/exclude.txt \
+    --exclude-from=/home/mrtc101/Desktop/tesina/repo/to_toko/submit/exclude.txt \
     . "${user_url}:scratch/"
 }
 
 alias send-toko='send mcogo@toko.uncu.edu.ar'
 alias get-toko='get mcogo@toko.uncu.edu.ar'
+alias send-mendieta='send mcogo@mendieta.ccad.unc.edu.ar'
+alias get-mendieta='get mcogo@mendieta.ccad.unc.edu.ar'

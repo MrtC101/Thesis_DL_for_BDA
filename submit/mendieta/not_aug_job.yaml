@@ -1,12 +1,12 @@
 node:
-  node_name: "toko01"
-  cpu_num: 64
-  partition: "XL"
-  hours: 72
+  node_name: "ivb09"
+  cpu_num: 18
+  partition: "multi"
+  hours: 2
 
 # Project and Experiment paths (derived from user-defined variables)
 paths:
-  exp_name: "aug"
+  exp_name: "not_aug"
   proj_path: "/home/mcogo/scratch"
   src_path: "$PROJ_PATH/src"
   xbd_path: "$PROJ_PATH/data"
@@ -33,22 +33,6 @@ jobs:
       - "$SRC_PATH/run_parameter_search.py"
   - job_name: "cv_3"
     conf_num: 3
-    file_list:
-      - "$SRC_PATH/run_parameter_search.py"
-  - job_name: "cv_4"
-    conf_num: 4
-    file_list:
-      - "$SRC_PATH/run_parameter_search.py"
-  - job_name: "cv_5"
-    conf_num: 5
-    file_list:
-      - "$SRC_PATH/run_parameter_search.py"
-  - job_name: "cv_6"
-    conf_num: 6
-    file_list:
-      - "$SRC_PATH/run_parameter_search.py"
-  - job_name: "cv_7"
-    conf_num: 7
     file_list:
       - "$SRC_PATH/run_parameter_search.py"
   - job_name: "defini"

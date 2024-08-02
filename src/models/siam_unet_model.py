@@ -116,6 +116,7 @@ class SiamUnet(nn.Module):
             )
         )
 
+    """
     #Used for debugging
     def forward(self, x1, x2):
         a = nn.Conv2d(3, 2, kernel_size=1)(x1)
@@ -127,11 +128,11 @@ class SiamUnet(nn.Module):
             b[:, c, :, :] = torch.mul(b[:, c, :, :], preds_seg_pre)
 
         return a, a, b    
-
     """
+
     def forward(self, x1: torch.Tensor, x2: torch.Tensor) -> \
             tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
-        \"""
+        """
         Forward pass through the Siamese U-Net.
 
         Args:
@@ -140,7 +141,7 @@ class SiamUnet(nn.Module):
 
         Returns:
             tuple: A tuple of logits tensors masks for segmentation and classification.
-        \"""
+        """
 
         # UNet on x1
         enc1_1 = self.encoder1(x1)
@@ -218,7 +219,6 @@ class SiamUnet(nn.Module):
                 out_class[:, c, :, :], preds_seg_pre)
 
         return out_seg_1, out_seg_2, out_class
-    """
     
     def compute_predictions(self, logit_masks) -> tuple:
         """

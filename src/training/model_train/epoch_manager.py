@@ -33,6 +33,9 @@ class EpochManager:
     metric_manager: MetricManager
     tb_logger: TensorBoardLogger
 
+    def __post_init__(self):
+        self.model = self.model.to(self.device)
+    
     def logging_wrapper(func):
         """Wrapper applied to the epoch_iteration method
           for printing messages"""
@@ -88,7 +91,8 @@ class EpochManager:
                 self.optimizer.zero_grad()
             else:
                 self.model.eval()
-
+            
+            # Verifica el dispositivo de entrada y el modelo
             logit_masks = self.model(x_pre, x_post)
 
             loss = self.loss_manager.\
