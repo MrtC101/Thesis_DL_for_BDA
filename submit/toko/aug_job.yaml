@@ -1,18 +1,19 @@
 node:
-  node_name: "toko06"
+  node_name: "toko01"
   cpu_num: 64
   partition: "XL"
   hours: 72
 
 # Project and Experiment paths (derived from user-defined variables)
 paths:
-  exp_name: "cpu_exp"
+  exp_name: "aug"
   proj_path: "/home/mcogo/scratch"
   src_path: "$PROJ_PATH/src"
-  out_path: "$PROJ_PATH/$EXP_NAME/out"
-  data_path: "$PROJ_PATH/$EXP_NAME/data"
-  param_path: ""
-
+  xbd_path: "$PROJ_PATH/data"
+  exp_path: "$PROJ_PATH/$EXP_NAME"
+  data_path: "$EXP_PATH/data"
+  out_path: "$EXP_PATH/out"
+  
 jobs:
   - job_name: "pre"
     conf_num: NULL
@@ -28,6 +29,26 @@ jobs:
       - "$SRC_PATH/run_parameter_search.py"
   - job_name: "cv_2"
     conf_num: 2
+    file_list:
+      - "$SRC_PATH/run_parameter_search.py"
+  - job_name: "cv_3"
+    conf_num: 3
+    file_list:
+      - "$SRC_PATH/run_parameter_search.py"
+  - job_name: "cv_4"
+    conf_num: 4
+    file_list:
+      - "$SRC_PATH/run_parameter_search.py"
+  - job_name: "cv_5"
+    conf_num: 5
+    file_list:
+      - "$SRC_PATH/run_parameter_search.py"
+  - job_name: "cv_6"
+    conf_num: 6
+    file_list:
+      - "$SRC_PATH/run_parameter_search.py"
+  - job_name: "cv_7"
+    conf_num: 7
     file_list:
       - "$SRC_PATH/run_parameter_search.py"
   - job_name: "defini"

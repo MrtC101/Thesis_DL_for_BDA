@@ -4,7 +4,7 @@ import yaml
 
 def load(path):
     with open(path) as f:
-        return yaml.load(f)
+        return yaml.safe_load(f)
 
 
 def run_job(job, node, paths):
