@@ -25,3 +25,4 @@ dependencies:
     - torchvision
     - rasterio  #object-level
     - opencv-python
+    - seaborn

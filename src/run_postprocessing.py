@@ -11,12 +11,11 @@ from postprocessing.postprocess_pipeline import postprocess
 
 if __name__ == "__main__":
     out_path = FilePath(os.environ["OUT_PATH"])
-    paths = out_path.join("data_paths.json").read_json()
-    aug_tile_split_json_path = FilePath(paths['aug_tile_split_json_path'])
+    paths_dict = out_path.join("data_paths.json").read_json()
 
-    paths = {}
-    paths["split_json"] = aug_tile_split_json_path
-    paths['pred_dir'] = out_path.join("definitive_model")
-    paths['out_dir'] = out_path.join("postprocessing")
+    args = {}
+    args["split_json"] = FilePath(paths_dict['patch_split_json_path'])
+    args['pred_dir'] = out_path.join("definitive_model")
+    args['out_dir'] = out_path.join("postprocessing")
 
     measure_time(postprocess, **paths)
