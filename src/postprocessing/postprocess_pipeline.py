@@ -20,7 +20,7 @@ def save_df(metric_df: pd.DataFrame, pred_out: FilePath, file_name: str):
     file = pred_out.join(file_name+".csv")
     metric_df.to_csv(path_or_buf=file, mode="w", index=False)
     file = pred_out.join(file_name+".tex")
-    metric_df.to_latex(file, index=False)
+    metric_df.to_latex(file)
 
 
 def save_img(out_dir: FilePath, dis_id: str, tile_id: str, prefix: str,
@@ -102,7 +102,7 @@ def add_confusion_matrices(conf_tot: pd.DataFrame, conf: pd.DataFrame):
     if conf_tot.empty:
         conf_tot = conf.copy()
     else:
-        conf_tot = conf_tot.add(conf, fill_value=0)
+        conf_tot = conf_tot.add(conf.iloc[:,1:], fill_value=0).astype(int)
     return conf_tot
 
 
@@ -174,19 +174,19 @@ def save_metrics_and_matrices(out_dir: FilePath, px_conf_tot: pd.DataFrame,
 
     log = LoggerSingleton()
     log.info("Metrics for all predicted tiles".upper())
-    metrics = MetricComputer.compute_eval_metrics(px_conf_tot, dmg_labels)
-    save_df(metrics, metric_dir, "pixel_metrics")
-    log.info(to_table(curr_type="pixel", df=metrics,
+    px_metrics = MetricComputer.compute_eval_metrics(px_conf_tot, dmg_labels)
+    save_df(px_metrics, metric_dir, "pixel_metrics")
+    log.info(to_table(curr_type="pixel", df=px_metrics,
                       odd=True, decim_digits=5))
 
-    metrics = MetricComputer.compute_eval_metrics(
+    obj_metrics = MetricComputer.compute_eval_metrics(
         obj_conf_tot, dmg_labels)
     log = LoggerSingleton()
     log.info("Pixel Metrics")
-    log.info(to_table(curr_type="object", df=metrics,
+    log.info(to_table(curr_type="object", df=obj_metrics,
                       odd=True, decim_digits=5))
 
-    save_df(metrics, metric_dir, "object_metrics")
+    save_df(obj_metrics, metric_dir, "object_metrics")
 
     save_df(px_conf_tot, metric_dir, "pixel_confusion_matrix")
     save_df(px_multi_conf_tot, metric_dir, "pixel_multi_confusion_matrix")

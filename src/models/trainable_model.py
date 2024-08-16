@@ -190,3 +190,12 @@ class TrainModel(SiamUnet):
         t += "="*100
         t += f"Total Params:{total_params}"
         return str(t)
+
+    def load_best(self, wei_path, device):
+        checkpoint = torch.load(wei_path, map_location=device)
+        self.load_state_dict(checkpoint['state_dict'])
+        self.freeze_model_param()
+        optimizer = torch.optim.Adam(self.parameters())
+        starting_epoch = checkpoint['epoch'] + 1
+        best_acc = checkpoint.get('best_f1', 0.0)
+        return optimizer, starting_epoch, best_acc

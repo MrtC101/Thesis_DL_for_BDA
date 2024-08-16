@@ -103,11 +103,9 @@ def train_definitive(configs: dict[str, any], paths: dict[str, any]):
     set_threads()
 
     # Load Dataset
-    xBD_train = TrainDataset(
-        'train', paths['split_json'], paths['mean_json'])
+    xBD_train = TrainDataset('train', paths['split_json'], paths['mean_json'])
     log.info(f'xBD_disaster_dataset train length: {len(xBD_train)}')
-    xBD_test = TrainDataset(
-        'test', paths['split_json'], paths['mean_json'])
+    xBD_test = TrainDataset('test', paths['split_json'], paths['mean_json'])
     log.info(f'xBD_disaster_dataset test length: {len(xBD_test)}')
 
     return start_train(configs, paths, xBD_train, xBD_test)

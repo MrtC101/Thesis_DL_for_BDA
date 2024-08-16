@@ -36,7 +36,7 @@ export CONF_NUM={job["conf_num"]}
 #SBATCH --time={node['hours']}-00:00:00
 ##SBATCH --nodelist={node['node_name']}
 
-/bin/bash -c "{paths['proj_path']}/submit/mendieta/{job['job_name']}_run.sh"
+/bin/bash -c "{out_path}/{job['job_name']}_run.sh"
 """
     run_script = \
         f"""#!/bin/bash
@@ -85,9 +85,10 @@ echo "($start,$end) Execution time was ${execution_time} seconds." > "$output_fi
     return slurm_script_file
     
 
+
 if __name__ == "__main__":
-    out_path = '/home/mcogo/scratch/submit/test'
-    conf = 'not_aug_job.yaml'
+    out_path = '/home/mcogo/scratch/submit/mendieta/exp3'
+    conf = 'exp3_job.yaml'
     config = load(f"{out_path}/{conf}")
     job_ids = defaultdict(str)
     dependency = None 
@@ -124,3 +125,4 @@ if __name__ == "__main__":
         else:
             print(f"Error submitting job: {result.stderr}")
             last_work = None
+

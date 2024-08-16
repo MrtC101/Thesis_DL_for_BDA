@@ -1,14 +1,13 @@
-from collections import defaultdict
 import subprocess
 import yaml
 
 
 def load(path):
     with open(path) as f:
-        return yaml.safe_load(f)
+        return yaml.load(f)
 
 
-def run_job(job, node, paths, out_path):
+def run_job(job, node, paths):
     # Contruct ENV
     env_script = \
         f"""export PROJ_PATH="{paths["proj_path"]}"
@@ -26,22 +25,21 @@ export CONF_NUM={job["conf_num"]}
         f"""#!/bin/bash
 
 #SBATCH --job-name="{job['job_name']}"
-#SBATCH --output={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.log
-#SBATCH --error={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.err
+#SBATCH --output="{paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}/out.log"
+#SBATCH --error="{paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}/out.err"
+#SBATCH --nodelist={node['node_name']}
 #SBATCH --nodes=1
 #SBATCH --ntasks=1
-#SBATCH --gpus-per-task=1
 #SBATCH --cpus-per-task={node['cpu_num']}
 #SBATCH --partition={node['partition']}
-#SBATCH --time={node['hours']}-00:00:00
-##SBATCH --nodelist={node['node_name']}
+#SBATCH --time={node['hours']}:00:00
 
-/bin/bash -c "{paths['proj_path']}/submit/mendieta/{job['job_name']}_run.sh"
+/bin/bash -c "{paths['proj_path']}/submit/toko/{job['job_name']}_run.sh"
 """
     run_script = \
         f"""#!/bin/bash
 
-source {out_path}/{job['job_name']}_temp_env.sh
+source /home/mcogo/scratch/submit/toko/{job['job_name']}_temp_env.sh
 """ + """
 output_file="$OUT_PATH/time.txt"
 
@@ -66,15 +64,15 @@ execution_time=$((end - start))
 echo "($start,$end) Execution time was ${execution_time} seconds." > "$output_file"
 """
     # write temporal env.sh
-    env_file = f"{out_path}/{job['job_name']}_temp_env.sh"
+    env_file = f"/home/mcogo/scratch/submit/toko/{job['job_name']}_temp_env.sh"
     with open(env_file, 'w') as file:
         file.write(env_script)
     # Write SLURM script to temporary file
-    slurm_script_file = f"{out_path}/{job['job_name']}_temp_slurm.sh"
+    slurm_script_file = f"/home/mcogo/scratch/submit/toko/{job['job_name']}_temp_slurm.sh"
     with open(slurm_script_file, 'w') as file:
         file.write(slurm_script)
 
-    run_script_file = f"{out_path}/{job['job_name']}_run.sh"
+    run_script_file = f"/home/mcogo/scratch/submit/toko/{job['job_name']}_run.sh"
     with open(run_script_file, 'w') as file:
         file.write(run_script)
 
@@ -82,45 +80,11 @@ echo "($start,$end) Execution time was ${execution_time} seconds." > "$output_fi
     subprocess.run(['chmod', '777', slurm_script_file])
     subprocess.run(['chmod', '777', run_script_file])
     # Submit job using sbatch
-    return slurm_script_file
-    
+    subprocess.run(['sbatch', slurm_script_file])
+    # Clean up temporary file
+
 
 if __name__ == "__main__":
-    out_path = '/home/mcogo/scratch/submit/test'
-    conf = 'not_aug_job.yaml'
-    config = load(f"{out_path}/{conf}")
-    job_ids = defaultdict(str)
-    dependency = None 
+    config = load('/home/mcogo/scratch/submit/toko/not_aug_job.yaml')
     for job in config['jobs']:
-        slurm_script_file = run_job(job, config['node'], config['paths'], out_path)
-
-        if str(job["job_name"]).startswith("cv"):
-            last_work = job_ids["pre"]
-            dependency = f"--dependency=afterok:{last_work}"  
-        elif str(job["job_name"]).startswith("defini"):
-            last_work = ""
-            for key, id in job_ids.items():
-                if key.startswith("cv"):
-                    last_work+=f"{id}:"
-            last_work = last_work.strip(":")
-            dependency = f"--dependency=afterok:{last_work}"  
-        elif str(job["job_name"]).startswith("post"):
-            last_work = f"{job_ids['defini']}" 
-            dependency = f"--dependency=afterok:{last_work}"  
-            
-        if dependency:
-            print(dependency)
-            command = f'sbatch {dependency} {slurm_script_file}'
-            dependency = None
-        else:
-            command = f'sbatch {slurm_script_file}'
-        # Usa subprocess.run para ejecutar el comando y capturar el job ID
-        result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
-        # Captura el ID del trabajo actual
-        if result.returncode == 0:
-            job_id = result.stdout.strip().split()[-1]
-            job_ids[job["job_name"]] = f"{job_id}" 
-        else:
-            print(f"Error submitting job: {result.stderr}")
-            last_work = None
+        run_job(job, config['node'], config['paths'])

@@ -85,16 +85,14 @@ class MetricComputer:
                 tp, fp, fn, tn = map(float, conf_tensor[i_label])
                 sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
                 specificity = tn / (fp + tn) if (fp + tn) > 0 else 0
-                curves[i_label][th] = (
-                    1 - specificity, sensitivity)  # FPR, TPR
-
+                curves[i_label][th] = (1 - specificity, sensitivity)  # FPR, TPR
+                
         # Calcular el AUC para cada curva ROC
         roc_curves = {}
         for label, th_curves in curves.items():
             x, y = zip(*sorted(th_curves.values()))  # Ordenar por FPR
             auc_value = auc(x, y)
             roc_curves[label] = (x, y, auc_value)
-
         return roc_curves
 
     @staticmethod

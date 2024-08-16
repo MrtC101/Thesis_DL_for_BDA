@@ -238,7 +238,7 @@ def train_model(configs: dict[str],
                                    metric_dir, "test")
         log.info(f"Loss over testing split: {test_loss:3f};")
         best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
-        pixel_metric_curves(test_loader, model, metric_dir)
+        pixel_metric_curves(test_loader, model, device, metric_dir)
 
     tb_logger.flush()
     tb_logger.close()
