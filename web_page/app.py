@@ -4,9 +4,6 @@ import csv
 import shutil
 from flask import Flask, json, render_template, request, abort
 
-os.environ["PROJ_PATH"] = "/home/mrtc101/Desktop/tesina/repo/hiper_siames"
-os.environ["SRC_PATH"] = os.path.join(os.environ["PROJ_PATH"], "src")
-
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
@@ -15,7 +12,7 @@ from models.deployable_model import DeployModel
 
 # MODEL
 model = DeployModel()
-model.load_weights("/home/mrtc101/Desktop/tesina/repo/hiper_siames/src/models/model_best.pth.tar")
+model.load_weights("/home/mrtc101/Desktop/tesina/repo/to_mendieta/web_page/model_best.pth.tar")
 predict_url = "/pred"
 
 # APP

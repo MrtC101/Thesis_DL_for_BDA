@@ -1,8 +1,8 @@
 node:
-  node_name: "toko07"
-  cpu_num: 64
-  partition: "XL"
-  hours: 72
+  node_name: "ivb09"
+  cpu_num: 18
+  partition: "multi"
+  hours: 2
 
 # Project and Experiment paths (derived from user-defined variables)
 paths:
@@ -29,6 +29,10 @@ jobs:
       - "$SRC_PATH/run_parameter_search.py"
   - job_name: "cv_2"
     conf_num: 2
+    file_list:
+      - "$SRC_PATH/run_parameter_search.py"
+  - job_name: "cv_3"
+    conf_num: 3
     file_list:
       - "$SRC_PATH/run_parameter_search.py"
   - job_name: "defini"
