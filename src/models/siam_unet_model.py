@@ -25,31 +25,6 @@ class SiamUnet(nn.Module):
         self.bottleneck = SiamUnet._block(features * 8, features * 16, name="bottleneck")
 
         self.upconv4 = nn.ConvTranspose2d(features * 16, features * 8, kernel_size=2, stride=2)
-<<<<<<< HEAD
-        self.decoder4 = SiamUnet._block((features * 8) * 2, features * 8, name="dec4")
-        self.upconv3 = nn.ConvTranspose2d(features * 8, features * 4, kernel_size=2, stride=2)
-        self.decoder3 = SiamUnet._block((features * 4) * 2, features * 4, name="dec3")
-        self.upconv2 = nn.ConvTranspose2d(features * 4, features * 2, kernel_size=2, stride=2)
-        self.decoder2 = SiamUnet._block((features * 2) * 2, features * 2, name="dec2")
-        self.upconv1 = nn.ConvTranspose2d(features * 2, features, kernel_size=2, stride=2)
-        self.decoder1 = SiamUnet._block(features * 2, features, name="dec1")
-
-        self.conv_s = nn.Conv2d(in_channels=features,out_channels=out_channels_s, kernel_size=1)
-
-        # Siamese classifier layers
-        self.upconv4_c = nn.ConvTranspose2d(features * 16, features * 8, kernel_size=2, stride=2)
-        self.conv4_c = SiamUnet._block(features * 16, features * 16, name="conv4")
-
-        self.upconv3_c = nn.ConvTranspose2d(features * 16, features * 4, kernel_size=2, stride=2)
-        self.conv3_c = SiamUnet._block(features * 8, features * 8, name="conv3")
-
-        self.upconv2_c = nn.ConvTranspose2d(features * 8, features * 2, kernel_size=2, stride=2)
-        self.conv2_c = SiamUnet._block(features * 4, features * 4, name="conv2")
-
-        self.upconv1_c = nn.ConvTranspose2d(features * 4, features, kernel_size=2, stride=2)
-        self.conv1_c = SiamUnet._block(features * 2, features * 2, name="conv1")
-
-=======
         self.decoder4 = SiamUnet._block(features * 16, features * 8, name="dec4")
         self.upconv3 = nn.ConvTranspose2d(features * 8, features * 4, kernel_size=2, stride=2)
         self.decoder3 = SiamUnet._block(features * 8, features * 4, name="dec3")
@@ -70,7 +45,6 @@ class SiamUnet(nn.Module):
         self.upconv1_c = nn.ConvTranspose2d(features * 2, features, kernel_size=2, stride=2)
         self.conv1_c = SiamUnet._block(features * 2, features, name="conv1")
 
->>>>>>> to_mendieta
         self.conv_c = nn.Conv2d(in_channels=features * 2, out_channels=out_channels_c, kernel_size=1)
 
         self.softmax = torch.nn.Softmax(dim=1)
@@ -165,51 +139,6 @@ class SiamUnet(nn.Module):
         dec4_1 = torch.cat((dec4_1, enc4_1), dim=1) #128x32 -> 256x32 
         dec4_1 = self.decoder4(dec4_1) #256x32 -> 128x32
 
-<<<<<<< HEAD
-        # UNet on x2
-        enc1_2 = self.encoder1(x2)
-        enc2_2 = self.encoder2(self.pool1(enc1_2))
-        enc3_2 = self.encoder3(self.pool2(enc2_2))
-        enc4_2 = self.encoder4(self.pool3(enc3_2))
-
-        bottleneck_2 = self.bottleneck(self.pool4(enc4_2))
-
-        dec4_2 = self.upconv4(bottleneck_2)
-        dec4_2 = torch.cat((dec4_2, enc4_2), dim=1)
-        dec4_2 = self.decoder4(dec4_2)
-        dec3_2 = self.upconv3(dec4_2)
-        dec3_2 = torch.cat((dec3_2, enc3_2), dim=1)
-        dec3_2 = self.decoder3(dec3_2)
-        dec2_2 = self.upconv2(dec3_2)
-        dec2_2 = torch.cat((dec2_2, enc2_2), dim=1)
-        dec2_2 = self.decoder2(dec2_2)
-        dec1_2 = self.upconv1(dec2_2)
-        dec1_2 = torch.cat((dec1_2, enc1_2), dim=1)
-        dec1_2 = self.decoder1(dec1_2)
-
-        # Siamese
-        dec1_c = bottleneck_2 - bottleneck_1
-
-        dec1_c = self.upconv4_c(dec1_c) # 256->128  
-        diff_2 = enc4_2 - enc4_1  
-        dec2_c = torch.cat((diff_2, dec1_c), dim=1)  
-        dec2_c = self.conv4_c(dec2_c) 
-
-        dec2_c = self.upconv3_c(dec2_c)  # 128->64
-        diff_3 = enc3_2 - enc3_1
-        dec3_c = torch.cat((diff_3, dec2_c), dim=1)
-        dec3_c = self.conv3_c(dec3_c)
-
-        dec3_c = self.upconv2_c(dec3_c)  # 64->32
-        diff_4 = enc2_2 - enc2_1
-        dec4_c = torch.cat((diff_4, dec3_c), dim=1)
-        dec4_c = self.conv2_c(dec4_c)
-
-        dec4_c = self.upconv1_c(dec4_c) # 32 -> 16
-        diff_5 = enc1_2 - enc1_1
-        dec5_c = torch.cat((diff_5, dec4_c), dim=1)
-        dec5_c = self.conv1_c(dec5_c)
-=======
         dec3_1 = self.upconv3(dec4_1) #128x32 -> 64x64
         dec3_1 = torch.cat((dec3_1, enc3_1), dim=1) #64x64 -> 128x64
         dec3_1 = self.decoder3(dec3_1) #128x64 -> 64x64
@@ -221,7 +150,6 @@ class SiamUnet(nn.Module):
         dec1_1 = self.upconv1(dec2_1) #32x128 -> 16x256
         dec1_1 = torch.cat((dec1_1, enc1_1), dim=1) #16x256 -> 32x256
         dec1_1 = self.decoder1(dec1_1)  #32x256 -> 16x256
->>>>>>> to_mendieta
 
         out_seg_1 = self.conv_s(dec1_1)
 
