@@ -138,14 +138,22 @@ def train_model(configs: dict[str],
         out_dir.basename().capitalize(), folder_path=out_dir)
 
     # setup output directories
-    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = get_dirs(
-        out_dir)
+    checkpoint_dir, tb_logger_dir, config_dir, metric_dir = get_dirs(out_dir)
     save_configs(config_dir, configs)
 
     # Device & Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     log.info(f'Using device: {device}.')
-    model = TrainModel().to(device=device)
+
+    model = TrainModel()
+
+    # Configuración de DataParallel si hay más de una GPU
+    if torch.cuda.device_count() > 1:
+        print(f"Usando {torch.cuda.device_count()} GPUs con DataParallel")
+        model = nn.DataParallel(model)
+
+    model = model.to(device)
+
     # log.info(model.model_summary())
 
     # samples are for tensorboard visualization of same images through epochs
@@ -166,8 +174,7 @@ def train_model(configs: dict[str],
     w_seg = torch.FloatTensor(configs['weights_seg'])
     w_damage = torch.FloatTensor(configs['weights_dmg'])
     criterion_seg = nn.CrossEntropyLoss(weight=w_seg).to(device=device)
-    criterion_damage = nn.CrossEntropyLoss(
-        weight=w_damage).to(device=device)
+    criterion_damage = nn.CrossEntropyLoss(weight=w_damage).to(device=device)
     criterions = [criterion_seg, criterion_seg, criterion_damage]
 
     # managers
