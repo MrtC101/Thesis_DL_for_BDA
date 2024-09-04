@@ -26,3 +26,4 @@ dependencies:
     - rasterio  #object-level
     - opencv-python
     - seaborn
+    - scipy
