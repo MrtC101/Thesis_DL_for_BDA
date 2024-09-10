@@ -1,6 +1,5 @@
 from collections import defaultdict
 import math
-from unicodedata import numeric
 from tqdm import trange, tqdm
 from utils.common.pathManager import FilePath
 import pandas as pd
@@ -187,14 +186,13 @@ def greedy_sampling(xbd_path: FilePath, img_num: int) -> FilePath:
     sample = best_sample_search(non_empty_df, empty_df, img_num, labels[:4])
     return sample
 
-
 def greedy_split_dataset(xbd_path: FilePath, data_path: FilePath, img_total: int, split_prop: dict) -> FilePath:
     """
     Performs a greedy selection of img_total images from the xBD dataset.
     Then splits the selected images into training and testing sets according to the specified proportions.
     Saves the split into a json inside data_path.
 
-    Args:
+    Args:    sample.sum(axis=0, numeric_only=True)
         xbd_path (FilePath): Path to the xBD dataset directory.
         data_path (FilePath): Path to the directory where the split files will be saved.
         img_total (int): Total number of images to be selected for the sample.
@@ -206,7 +204,10 @@ def greedy_split_dataset(xbd_path: FilePath, data_path: FilePath, img_total: int
     # Sampling
     sample = greedy_sampling(xbd_path, img_total)
     ids_df = sample[["dis_id", "tile_id"]]
-    log.info(f"Building distribution: {sample.sum(axis=0, numeric_only=True)}")
+    ids_df = ids_df.reset_index(drop=True)
+
+    log.info(f"Building distribution: \n{sample.sum(axis=0, numeric_only=True)}")
+    
     # creates splits folder
     split_path = data_path.join("splits")
     split_path.create_folder()
@@ -218,21 +219,30 @@ def greedy_split_dataset(xbd_path: FilePath, data_path: FilePath, img_total: int
 
     total_tiles = len(ids_df)
 
-    train_ids_df = ids_df.sample(math.floor(total_tiles * split_prop["train"]))
+    train_ids_df = ids_df.sample(math.ceil(total_tiles * split_prop["train"]))
     test_ids_df = ids_df.drop(train_ids_df.index)
 
-    train_keys = set(train_ids_df.itertuples(index=False, name=None))
-    test_keys = set(test_ids_df.itertuples(index=False, name=None))
+    train_keys = list(train_ids_df.itertuples(index=False, name=None))
+    test_keys = list(test_ids_df.itertuples(index=False, name=None))
 
     splits_dict = defaultdict(lambda: defaultdict(lambda: {}))
     for dis_id, tiles_dict in data_dict.items():
         for tile_id in tiles_dict.keys():
-            if (dis_id, tile_id) in test_keys:
-                splits_dict["test"][dis_id][tile_id] = tiles_dict[tile_id]
-            elif (dis_id, tile_id) in train_keys:
-                splits_dict["train"][dis_id][tile_id] = tiles_dict[tile_id]
+            tup = (dis_id, tile_id)
+            if tup in test_keys:
+                for i in range(1, test_keys.count(tup)+1):
+                    new_tile_id = tile_id
+                    if i > 1:
+                        new_tile_id = str(i) + 'a' + tile_id
+                    splits_dict["test"][dis_id][new_tile_id] = tiles_dict[tile_id]
+            if tup in train_keys:
+                for i in range(1, train_keys.count(tup)+1):
+                    new_tile_id = tile_id
+                    if i > 1:
+                        new_tile_id = str(i) + 'a' + tile_id
+                    splits_dict["train"][dis_id][new_tile_id] = tiles_dict[tile_id]
     
-    log.info(f"Total imgs {total_tiles}: train length {len(train_keys)}" + \
+    log.info(f"Total imgs {total_tiles}: train length {len(train_keys)} " + \
              f"test length {len(test_keys)} desired length {img_total}")
     balanced_file = split_path.join("raw_splits.json")
     balanced_file.save_json(splits_dict)

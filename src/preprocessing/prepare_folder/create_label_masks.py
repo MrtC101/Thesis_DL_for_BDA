@@ -41,8 +41,10 @@ def json_to_mask(label_path: FilePath,
     shapes = []
     for building in label_json['features']['xy']:
         # Get damage class, defaulting to 'no-damage' if not present
-        damage_class = building.get('subtype', 'no-damage')
+        damage_class = building['properties'].get('subtype', 'no-damage')
         dmg_label = labels.get_num_by_key(damage_class)
+        if(dmg_label == 5):
+            dmg_label = 0
         # Read the coordinates
         shapes.append((wkt.loads(building['wkt']), dmg_label))
     mask_img = np.zeros(shape=size, dtype=np.uint8)
@@ -102,4 +104,5 @@ def create_masks(raw_path: FilePath) -> None:
         if not targets_dir.is_dir():
             targets_dir.create_folder()
             mask_tiles(labels_dir, targets_dir)
+
         log.info(f"Masks for {subset}/ folder created.")

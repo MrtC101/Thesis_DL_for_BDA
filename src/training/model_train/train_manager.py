@@ -145,14 +145,7 @@ def train_model(configs: dict[str],
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     log.info(f'Using device: {device}.')
 
-    model = TrainModel()
-
-    # Configuración de DataParallel si hay más de una GPU
-    if torch.cuda.device_count() > 1:
-        print(f"Usando {torch.cuda.device_count()} GPUs con DataParallel")
-        model = nn.DataParallel(model)
-
-    model = model.to(device)
+    model = TrainModel().to(device)
 
     # log.info(model.model_summary())
 

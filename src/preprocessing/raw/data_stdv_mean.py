@@ -1,11 +1,14 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
 import numpy as np
+import pandas as pd
 from tqdm import tqdm
 from utils.common.defaultDictFactory import nested_defaultdict
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.raw_datasets import TileDataset
+from utils.visualization.label_to_color import LabelDict
+from cv2 import imread
 
 log = LoggerSingleton()
 
@@ -27,6 +30,31 @@ def compute_mean_stddev(pre_img: np.ndarray, post_img: np.ndarray) -> dict:
         "post": calculate_stats(post_img)
     }
 
+def count_pxls(mask_path):
+    row = np.zeros(6,np.uint16)
+    count_tup = np.unique(imread(mask_path)[0],return_counts=True)
+    for l,c in zip(count_tup[0],count_tup[1]):
+        row[l] = c
+    return list(row)
+
+def compute_pixel_weights(data_path:FilePath,split_json_path: FilePath):
+    splits_dict = split_json_path.read_json()
+    rows = []
+    for split_id, dis_dict in splits_dict.items():
+        for dis_id, tile_dict in dis_dict.items():
+            for tile_id in tile_dict.keys():
+                imgs_dict = tile_dict[tile_id]["post"]
+                mask_path = FilePath(imgs_dict["mask"])
+                px_count = count_pxls(mask_path)
+                rows.append([split_id,dis_id,tile_id]+px_count)
+    px_Count  = pd.DataFrame(rows,columns=["split_id","dis_id","tile_id"]+list(LabelDict().labels.keys()))
+    weights_s = px_Count.set_index(["split_id","dis_id","tile_id"]).sum()
+    weights_s = weights_s.sum() / weights_s 
+    weights = {label: w for label, w in weights_s.items()
+               if label in ['destroyed', 'major-damage', 'minor-damage', 'no-damage']}
+    data_path.create_folder()
+    out_path = data_path.join("..","out")
+    out_path.join("train_weights.json").save_json(weights)
 
 def create_data_dicts(splits_json_path: FilePath, out_path: FilePath) -> str:
     """Creates three JSON files and stores them in a folder named \

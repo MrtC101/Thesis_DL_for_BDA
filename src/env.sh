@@ -1,5 +1,5 @@
 export PROJ_PATH="/home/mcogo/scratch"
-export EXP_NAME="exp3_aug"
+export EXP_NAME="deb"
 export SRC_PATH="$PROJ_PATH/src"
 export XBD_PATH="$PROJ_PATH/data"
 export EXP_PATH="$PROJ_PATH/$EXP_NAME"

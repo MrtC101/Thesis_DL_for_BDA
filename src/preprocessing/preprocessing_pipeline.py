@@ -8,7 +8,7 @@ from preprocessing.raw.gready_samp import greedy_split_dataset
 from preprocessing.prepare_folder.create_label_masks import create_masks
 from preprocessing.raw.split_raw_dataset import stratified_split_dataset
 from preprocessing.data_augmentation.augmentation import make_augmentations
-from preprocessing.raw.data_stdv_mean import create_data_dicts
+from preprocessing.raw.data_stdv_mean import compute_pixel_weights, create_data_dicts
 from preprocessing.sliced.make_smaller_tiles import slice_dataset
 from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 
@@ -54,9 +54,10 @@ def preprocess() -> dict:
     total_tiles = params["preprocessing"]["img_num"]
     # Estrategía de gready sampling
 
-    if params["custom_sampling"]:
+    if params["preprocessing"]["custom_sampling"]:
         log_Title("Split disasters with greedy approach")
         tile_splits_json_path = greedy_split_dataset(xbd_path, data_path, total_tiles, split_prop)
+        compute_pixel_weights(data_path, tile_splits_json_path)
     else:
         # Raw data
         log_Title("Split disasters")
