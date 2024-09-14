@@ -51,7 +51,7 @@ class MetricComputer:
             fp = conf_mtrx_df.loc[class_idx, 'false_pos'].sum()
             fn = conf_mtrx_df.loc[class_idx, 'false_neg'].sum()
             tn = conf_mtrx_df.loc[class_idx, 'true_neg'].sum()
-            tot = conf_mtrx_df.loc[class_idx, 'total'].sum()
+            tot = tp + fp + fn + tn
 
             precision = tp / (tp + fp) if (tp > 0 or fp > 0) else 0
 

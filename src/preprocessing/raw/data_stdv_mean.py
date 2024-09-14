@@ -50,8 +50,15 @@ def compute_pixel_weights(data_path:FilePath,split_json_path: FilePath):
     px_Count  = pd.DataFrame(rows,columns=["split_id","dis_id","tile_id"]+list(LabelDict().labels.keys()))
     weights_s = px_Count.set_index(["split_id","dis_id","tile_id"]).sum()
     weights_s = weights_s.sum() / weights_s 
-    weights = {label: w for label, w in weights_s.items()
-               if label in ['destroyed', 'major-damage', 'minor-damage', 'no-damage']}
+    
+    weights = {
+        "dmg": {label: w for label, w in weights_s.items() if label in LabelDict().keys_list},
+        "seg": {
+            'building': weights_s[LabelDict().keys_list[1:5]].sum(),
+            'background': weights_s['background']
+        }
+    }
+    
     data_path.create_folder()
     out_path = data_path.join("..","out")
     out_path.join("train_weights.json").save_json(weights)

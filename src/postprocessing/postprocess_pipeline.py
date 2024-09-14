@@ -37,11 +37,12 @@ def save_mask(out_dir: FilePath, dis_id: str, tile_id: str,
     LabelMaskVisualizer.save_tensor_img(pred_img, pred_path)
 
 
-def save_bbs(out_dir: FilePath, dis_id: str, tile_id: str, prefix: str,
-             bbs_df: pd.DataFrame,):
-    values = list(bbs_df.value_counts(subset=["label"]).items())
-    table = pd.DataFrame([(val[0][0], val[1]) for val in values],
-                         columns=["Level", "Count"])
+def save_bbs(out_dir: FilePath, dis_id: str, tile_id: str, prefix: str, bbs_df: pd.DataFrame):
+    data = [{"Level": LabelDict().get_key_by_num(l), "Count" : 0} for l in range(1,5)]
+    table = pd.DataFrame(data, columns=["Level", "Count"])
+    for l, n in bbs_df.value_counts(["label"]).items():
+        table.loc[table["Level"] == l[0], "Count"] = n
+
     folder = out_dir.join(f"{prefix}_bbs")
     folder.create_folder()
     save_df(table, folder, f"{prefix}_table.csv")
@@ -102,8 +103,46 @@ def add_confusion_matrices(conf_tot: pd.DataFrame, conf: pd.DataFrame):
     if conf_tot.empty:
         conf_tot = conf.copy()
     else:
-        conf_tot = conf_tot.add(conf.iloc[:,1:], fill_value=0).astype(int)
+        conf_tot = conf_tot.add(conf.iloc[:, 1:], fill_value=0).astype(int)
     return conf_tot
+
+
+
+def save_metrics_and_matrices(out_dir: FilePath, px_conf_tot: pd.DataFrame,
+                              px_multi_conf_tot: pd.DataFrame,
+                              obj_conf_tot: pd.DataFrame,
+                              obj_multi_conf_tot: pd.DataFrame,
+                              dmg_labels: list):
+    """
+    Save the metrics and confusion matrices to the output directory.
+
+    Args:
+        out_dir (FilePath): Directory to save the results.
+        px_conf_tot (pd.DataFrame): Total pixel confusion matrix.
+        px_multi_conf_tot (pd.DataFrame): Total pixel multi confusion matrix.
+        obj_conf_tot (pd.DataFrame): Total object confusion matrix.
+        obj_multi_conf_tot (pd.DataFrame): Total object multi confusion matrix.
+        dmg_labels (list): List of damage labels.
+    """
+    metric_dir = out_dir.join("metrics")
+    metric_dir.create_folder()
+
+    log = LoggerSingleton()
+
+    log.info("Metrics for all predicted tiles".upper())
+    px_metrics = MetricComputer.compute_eval_metrics(px_conf_tot, dmg_labels)
+    log.info(to_table(curr_type="pixel", df=px_metrics, odd=True, decim_digits=5))
+
+    log.info("Pixel Metrics")
+    obj_metrics = MetricComputer.compute_eval_metrics(obj_conf_tot, dmg_labels)    
+    log.info(to_table(curr_type="object", df=obj_metrics,odd=True, decim_digits=5))
+
+    save_df(px_metrics, metric_dir, "pixel_metrics")
+    save_df(obj_metrics, metric_dir, "object_metrics")
+    save_df(px_conf_tot, metric_dir, "pixel_confusion_matrix")
+    save_df(px_multi_conf_tot, metric_dir, "pixel_multi_confusion_matrix")
+    save_df(obj_conf_tot, metric_dir, "obj_confusion_matrix")
+    save_df(obj_multi_conf_tot, metric_dir, "obj_multi_confusion_matrix")
 
 
 def postprocess(split_json: FilePath, pred_dir: FilePath,
@@ -151,44 +190,3 @@ def postprocess(split_json: FilePath, pred_dir: FilePath,
 
     save_metrics_and_matrices(out_dir, px_conf_tot, px_multi_conf_tot,
                               obj_conf_tot, obj_multi_conf_tot, dmg_labels)
-
-
-def save_metrics_and_matrices(out_dir: FilePath, px_conf_tot: pd.DataFrame,
-                              px_multi_conf_tot: pd.DataFrame,
-                              obj_conf_tot: pd.DataFrame,
-                              obj_multi_conf_tot: pd.DataFrame,
-                              dmg_labels: list):
-    """
-    Save the metrics and confusion matrices to the output directory.
-
-    Args:
-        out_dir (FilePath): Directory to save the results.
-        px_conf_tot (pd.DataFrame): Total pixel confusion matrix.
-        px_multi_conf_tot (pd.DataFrame): Total pixel multi confusion matrix.
-        obj_conf_tot (pd.DataFrame): Total object confusion matrix.
-        obj_multi_conf_tot (pd.DataFrame): Total object multi confusion matrix.
-        dmg_labels (list): List of damage labels.
-    """
-    metric_dir = out_dir.join("metrics")
-    metric_dir.create_folder()
-
-    log = LoggerSingleton()
-    log.info("Metrics for all predicted tiles".upper())
-    px_metrics = MetricComputer.compute_eval_metrics(px_conf_tot, dmg_labels)
-    save_df(px_metrics, metric_dir, "pixel_metrics")
-    log.info(to_table(curr_type="pixel", df=px_metrics,
-                      odd=True, decim_digits=5))
-
-    obj_metrics = MetricComputer.compute_eval_metrics(
-        obj_conf_tot, dmg_labels)
-    log = LoggerSingleton()
-    log.info("Pixel Metrics")
-    log.info(to_table(curr_type="object", df=obj_metrics,
-                      odd=True, decim_digits=5))
-
-    save_df(obj_metrics, metric_dir, "object_metrics")
-
-    save_df(px_conf_tot, metric_dir, "pixel_confusion_matrix")
-    save_df(px_multi_conf_tot, metric_dir, "pixel_multi_confusion_matrix")
-    save_df(obj_conf_tot, metric_dir, "obj_confusion_matrix")
-    save_df(obj_multi_conf_tot, metric_dir, "obj_multi_confusion_matrix")

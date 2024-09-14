@@ -2,15 +2,17 @@
 # Licensed under the MIT License.
 import random
 import pandas as pd
-import concurrent.futures
+import shapely
 import torch
 from tqdm import tqdm
 from postprocessing.bbs.bounding_boxes import BoundingBox
 from utils.loggers.console_logger import LoggerSingleton
 from utils.metrics.common import Level
 import matplotlib
+from scipy.optimize import linear_sum_assignment
 
 from postprocessing.bbs.polygon_manager import get_buildings, get_instance_mask
+from utils.visualization.label_to_color import LabelDict
 #matplotlib.use("TkAgg")
 
 
@@ -100,55 +102,47 @@ class MatrixComputer:
     # OBJECT LEVEL
 
     @staticmethod
-    def match_polygons(gt_buildings, gt_label_matrix, pd_label_matrix, th):
+    def match_polygons(gt_buildings : list, gt_label_matrix : torch.Tensor,
+                       pd_buildings : list, pd_label_matrix : torch.Tensor, th : float):
         """
             Match each ground truth polygon with the max IoU predicted polygon,
             without repetition and only if its IoU is higher than the given
             threshold.
         """
-        pd_len = pd_label_matrix.unique().numel() - 1
-        relation = torch.zeros(
-            size=(len(gt_buildings), pd_len), dtype=torch.float)
-
-        # Fill relation matrix
-        for gid, (gt_poly, _) in enumerate(tqdm(gt_buildings)):
-            gt_bb = BoundingBox.create(gt_poly)
-            x1, y1, x2, y2 = gt_bb.get_components()
-            candidates = pd_label_matrix[y1:y2, x1:x2].unique()
-            best_pid, best_iou = -1, 0.0
-            for pid in candidates:
-                if pid > 0:
-                    intersection = ((gt_label_matrix == gid + 1)
-                                    & (pd_label_matrix == pid)).sum()
-                    union = ((gt_label_matrix == gid + 1) |
-                             (pd_label_matrix == pid)).sum()
-                    iou = intersection / union if union > 0 else 0.0
-                    if iou > best_iou and iou >= th:
-                        best_pid = int(pid)
-                        best_iou = iou
-            pid, iou = best_pid, best_iou
-            if pid > -1:
-                relation[gid][pid-1] = iou
-
         building_list = []
-        if len(gt_buildings) > 0:
-            for pid in range(pd_len):
-                gid = torch.argmax(relation[:, pid])
-                iou = relation[gid][pid]
-                relation[:, pid] = 0.0
-                relation[gid][pid] = iou
+        if len(gt_buildings) > 0 and len(pd_buildings) > 0:
+            relation = torch.zeros(size=(len(gt_buildings), len(pd_buildings)), dtype=torch.float)
 
-        for gid in range(len(gt_buildings)):
-            if pd_len > 0:
-                pid = torch.argmax(relation[gid])
+            # Fill relation matrix
+            for gid, (gt_poly, _) in enumerate(tqdm(gt_buildings)):
+                gt_bb = BoundingBox.create(gt_poly)
+                x1, y1, x2, y2 = gt_bb.get_components()
+                candidates : torch.Tensor = pd_label_matrix[y1:y2, x1:x2].unique()
+                candidates :list = candidates.tolist()
+                try:
+                    candidates.remove(-1)
+                except:
+                    None;
+                
+                for pid in candidates:
+                    pd_poly, _ = pd_buildings[pid]
+                    intersection = gt_poly.intersection(pd_poly).area
+                    union = gt_poly.union(pd_poly).area
+                    relation[gid][pid] = intersection / union if union > 0 else 0.0
+
+            #Asignación hungara para transformar la relación en binaría.
+            cost_matrix = 1 - relation
+            row_indices, col_indices = linear_sum_assignment(cost_matrix)
+            for gid, pid in zip(row_indices, col_indices):
                 iou = relation[gid][pid]
-            else:
-                iou = 0.0
-            building_list.append({
-                'gid': int(gid),
-                'pid': int(pid) if iou >= th else -1,
-                'iou': int(iou)
-            })
+                if iou > th:
+                    building_list.append({
+                        'gid': gid,
+                        'pid': pid,
+                        'iou': iou,
+                        'glabel': gt_buildings[gid][1],
+                        'plabel': pd_buildings[pid][1],
+                    })
 
         return pd.DataFrame(building_list)
 
@@ -167,7 +161,8 @@ class MatrixComputer:
         Retorna:
         - gt_labels: Series con las etiquetas de los polígonos ground truth.
         - pd_labels: Series con las etiquetas de los polígonos predichos.
-        - IoU_df: DataFrame con los valores de IoU entre los polígonos coincidentes.
+        - IoU_df: DataFrame Unicamente con aquellos polígonos gt que coincidieron con alguno pd,
+        y la label que se predijo.
         """
         log = LoggerSingleton()
 
@@ -181,11 +176,10 @@ class MatrixComputer:
                  f"{len(pd_buildings)} buildings found in predicted mask")
         log.info("Matching labels for each building.")
         IoU_df = MatrixComputer.match_polygons(gt_buildings, gt_label_matrix,
-                                               pd_label_matrix, iou_threshold)
-
+                                               pd_buildings, pd_label_matrix, iou_threshold)
         gt_labels = pd.Series([l for _, l in gt_buildings])
         pd_labels = pd.Series([l for _, l in pd_buildings])
-        return gt_labels, pd_labels, IoU_df
+        return IoU_df, gt_labels, pd_labels
 
     @staticmethod
     def patches_obj_conf_mtrx(level, labels_set, n_masks, gt_bld_mask,
@@ -217,10 +211,13 @@ class MatrixComputer:
     def conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set):
         conf_mrtx = []
         for c in labels_set:
+            if(len(IoU_df) > 0):
+                curr_df = IoU_df[IoU_df["glabel"] == c]
+                tp = (curr_df["glabel"] == curr_df["plabel"]).sum()
+            else:
+                tp = 0
             gt_s = gt_labels[gt_labels == c]
             pd_s = pd_labels[pd_labels == c]
-            relation = IoU_df.loc[gt_s.index]
-            tp = (relation["pid"] > -1).sum()
             fn = len(gt_s) - tp
             fp = len(pd_s) - tp
             tn = 0
@@ -232,7 +229,8 @@ class MatrixComputer:
                 'false_pos': fp,
                 'false_neg': fn,
                 'true_neg': tn,
-                'total': len(gt_s)+len(pd_s)
+                'true_total': len(gt_s),
+                'pred_total': len(pd_s)
             })
 
         return pd.DataFrame(conf_mrtx)
@@ -255,50 +253,41 @@ class MatrixComputer:
         size = l_size + 2  # +2 para 'Undetected' y 'Total'
         mat = torch.zeros(size=(size, size), dtype=torch.int32)
 
-        for gt in range(l_size):
-            l_g = labels_set[gt]
-            curr_gt = gt_labels[gt_labels == l_g]
-            rel_df = IoU_df.loc[curr_gt.index]
-            matched_ids = rel_df[rel_df["pid"] > -1]["pid"]
-            curr_prd = pd_labels.loc[matched_ids]
+        if(len(IoU_df) > 0):
+            for gt_lab in labels_set:
+                for pd_lab in labels_set:
+                    gt_labxpd_lab = (IoU_df["glabel"] == gt_lab) & (IoU_df["plabel"] == pd_lab)
+                    mat[gt_lab-1][pd_lab-1] = gt_labxpd_lab.sum()
 
-            for prd in range(l_size):
-                l_p = labels_set[prd]
-                mat[gt][prd] = (curr_prd == l_p).sum()
+        # Adding Undetected column
+        for gt_lab in labels_set:
+            mat[gt_lab - 1 , size - 2] = (gt_labels == gt_lab).sum()
+            mat[gt_lab - 1, size - 1] = \
+                mat[gt_lab - 1, size - 2] - mat[gt_lab - 1, 0:len(labels_set)].sum()
 
-            mat[gt][l_size] = (rel_df["pid"] == -1).sum()  # Undetected
-            mat[gt][size - 1] = len(curr_gt)
-
-            ghost = pd_labels.loc[~pd_labels.index.isin(
-                matched_ids)][pd_labels == l_g]
-            mat[l_size][gt] = len(ghost)  # Ghost predictions
-
-        for prd in range(l_size):
-            mat[size - 1][prd] = torch.sum(mat[:, prd])  # Total predicted
-
-        # Ghost predictions
-        mat[l_size][size - 1] = torch.sum(mat[l_size])
-        # Unpredicted
-        mat[size - 1][l_size] = torch.sum(mat[:, l_size])
-        # Totales por fila y columna
-        mat[size - 1][size -
-                      1] = torch.sum(mat[:size, size - 1]) + torch.sum(mat[size - 1, :size])
+        # Adding Ghost row
+        for pd_lab in labels_set:
+            mat[size - 2, pd_lab - 1] = (pd_labels == pd_lab).sum()
+            mat[size - 1, pd_lab - 1] = \
+                mat[size - 2, pd_lab - 1] - mat[0:len(labels_set), pd_lab - 1].sum()        
+        
+        # Total predicted
+        mat[size - 2, size - 2] = mat[:, size - 2].sum()
+        mat[size - 2, size - 1] = mat[:, size - 1].sum()
+        mat[size - 1, size - 2] = mat[size - 1, :].sum()
 
         # Convertir a DataFrame de pandas
-        mat_df = pd.DataFrame(mat.numpy(), columns=labels_set + ['Undetected', 'Total'],
-                              index=labels_set + ['Ghost', 'Total'])
+        mat_df = pd.DataFrame(mat.numpy(), 
+                              columns=labels_set + ['Total', 'Undetected'],
+                              index=labels_set + ['Total', 'Ghost'])
         return mat_df
 
     @staticmethod
     def tile_obj_conf_matrices(dmg_mask, pred_mask, labels_set, iou_threshold=0.5):
         """Returns a confusión matrix for one image"""
-        gt_labels, pd_labels, IoU_df = MatrixComputer.\
-            evaluate_polygon_iou(dmg_mask, pred_mask,
-                                 labels_set, iou_threshold)
-        conf_mrtx = MatrixComputer.\
-            conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set)
-        multi_conf_mtrx = MatrixComputer.\
-            obj_multiclass_conf_mtrx(gt_labels, pd_labels, IoU_df, labels_set)
+        IoU_df, gt_labels, pd_labels = MatrixComputer.evaluate_polygon_iou(dmg_mask, pred_mask, labels_set, iou_threshold)
+        conf_mrtx = MatrixComputer.conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set)
+        multi_conf_mtrx = MatrixComputer.obj_multiclass_conf_mtrx(gt_labels, pd_labels, IoU_df, labels_set)
         return conf_mrtx, multi_conf_mtrx
 
     # BINARY MASKS

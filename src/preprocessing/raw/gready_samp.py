@@ -40,7 +40,7 @@ def find_best_sample(non_empty_df: pd.DataFrame, dmg_size: int, labels: list, ba
     bld_tot_f = []
     imbalance_f = []
     log.info("Exploring posible data samples...")
-    for i in trange(0, len(non_empty_df)-dmg_size):
+    for i in trange(0, len(non_empty_df)-dmg_size, desc="Searching best sample"):
         sample = non_empty_df.iloc[i:i+dmg_size]
         bld_tot = sample.sum(axis=0, numeric_only=True).sum()
         arr = sample[labels].sum(axis=0, numeric_only=True).to_numpy()

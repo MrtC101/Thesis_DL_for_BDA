@@ -107,7 +107,7 @@ def comparative_figure(dis_id, tile_id, pre_img, post_img, pred_mask, gt_table, 
     ax4.axis('off')
     addPlotTable(ax4, gt_table, subtitle_size, [
                  0.6]*len(gt_table.columns), 0.16)
-    ax4.set_title('Predicted building count', fontsize=subtitle_size)
+    ax4.set_title('True building count', fontsize=subtitle_size)
 
     ax5 = fig.add_subplot(gs[1, 2])  # Span all columns in the second row
     ax5.axis('off')

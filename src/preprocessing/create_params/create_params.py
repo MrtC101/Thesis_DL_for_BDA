@@ -19,14 +19,15 @@ def create_params(params) -> list[dict]:
     """
     out_path = FilePath(os.environ["OUT_PATH"])
     train_weights = out_path.join("train_weights.json").read_json()
-    weights = [1]  # w for label 0
-    lab_w = [round(w) for w in train_weights.values()]
-    lab_w.reverse()
-    weights.extend(lab_w)  # weights for all classes
+    dmg_w = [round(w,4) for w in train_weights["dmg"].values()]
+    dmg_w.reverse()
+    seg_w = [round(w,4) for w in train_weights["seg"].values()]
+    seg_w.reverse()
 
     configs = {**params['train'], **params['visual'],
                **params['preprocessing'], **params['weights']}
-    configs["weights_dmg"] = weights
+    configs["weights_dmg"] = dmg_w
+    configs["weights_seg"] = dmg_w
     param_combinations = list(ParameterGrid(params['hyperparameter']))
     configs = [(i, {**configs, **params})
                for i, params in enumerate(param_combinations)]
