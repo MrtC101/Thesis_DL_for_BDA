@@ -27,7 +27,7 @@ def create_params(params) -> list[dict]:
     configs = {**params['train'], **params['visual'],
                **params['preprocessing'], **params['weights']}
     configs["weights_dmg"] = dmg_w
-    configs["weights_seg"] = dmg_w
+    configs["weights_seg"] = seg_w
     param_combinations = list(ParameterGrid(params['hyperparameter']))
     configs = [(i, {**configs, **params})
                for i, params in enumerate(param_combinations)]
