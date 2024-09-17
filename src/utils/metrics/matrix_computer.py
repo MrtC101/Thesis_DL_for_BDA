@@ -294,13 +294,13 @@ class MatrixComputer:
     @staticmethod
     def compute_bin_matrices_px(bin_pred_tensor: torch.Tensor,
                                 bin_true_tensor: torch.Tensor) -> torch.Tensor:
-        axis = (1, 2)
-        tp = torch.sum(bin_true_tensor & bin_pred_tensor, axis)
-        fn = torch.sum(bin_true_tensor & ~bin_pred_tensor, axis)
-        fp = torch.sum(~bin_true_tensor & bin_pred_tensor, axis)
-        tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis)
-        return torch.stack([tp, fp, fn, tn], axis=0).transpose(0, 1)
-
+        axis = (-2,-1)
+        tp = torch.sum(bin_true_tensor & bin_pred_tensor, axis).sum(axis=1)
+        fn = torch.sum(bin_true_tensor & ~bin_pred_tensor, axis).sum(axis=1)
+        fp = torch.sum(~bin_true_tensor & bin_pred_tensor, axis).sum(axis=1)
+        tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis).sum(axis=1)
+        batch = torch.stack([tp, fp, fn, tn], axis=1)
+        return batch
     @staticmethod
     def compute_bin_matrices_obj(bin_pred_tensor: torch.Tensor,
                                  bin_true_tensor: torch.Tensor) -> torch.Tensor:

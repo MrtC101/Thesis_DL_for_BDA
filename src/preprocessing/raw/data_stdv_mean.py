@@ -52,7 +52,7 @@ def compute_pixel_weights(data_path:FilePath,split_json_path: FilePath):
     weights_s = weights_s.sum() / weights_s 
     
     weights = {
-        "dmg": {label: w for label, w in weights_s.items() if label in LabelDict().keys_list[0:5]},
+        "dmg": {label: w for label, w in weights_s.items() if label in LabelDict().keys_list},
         "seg": {
             'building': weights_s[LabelDict().keys_list[1:5]].sum(),
             'background': weights_s['background']
