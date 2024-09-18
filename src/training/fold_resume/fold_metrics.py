@@ -1,56 +1,38 @@
-from collections import defaultdict
 import pandas as pd
-
 from utils.common.pathManager import FilePath
 
+def build_fold_table(out_path : FilePath):
+    config_folders = [fol_name for fol_name in out_path.get_folder_names() if fol_name.startswith("config")]
+    fold_list = []
+    for dir in config_folders:
+        conf_path = out_path.join(dir)
+        for fold in conf_path.get_folder_names():
+            
+            fold_dir = conf_path.join(fold)
+            metric_dir = fold_dir.join("metrics/csv")
+            bld_df = pd.read_csv(metric_dir.join("val_bld_pixel_level.csv"))
+            bld_df = bld_df.set_index(["epoch","class"])
+            dmg_df = pd.read_csv(metric_dir.join("val_dmg_pixel_level.csv"))
+            dmg_df = dmg_df.set_index(["epoch","class"])
+            loss_df = pd.read_csv(metric_dir.join("val_loss.csv"))
+            loss_df = loss_df.set_index(["epoch"])
+            
+            c = dir[len(dir)-1]
+            f = fold[len(fold)-1]
+            best_f1_hm = dmg_df["f1_harmonic_mean"].max()
+            best_epoch = dmg_df["f1_harmonic_mean"].idxmax()[0]
+            val_loss = loss_df.loc[best_epoch].iloc[0]
+            seg_f1 = bld_df.loc[best_epoch,"f1"].iloc[0]
+            row = [c, f, best_epoch, best_f1_hm, val_loss, seg_f1]
+            fold_list.append(row)
 
-def compute_config_resume(config_path: FilePath) -> dict:
-    best_fold = {"fold_num": -1, "epoch": -1, "val_loss": 10.0}
-
-    for file_name in config_path.get_folder_names():
-        fold_folder = config_path.join(file_name)
-        metric_dir = fold_folder.join("metrics","csv")
-
-        loss_df = pd.read_csv(metric_dir.join("val_loss.csv"), index_col="epoch")
-        best_epoch = loss_df["loss"].idxmin()
-        fold_resume = []
-
-        for file in metric_dir.get_files_names():
-            if not file.find("loss") > -1 and file.endswith(".csv"):
-                split, mask, level, _ = file.split("_")
-                df = pd.read_csv(metric_dir.join(file), index_col="epoch")
-                df["split"] = split
-                df["mask"] = mask
-                res = df.loc[best_epoch]
-
-                if isinstance(res, pd.Series):
-                    res = res.to_frame().transpose()
-
-                res = res.reset_index().rename(columns={"index": "epoch"})
-                fold_resume.append(res)
-
-        resume_df = pd.concat(fold_resume, axis=0, ignore_index=True)
-        resume_df.to_csv(fold_folder.join("resume.csv"), index=False)
-
-        fold_num = int(file_name.split("_")[-1])
-        curr_fold = {
-            "fold_num": fold_num,
-            "epoch": best_epoch,
-            "val_loss": loss_df.loc[best_epoch].iloc[0]
-        }
-        best_fold = min(best_fold, curr_fold, key=lambda x: x["val_loss"])
-    return best_fold
-
+    fold_df = pd.DataFrame(fold_list, columns=["Conf", "Fold", "Best epoch", "val-loss", "Harmonic-mean-f1", "Seg-f1"])
+    fold_df = fold_df.sort_values(by=["Conf"])
+    return fold_df
 
 def get_best_config(out_path: FilePath, param_list: list) -> dict:
-    results = []
-    for folder_name in out_path.get_folder_names():
-        if folder_name.startswith("config"):
-            config_out_path = out_path.join(folder_name)
-            result = compute_config_resume(config_out_path)
-            result["conf_num"] = folder_name[len(folder_name)-1]
-            results.append(result)
-    res_df = pd.DataFrame(results)
-    res_df.set_index("conf_num")
-    best_idx = res_df["val_loss"].idxmax()
-    return param_list[best_idx]
+    fold_df = build_fold_table(out_path)
+    fold_df = fold_df.sort_values(by=["Conf","Fold"])
+    fold_df = fold_df.groupby('Conf').apply(lambda x: x.set_index('Fold'), include_groups=False)
+    best_conf = fold_df["Harmonic-mean-f1"].idxmax()[0]
+    return param_list[best_conf]

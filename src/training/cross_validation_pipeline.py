@@ -1,7 +1,7 @@
 
 from tqdm import tqdm
 from torch.utils.data import SubsetRandomSampler
-from sklearn.model_selection import KFold, train_test_split
+from sklearn.model_selection import KFold
 from training.train_pipeline import set_threads, start_train
 from utils.common.pathManager import FilePath
 from utils.datasets.train_dataset import TrainDataset

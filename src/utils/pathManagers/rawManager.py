@@ -117,7 +117,7 @@ class RawPathManager(dict):
             for folder_path in subset_path.get_folder_paths():
                 folder_path.must_be_dir()
                 for file in folder_path.get_files_names():
-                    if file.startswith(disasters):
+                    if file.startswith(disasters) or disasters == "all":
                         disaster_zone_dict.add(folder_path, file)
         disaster_zone_dict.check()
         return disaster_zone_dict

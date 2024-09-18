@@ -9,8 +9,7 @@ function get() {
 
     # Recibe archivos desde el servidor remoto
     rsync -avz \
-    #--exclude-from=/home/mrtc101/Desktop/tesina/repo/to_mendieta/submit/exclude.txt \
-    --exclude-from=/home/mrtc101/Desktop/tesina/repo/to_toko/submit/exclude.txt \
+    --exclude-from=/home/mrtc101/Desktop/tesina/repo/to_mendieta/submit/exclude.txt \
     "${user_url}:scratch/" .
 }
 
@@ -26,8 +25,7 @@ function send() {
     # Elimina caches y envía archivos
     find . -type d -name '__pycache__' -exec rm -r {} +
     rsync -avz \
-    #--exclude-from=/home/mrtc101/Desktop/tesina/repo/to_mendieta/submit/exclude.txt \
-    --exclude-from=/home/mrtc101/Desktop/tesina/repo/to_toko/submit/exclude.txt \
+    --exclude-from=/home/mrtc101/Desktop/tesina/repo/to_mendieta/submit/exclude.txt \
     . "${user_url}:scratch/"
 }
 

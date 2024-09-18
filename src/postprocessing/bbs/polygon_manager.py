@@ -71,13 +71,10 @@ def get_instance_mask(shapes_list: list, shape=(1024, 1024)) -> torch.Tensor:
     """
     instance_mask = torch.zeros(size=shape, dtype=torch.int32)
     if (len(shapes_list) > 0):
-        shapes_list = [(poly[0], i+1) for i, poly in enumerate(shapes_list)]
-        # transform = rasterio.transform.from_origin(0, shape[0], 1, 1)
+        shapes_list = [(poly[0], i) for i, poly in enumerate(shapes_list)]
         instance_mask = rasterio.features.rasterize(shapes_list,
                                                     out_shape=shape,
-                                                    # transform=transform,
-                                                    fill=0,
+                                                    fill=-1,
                                                     dtype=np.int32)
         instance_mask = torch.from_numpy(instance_mask)
-        # instance_mask = instance_mask.transpose(0,1)
     return instance_mask

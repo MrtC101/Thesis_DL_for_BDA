@@ -1,5 +1,5 @@
-export PROJ_PATH="/home/mcogo/scratch"
-export EXP_NAME="not_aug"
+export PROJ_PATH="/home/mrtc101/Desktop/tesina/repo/main/"
+export EXP_NAME="exp4_deb"
 export SRC_PATH="$PROJ_PATH/src"
 export XBD_PATH="$PROJ_PATH/data"
 export EXP_PATH="$PROJ_PATH/$EXP_NAME"
