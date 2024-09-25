@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver.
+# Martín Cogo Belver has rights reserved over this modifications.
 import os
 import random
 import sys
@@ -9,35 +11,83 @@ import torch
 from torchvision.io import read_image
 from torchvision.transforms import Normalize
 from torchvision.utils import draw_bounding_boxes
-
-
 from postprocessing.bbs.bounding_boxes import get_bbs_from_mask
-from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
+from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 from models.siam_unet_model import SiamUnet
 from utils.visualization.label_to_color import LabelDict
 
 
 class DeployModel(SiamUnet):
+    """Class that impelments all methods used during deployment."""
 
     label_dict = LabelDict()
 
-    def load_weights(self, weights_path):
+    def load_weights(self, weights_path: str):
+        """
+            Load weights saved with `torch.save()`. Because this is a deployment Model all layers
+            are freeze. It means that all layers are requires_grad = False.
+
+        """
         device = torch.device("cuda") if torch.cuda.is_available() \
             else torch.device("cpu")
         assert os.path.isfile(weights_path), \
             f"{weights_path} is not a file."
         checkpoint = torch.load(weights_path, map_location=device)
         self.load_state_dict(checkpoint['state_dict'])
-        self.freeze_model_param()
+        self.freeze_model_params()
         self.device = device
         print("MODEL LOADED")
 
+    def _normalize_image(self, img: torch.Tensor) -> torch.Tensor:
+        """Applys color normalization for input image"""
+        if img.shape[0] > 3:
+            img = img[0:3, :, :]
+        img = img.to(torch.float32) / 255.0
+        mean_rgb = [img[0].mean(), img[1].mean(), img[2].mean()]
+        std_rgb = [img[0].std(), img[1].std(), img[2].std()]
+        norm_img = Normalize(mean=mean_rgb, std=std_rgb)(img)
+        return norm_img
+
+    def _crop_image(self, image: torch.Tensor) -> list:
+        """Corps image of 1024x1024 to 16 patches of 256x256
+        Args:
+            image: `torch.Tensor` with shape (1024,1024)
+        """
+        patch_list = []
+        points = [math.floor(1024*p) for p in torch.arange(0, 1, 0.25)]
+        for x in points:
+            for y in points:
+                patch = image[:, x:x+256, y:y+256]
+                patch_list.append(patch)
+        return patch_list
+
+    def _preprocess(self, pre_img: torch.Tensor, post_img: torch.Tensor) -> list[torch.Tensor]:
+        """Preprocessing pipeline for both pre and post disaster images.
+            Args:
+             pre_img: Predisaster image with shape 1024x1024
+             post_img: Postdisaster image with shape 1024x1024
+        """
+        pre_norm = self._normalize_image(pre_img)
+        post_norm = self._normalize_image(post_img)
+        pre_patches_list = self._crop_image(pre_norm)
+        post_patches_list = self._crop_image(post_norm)
+        # to batch
+        pre_patches = torch.stack(pre_patches_list, dim=0)
+        post_patches = torch.stack(post_patches_list, dim=0)
+        return pre_patches, post_patches
+
     def _merge_patches(self, patch_batch: torch.Tensor) -> torch.Tensor:
+        """Merge all 16 patches of 256x256 into one image of 1024x1024
+        Args:
+            patch_batch: a torch.Tensor with shape (16,256,256)
+        Returns:
+            torch.Tensor: damage mask tensor with shape (1024,1024)
+        """
         rows = []
         row = []
         for i, patch in enumerate(torch.unbind(patch_batch)):
@@ -59,9 +109,12 @@ class DeployModel(SiamUnet):
     }
 
     def bbs_imgs(self, bbs_df: pd.DataFrame, dir_path: str, n: int):
-        """
-            Generates a png transparent background image for each class of bounding boxes.
-            (La idea es tener una iamgen con las bounding boxes de con la misma clase)
+        """Generates a png transparent background image for each class of bounding boxes.
+
+            Args:
+                bbs_df: `pd.Dataframe` with all predicted building bounding boxes.
+                dir_path: Path to store each bounding box image.
+                n: class label number. (Used in frontend)
         """
         print("bbs:", len(bbs_df))
         for cls in self.label_dict.keys_list:
@@ -95,7 +148,12 @@ class DeployModel(SiamUnet):
                 cv2.imwrite(file_path, img)
 
     def _postproccess(self, patch_batch: torch.Tensor, dir_path: str) -> str:
-        """Implements the postprocessing pipeline"""
+        """Pipeline for postprocessing damage mask patches
+
+            Args:
+                patch_batch: batch of 16 256x256 damage mask patches predicted.
+                dir_path: Path to store the predicted 1024x1024 damge mask image. 
+        """
         n = random.randint(0, 10**10)
         pred_img = self._merge_patches(patch_batch)
         dmg_path = os.path.join(dir_path, f"dmg_img_{n}.png")
@@ -111,48 +169,30 @@ class DeployModel(SiamUnet):
 
         self.bbs_imgs(bbs_df, dir_path, n)
 
-    def _normalize_image(self, img: torch.Tensor) -> torch.Tensor:
-        if img.shape[0] > 3:
-            img = img[0:3, :, :]
-        img = img.to(torch.float32) / 255.0
-        mean_rgb = [img[0].mean(), img[1].mean(), img[2].mean()]
-        std_rgb = [img[0].std(), img[1].std(), img[2].std()]
-        norm_img = Normalize(mean=mean_rgb, std=std_rgb)(img)
-        return norm_img
+    def make_prediction(self, pre_path: str, post_path: str, pred_dir) -> None:
+        """Pipeline for pre and post image prediction of a damage mask.
 
-    def _crop_image(self, image: torch.Tensor) -> list:
-        patch_list = []
-        points = [math.floor(1024*p) for p in torch.arange(0, 1, 0.25)]
-        for x in points:
-            for y in points:
-                patch = image[:, x:x+256, y:y+256]
-                patch_list.append(patch)
-        return patch_list
-
-    def _preprocess(self, pre_img: torch.Tensor,
-                    post_img: torch.Tensor) -> list[torch.Tensor]:
-        pre_norm = self._normalize_image(pre_img)
-        post_norm = self._normalize_image(post_img)
-        pre_patches_list = self._crop_image(pre_norm)
-        post_patches_list = self._crop_image(post_norm)
-        # to batch
-        pre_patches = torch.stack(pre_patches_list, dim=0)
-        post_patches = torch.stack(post_patches_list, dim=0)
-        return pre_patches, post_patches
-
-    def make_prediction(self, pre_path: str, post_path: str, pred_dir) -> str:
+            Args:
+                pre_path: Path to the pre-disaster 1024x1024 image.
+                post_path: Path to the post-disaster 1024x1024 image.
+                pred_dir: Path to the directory where predicted damage mask should be stored.
+        """
         if os.path.isfile(pre_path):
             pre_img = read_image(pre_path)
         else:
             Exception(f"{pre_path} is not a file.")
+
         if os.path.isfile(post_path):
             post_img = read_image(post_path)
         else:
             Exception(f"{post_path} is not a file.")
+
         pre_patches, post_patches = self._preprocess(pre_img, post_img)
+
         pre_patches.to(device=self.device)
         post_patches.to(device=self.device)
         logit_masks = self(pre_patches, post_patches)
         pred_patches = self.compute_predictions(logit_masks)
+
         os.makedirs(pred_dir, exist_ok=True)
         self._postproccess(pred_patches[2], pred_dir)

@@ -6,49 +6,125 @@ import shutil
 from datetime import datetime
 from time import localtime, strftime
 import torch
-import torch.nn as nn
 import torch.utils
 import torch.utils.tensorboard
 import torch.utils.tensorboard.summary
-
+from utils.common.pathManager import FilePath
 from models.siam_unet_model import SiamUnet
 
 
 class TrainModel(SiamUnet):
-    """This class implements the architecture of the Siamese CNN used in this project."""
+    """`SiamUnet` class that implements all methods related to load and save weights
+    during model training."""
 
-    def make_binary(self, gt_dmg_mask: torch.Tensor, label_set: list) -> torch.Tensor:
-        bin_mask_list = [gt_dmg_mask == label for label in label_set]
-        return torch.stack(bin_mask_list)
+    def save_checkpoint(self, state: dict, is_best: bool,
+                        checkpoint_dir: str = '../checkpoints') -> None:
+        """
+            Saves weights from current epoch as checkpoint. If `is_best` is True a file named
+            'model_best' is stored in the same folder.
 
-    def compute_binary(self, dmg_logit_mask: torch.Tensor, threshold=0.5) -> torch.Tensor:
-        bin_mask = self.softmax(dmg_logit_mask) >= threshold
-        return bin_mask
+            Args:
+                state: dictionary with current epoch important variables to save.
+                is_best: True if this is the epoch with highest harmonic f1 score so far.
+                chekcpoint_dir: path to the folder where checkpoint is stored.
+        """
+        checkpoint_path = os.path.join(checkpoint_dir,
+                                       f"checkpoint_epoch{state['epoch']}_"
+                                       f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
+        torch.save(state, checkpoint_path)
+        if is_best:
+            shutil.copyfile(checkpoint_path, os.path.join(
+                checkpoint_dir, 'model_best.pth.tar'))
 
-    def reinitialize_Siamese(self):
-        """initialize all layers from the model"""
-        torch.nn.init.xavier_uniform_(self.upconv4_c.weight)
-        torch.nn.init.xavier_uniform_(self.upconv3_c.weight)
-        torch.nn.init.xavier_uniform_(self.upconv2_c.weight)
-        torch.nn.init.xavier_uniform_(self.upconv1_c.weight)
-        torch.nn.init.xavier_uniform_(self.conv_c.weight)
+    def resume_from_checkpoint(self, checkpoint_dir: str, device,
+                               init_learning_rate, tb_logger, freeze_seg: bool) -> \
+            tuple[torch.optim.Optimizer, int, float]:
+        """
+        Resumes the model from a checkpoint.
 
-        self.upconv4_c.bias.data.fill_(0.01)
-        self.upconv3_c.bias.data.fill_(0.01)
-        self.upconv2_c.bias.data.fill_(0.01)
-        self.upconv1_c.bias.data.fill_(0.01)
-        self.conv_c.bias.data.fill_(0.01)
+        Args:
+            checkpoint_dir : The path to the checkpoint file.
+            tb_log_dir : The directory for TensorBoard logs.
+            config : Configuration dictionary containing necessary parameters.
 
-        def init_weights(m):
-            """Inits a weights of the current layer with xavier uniform"""
-            if type(m) == nn.Linear:
-                torch.nn.init.xavier_uniform_(m.weight)
-                m.bias.data.fill_(0.01)
+        Returns:
+            tuple: A tuple containing the optimizer, starting epoch, and best accuracy.
+        """
 
-        self.conv4_c.apply(init_weights)
-        self.conv3_c.apply(init_weights)
-        self.conv2_c.apply(init_weights)
-        self.conv1_c.apply(init_weights)
+        checkpoint_path = self.find_last(checkpoint_dir)
+        checkpoint = torch.load(checkpoint_path, map_location=device)
+        self.load_state_dict(checkpoint['state_dict'])
+
+        if freeze_seg:
+            self.freeze_segmentation_branch()
+            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
+                                         lr=init_learning_rate)
+        else:
+            optimizer = torch.optim.Adam(self.parameters(), lr=init_learning_rate)
+
+        starting_epoch = checkpoint['epoch'] + 1
+        best_acc = checkpoint.get('best_f1', 0.0)
+        return optimizer, starting_epoch, best_acc
+    
+    def load_freezed_weights(self, weights_path: FilePath, device: torch.device) -> tuple:
+        """
+        Loads weights from the weights_path.
+        Args:
+            weights_path: Path to .tar file of weights saved with `torch.save()`.
+            device: Device where to map weights.
+
+        Returns:
+            torch.optim.Adam: Optimizer for training.
+            int: next starting epoch.
+            float: best harmonic f1 score from given weights epoch.
+        """
+        checkpoint = torch.load(weights_path, map_location=device)
+        self.load_state_dict(checkpoint['state_dict'])
+        self.freeze_model_params()
+        optimizer = torch.optim.Adam(self.parameters())
+        starting_epoch = checkpoint['epoch'] + 1
+        hf1 = checkpoint.get('best_f1', 0.0)
+        return optimizer, starting_epoch, hf1
+
+    def freeze_segmentation_branch(self):
+        """Disables weight and bias updates for specific segmentation branch layers in the model."""
+
+        # List of indices for weight only and weight + bias layers
+        weight_only_indices = [0, 3]
+        weight_bias_indices = [1, 4]
+
+        # Helper function to freeze weight (and optionally bias)
+        def freeze_module(module, indices):
+            for i in indices:
+                module[i].weight.requires_grad = False
+                if hasattr(module[i], 'bias') and module[i].bias is not None:
+                    module[i].bias.requires_grad = False
+
+        # Freeze weights and biases for encoder, bottleneck, and decoder
+        encoders = [self.encoder1, self.encoder2, self.encoder3, self.encoder4]
+        decoders = [self.decoder1, self.decoder2, self.decoder3, self.decoder4]
+
+        for encoder, decoder in zip(encoders, decoders):
+            freeze_module(encoder, weight_only_indices)
+            freeze_module(encoder, weight_bias_indices)
+            freeze_module(decoder, weight_only_indices)
+            freeze_module(decoder, weight_bias_indices)
+
+        # Freeze weights and biases for bottleneck
+        freeze_module(self.bottleneck, weight_only_indices)
+        freeze_module(self.bottleneck, weight_bias_indices)
+
+        # Freeze upconvolutional layers
+        upconvs = [self.upconv1, self.upconv2, self.upconv3, self.upconv4]
+        for upconv in upconvs:
+            upconv.weight.requires_grad = False
+            if hasattr(upconv, 'bias') and upconv.bias is not None:
+                upconv.bias.requires_grad = False
+
+        # Freeze final convolution layer
+        self.conv_s.weight.requires_grad = False
+        if hasattr(self.conv_s, 'bias') and self.conv_s.bias is not None:
+            self.conv_s.bias.requires_grad = False
 
     def find_last(self, checkpoint_dir: str) -> str:
         """
@@ -83,119 +159,9 @@ class TrainModel(SiamUnet):
         checkpoint_path = os.path.join(checkpoint_dir, latest_file_name)
         return checkpoint_path
 
-    def resume_from_checkpoint(self, checkpoint_dir: str, device,
-                               init_learning_rate, tb_logger, new_optimizer: bool) -> \
-            tuple[torch.optim.Optimizer, int, float]:
-        """
-        Resumes the model from a checkpoint.
-
-        Args:
-            checkpoint_dir : The path to the checkpoint file.
-            tb_log_dir : The directory for TensorBoard logs.
-            config : Configuration dictionary containing necessary parameters.
-
-        Returns:
-            tuple: A tuple containing the optimizer, starting epoch, and best accuracy.
-        """
-
-        checkpoint_path = self.find_last(checkpoint_dir)
-        checkpoint = torch.load(checkpoint_path, map_location=device)
-        self.load_state_dict(checkpoint['state_dict'])
-
-        if not new_optimizer:
-            # don't load the optimizer settings so that a newly
-            # specified lr can take effect
-            #self.print_network()
-            self.freeze_model_param()
-            #self.print_network()
-
-            for tag, value in self.named_parameters():
-                tag = tag.replace('.', '/')
-                tb_logger.add_histogram(
-                    tag, value.data.cpu().numpy(), global_step=0)
-
-            self.reinitialize_Siamese()
-
-            for tag, value in self.named_parameters():
-                tag = tag.replace('.', '/')
-                tb_logger.add_histogram(
-                    tag, value.data.cpu().numpy(), global_step=1)
-
-            optimizer = torch.optim.Adam(filter(lambda p: p.requires_grad, self.parameters()),
-                                         lr=init_learning_rate)
-        else:
-            optimizer = torch.optim.Adam(
-                self.parameters(), lr=init_learning_rate)
-
-        starting_epoch = checkpoint['epoch'] + 1
-        best_acc = checkpoint.get('best_f1', 0.0)
-        return optimizer, starting_epoch, best_acc
-
     def resume_from_scratch(self, init_learning_rate) -> tuple:
         """Resumes model from scratch"""
         optimizer = torch.optim.Adam(self.parameters(), lr=init_learning_rate)
         starting_epoch = 1
         best_acc = 0.0
-        return optimizer, starting_epoch, best_acc
-
-    def save_checkpoint(self, state: dict, is_best: bool,
-                        checkpoint_dir: str = '../checkpoints') -> None:
-        """
-        checkpoint_dir is used to save the best checkpoint if this checkpoint is best one so far.
-        """
-        checkpoint_path = os.path.join(checkpoint_dir,
-                                       f"checkpoint_epoch{state['epoch']}_"
-                                       f"{strftime('%Y-%m-%d-%H-%M-%S', localtime())}.pth.tar")
-        torch.save(state, checkpoint_path)
-        if is_best:
-            shutil.copyfile(checkpoint_path, os.path.join(
-                checkpoint_dir, 'model_best.pth.tar'))
-
-    def print_network(self) -> None:
-        print('model summary')
-        for name, p in self.named_parameters():
-            print(name)
-            print(p.requires_grad)
-
-    def model_summary(self) -> str:
-        """
-            Returns an string that contains a summary of the model total weights
-        """
-        class Text(str):
-            def __add__(self, other) -> 'Text':
-                return Text(super().__add__("\n").__add__(other))
-
-        lay_n = 0
-        total_params = 0
-        model_params = [layer for layer in self.parameters()
-                        if layer.requires_grad]
-        layers = [child for child in self.children()]
-        lay_t = Text("")
-        for layer in layers:
-            lay_n_params = model_params[lay_n].numel()
-            lay_n += 1
-            if hasattr(layer, "bias"):
-                if (layer.bias is not None):
-                    lay_n_params += model_params[lay_n].numel()
-                    lay_n += 1
-            total_params += lay_n_params
-            lay_t += (str(layer)+"\t"*3+str(lay_n_params))
-
-        t = Text("self_summary")
-        t += ""
-        t += "Layer_name"+"\t"*7+"Number of Parameters"
-        t += "="*100
-        t += "\t"*10
-        t += lay_t
-        t += "="*100
-        t += f"Total Params:{total_params}"
-        return str(t)
-
-    def load_best(self, wei_path, device):
-        checkpoint = torch.load(wei_path, map_location=device)
-        self.load_state_dict(checkpoint['state_dict'])
-        self.freeze_model_param()
-        optimizer = torch.optim.Adam(self.parameters())
-        starting_epoch = checkpoint['epoch'] + 1
-        best_acc = checkpoint.get('best_f1', 0.0)
         return optimizer, starting_epoch, best_acc
