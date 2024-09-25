@@ -81,8 +81,7 @@ class MetricManager:
             *kwargs: Additional arguments.
 
         Returns:
-            dict: Dictionary containing confusion matrices and 
-            batch identifier.
+            dict: Dictionary containing confusion matrices and batch identifier.
         """
 
         def get_confusion_matrix_for_level(lvl, batch_idx):
@@ -190,13 +189,13 @@ class MetricManager:
         df.to_csv(csv_dir.join(f"{file_prefix}_loss.csv"),
                   mode="w", index=False)
         df.to_latex(tex_dir.join(f"{file_prefix}_loss.tex"))
-        log.info(f"Loss & Metrics saved")
+        log.info("Loss & Metrics saved")
         if file_prefix == "val":
-            tr_l = pd.read_csv(csv_dir.join(f"train_loss.csv"))
-            vl_l = pd.read_csv(csv_dir.join(f"val_loss.csv"))
+            tr_l = pd.read_csv(csv_dir.join("train_loss.csv"))
+            vl_l = pd.read_csv(csv_dir.join("val_loss.csv"))
             plot_loss(tr_l, vl_l, metric_dir)
-            tr_m = pd.read_csv(csv_dir.join(f"train_dmg_pixel_level.csv"))
-            vl_m = pd.read_csv(csv_dir.join(f"val_dmg_pixel_level.csv"))
+            tr_m = pd.read_csv(csv_dir.join("train_dmg_pixel_level.csv"))
+            vl_m = pd.read_csv(csv_dir.join("val_dmg_pixel_level.csv"))
             plot_harmonic_mean(tr_m, vl_m, metric_dir)
             plot_metric_per_class(tr_m, 'f1', "train", metric_dir)
             plot_metric_per_class(vl_m, 'f1', "val", metric_dir)

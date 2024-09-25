@@ -43,7 +43,7 @@ def json_to_mask(label_path: FilePath,
         # Get damage class, defaulting to 'no-damage' if not present
         damage_class = building['properties'].get('subtype', 'no-damage')
         dmg_label = labels.get_num_by_key(damage_class)
-        if(dmg_label == 5):
+        if (dmg_label == 5):
             dmg_label = 0
         # Read the coordinates
         shapes.append((wkt.loads(building['wkt']), dmg_label))

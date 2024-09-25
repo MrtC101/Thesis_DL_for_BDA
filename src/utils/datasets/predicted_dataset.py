@@ -15,7 +15,7 @@ from utils.pathManagers.predictedManager import PredictedPathManager
 
 
 class PredictedDataset(Dataset):
-    """Class that implements the corresponding methods to access raw xBD 
+    """Class that implements the corresponding methods to access raw xBD
     dataset data."""
 
     def __init__(self, split_raw_json_path: FilePath,
@@ -35,7 +35,7 @@ class PredictedDataset(Dataset):
         return len(self.tile_list)
 
     def same_shape(self, dis_id, tile_id, img1, img2) -> bool:
-        assert img1.shape[:2] == img2.shape[:2], f'Images from' + \
+        assert img1.shape[:2] == img2.shape[:2], 'Images from' + \
             f'{dis_id}_{tile_id} should be the same size,' + \
             f'{img1.shape} != {img2.shape}.'
         return True

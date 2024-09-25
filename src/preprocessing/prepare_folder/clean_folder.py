@@ -1,9 +1,7 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import random
 from typing import Tuple
 from tqdm import tqdm
-from utils.pathManagers.rawManager import RawPathManager
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
 

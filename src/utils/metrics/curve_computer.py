@@ -4,17 +4,14 @@ from tqdm import tqdm
 import torch
 
 from models.trainable_model import TrainModel
-from utils.datasets.train_dataset import TrainDataset
 from utils.metrics.matrix_computer import MatrixComputer
 from utils.metrics.metric_computer import MetricComputer
 from postprocessing.plots.plot_results import plot_pr_curves, plot_roc_curves
 
 
-
-def pixel_metric_curves(loader: DataLoader, model: TrainModel, device : torch.device, metric_dir: str,
-                        k: int = 200) -> None:
-    """ Computes the metrics necessary for plotting the ROC curve and PR curve for the dataset. 
-    """
+def pixel_metric_curves(loader: DataLoader, model: TrainModel, device: torch.device,
+                        metric_dir: str, k: int = 200) -> None:
+    """ Computes the metrics necessary for plotting the ROC curve and PR curve for the dataset."""
     n_class = 5
     model.eval()
     # columns=["tp","fp","fn","tn"]
@@ -27,16 +24,16 @@ def pixel_metric_curves(loader: DataLoader, model: TrainModel, device : torch.de
 
         masks = [(y_cls == lab_i) for lab_i in range(5)]
         bin_true_tensor = torch.stack(masks, dim=0)
-        
+
         logit_masks = model(x_pre, x_post)[2]
 
-        for th in torch.linspace(0,1,k):
+        for th in torch.linspace(0, 1, k):
             bin_pred_tensor = model.softmax(logit_masks) >= th
-            bin_pred_tensor = bin_pred_tensor.permute(1,0,2,3)
+            bin_pred_tensor = bin_pred_tensor.permute(1, 0, 2, 3)
             conf_matrices = MatrixComputer.compute_bin_matrices_px(bin_pred_tensor, bin_true_tensor)
             key = round(float(th), 5)
             patch_conf_mtrx_dict[key] += conf_matrices.to(device='cpu')
-    
+
     roc_curve: tuple = MetricComputer.compute_ROC(patch_conf_mtrx_dict)
     plot_roc_curves("pixel", roc_curve, metric_dir)
     pr_curve: tuple = MetricComputer.compute_PR(patch_conf_mtrx_dict)

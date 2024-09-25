@@ -37,7 +37,7 @@ def k_cross_validation(k: int, configs: dict[str, any],
         # K-fold Cross Validation model evaluation
         KF = KFold(n_splits=k, shuffle=True)
         for fold, (train_idx, val_idx) in tqdm(enumerate(KF.split(xBD_train)),
-                                            total=k, desc="Fold"):
+                                               total=k, desc="Fold"):
             log.info(f"{fold} iteration {k} Cross Validation")
             paths['out_dir'] = out_dir.join(f"{k}-fold_{fold}")
             score = start_train(configs, paths, xBD_train,

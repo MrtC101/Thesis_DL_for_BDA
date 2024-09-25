@@ -30,14 +30,18 @@ def compute_mean_stddev(pre_img: np.ndarray, post_img: np.ndarray) -> dict:
         "post": calculate_stats(post_img)
     }
 
-def count_pxls(mask_path):
-    row = np.zeros(6,np.uint16)
-    count_tup = np.unique(imread(mask_path)[0],return_counts=True)
-    for l,c in zip(count_tup[0],count_tup[1]):
-        row[l] = c
+
+def _count_pixels(mask_path: FilePath) -> list:
+    """Count the number of pixels of each class present in the image"""
+    row = np.zeros(6, np.uint16)
+    count_tup = np.unique(imread(mask_path)[0], return_counts=True)
+    for label, count in zip(count_tup[0], count_tup[1]):
+        row[label] = count
     return list(row)
 
-def compute_pixel_weights(data_path:FilePath,split_json_path: FilePath):
+
+def compute_pixel_weights(data_path: FilePath, split_json_path: FilePath):
+    """Computes the corresponding weights for """
     splits_dict = split_json_path.read_json()
     rows = []
     for split_id, dis_dict in splits_dict.items():
@@ -45,12 +49,13 @@ def compute_pixel_weights(data_path:FilePath,split_json_path: FilePath):
             for tile_id in tile_dict.keys():
                 imgs_dict = tile_dict[tile_id]["post"]
                 mask_path = FilePath(imgs_dict["mask"])
-                px_count = count_pxls(mask_path)
-                rows.append([split_id,dis_id,tile_id]+px_count)
-    px_Count  = pd.DataFrame(rows,columns=["split_id","dis_id","tile_id"]+list(LabelDict().labels.keys()))
-    weights_s = px_Count.set_index(["split_id","dis_id","tile_id"]).sum()
-    weights_s = weights_s.sum() / weights_s 
-    
+                px_count = _count_pixels(mask_path)
+                rows.append([split_id, dis_id, tile_id]+px_count)
+    px_Count = pd.DataFrame(rows, columns=["split_id", "dis_id",
+                            "tile_id"]+list(LabelDict().labels.keys()))
+    weights_s = px_Count.set_index(["split_id", "dis_id", "tile_id"]).sum()
+    weights_s = weights_s.sum() / weights_s
+
     weights = {
         "dmg": {label: w for label, w in weights_s.items() if label in LabelDict().keys_list},
         "seg": {
@@ -58,10 +63,11 @@ def compute_pixel_weights(data_path:FilePath,split_json_path: FilePath):
             'background': weights_s['background']
         }
     }
-    
+
     data_path.create_folder()
-    out_path = data_path.join("..","out")
+    out_path = data_path.join("..", "out")
     out_path.join("train_weights.json").save_json(weights)
+
 
 def create_data_dicts(splits_json_path: FilePath, out_path: FilePath) -> str:
     """Creates three JSON files and stores them in a folder named \

@@ -36,6 +36,7 @@ def set_threads():
         log.info("Number of threads for PyTorch internal operations: " +
                  f"{torch.get_num_interop_threads()}")
 
+
 def start_train(configs: dict, paths: dict, xBD_train, xBD_test=None,
                 train_sampler=None, val_sampler=None):
     """

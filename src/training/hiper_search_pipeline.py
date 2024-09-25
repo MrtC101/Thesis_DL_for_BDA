@@ -4,8 +4,8 @@ from utils.common.pathManager import FilePath
 from training.cross_validation_pipeline import k_cross_validation
 from utils.loggers.console_logger import LoggerSingleton
 
-def _start_k_fold(folds: int, index: int,
-                  config: dict, paths: dict) -> tuple[int, float]:
+
+def _start_k_fold(folds: int, index: int, config: dict, paths: dict) -> tuple[int, float]:
     """
     Run k-fold cross-validation for a given configuration.
 
@@ -45,13 +45,13 @@ def parameter_search(folds: int, param_list: dict, paths_dict: dict, parallel=Fa
 
     if parallel:
         results = Parallel(n_jobs=-1)(delayed(_start_k_fold)
-                                    (folds, i, config, paths_dict)
-                                    for i, config in tqdm(param_list))
+                                      (folds, i, config, paths_dict)
+                                      for i, config in tqdm(param_list))
     else:
         results = [_start_k_fold(folds, i, config, paths_dict)
-                for i, config in tqdm([param_list])]
+                   for i, config in tqdm([param_list])]
 
     best_index, best_acc = min(results, key=lambda x: x[1])
 
     log.info(f"Configuration number {best_index} " +
-            f"with a validation loss of {best_acc:.4f}")
+             f"with a validation loss of {best_acc:.4f}")

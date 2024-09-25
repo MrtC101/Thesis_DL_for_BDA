@@ -128,7 +128,7 @@ class SiamUnet(nn.Module):
             x2: Can be pre or post input patch tensor image.
 
         Returns:
-            tuple: A tuple of logits tensors masks for segmentation and classification. 
+            tuple: A tuple of logits tensors masks for segmentation and classification.
             (pre_seg,post_seg,dmg_mask)
         """
 
@@ -214,7 +214,7 @@ class SiamUnet(nn.Module):
         """
             Applys Softmax for each output logit mask.
             Returns:
-                tuple: A tuple of predictions tensor masks for segmentation and classification. 
+                tuple: A tuple of predictions tensor masks for segmentation and classification.
                 (All three output masks are `torch.Tensors` of shapes (256,256))
         """
         return tuple(torch.argmax(self.softmax(logit_mask), dim=1) for logit_mask in logit_masks)

@@ -4,7 +4,7 @@ from collections import defaultdict
 import os
 import sys
 import pandas as pd
-from sklearn.metrics import auc, average_precision_score, precision_recall_curve
+from sklearn.metrics import auc
 import torch
 
 if (os.environ.get("SRC_PATH") not in sys.path):
@@ -86,7 +86,7 @@ class MetricComputer:
                 sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
                 specificity = tn / (fp + tn) if (fp + tn) > 0 else 0
                 curves[i_label][th] = (1 - specificity, sensitivity)  # FPR, TPR
-                
+
         # Calcular el AUC para cada curva ROC
         roc_curves = {}
         for label, th_curves in curves.items():

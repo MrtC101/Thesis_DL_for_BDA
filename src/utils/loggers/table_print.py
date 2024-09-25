@@ -83,7 +83,7 @@ def to_table(curr_type, df: pd.DataFrame, odd: bool, decim_digits: int) -> str:
     Returns:
         str: The formatted table.
     """
-    """ 
+    """
         \u2550 = '═'
         \u2551 = '║'
         \u2554 = '╔'

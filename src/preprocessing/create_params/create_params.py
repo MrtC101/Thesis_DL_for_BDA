@@ -19,9 +19,9 @@ def create_params(params) -> list[dict]:
     """
     out_path = FilePath(os.environ["OUT_PATH"])
     train_weights = out_path.join("train_weights.json").read_json()
-    dmg_w = [round(w,4) for w in train_weights["dmg"].values()]
+    dmg_w = [round(weight, 4) for weight in train_weights["dmg"].values()]
     dmg_w.reverse()
-    seg_w = [round(w,4) for w in train_weights["seg"].values()]
+    seg_w = [round(weight, 4) for weight in train_weights["seg"].values()]
     seg_w.reverse()
 
     configs = {**params['train'], **params['visual'],

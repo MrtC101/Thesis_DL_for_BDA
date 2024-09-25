@@ -152,7 +152,7 @@ class DeployModel(SiamUnet):
 
             Args:
                 patch_batch: batch of 16 256x256 damage mask patches predicted.
-                dir_path: Path to store the predicted 1024x1024 damge mask image. 
+                dir_path: Path to store the predicted 1024x1024 damge mask image.
         """
         n = random.randint(0, 10**10)
         pred_img = self._merge_patches(patch_batch)

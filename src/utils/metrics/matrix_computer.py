@@ -2,18 +2,15 @@
 # Licensed under the MIT License.
 import random
 import pandas as pd
-import shapely
 import torch
 from tqdm import tqdm
 from postprocessing.bbs.bounding_boxes import BoundingBox
 from utils.loggers.console_logger import LoggerSingleton
 from utils.metrics.common import Level
-import matplotlib
 from scipy.optimize import linear_sum_assignment
 
 from postprocessing.bbs.polygon_manager import get_buildings, get_instance_mask
-from utils.visualization.label_to_color import LabelDict
-#matplotlib.use("TkAgg")
+# matplotlib.use("TkAgg")
 
 
 class MatrixComputer:
@@ -102,8 +99,8 @@ class MatrixComputer:
     # OBJECT LEVEL
 
     @staticmethod
-    def match_polygons(gt_buildings : list, gt_label_matrix : torch.Tensor,
-                       pd_buildings : list, pd_label_matrix : torch.Tensor, th : float):
+    def match_polygons(gt_buildings: list, gt_label_matrix: torch.Tensor,
+                       pd_buildings: list, pd_label_matrix: torch.Tensor, th: float):
         """
             Match each ground truth polygon with the max IoU predicted polygon,
             without repetition and only if its IoU is higher than the given
@@ -117,20 +114,20 @@ class MatrixComputer:
             for gid, (gt_poly, _) in enumerate(tqdm(gt_buildings)):
                 gt_bb = BoundingBox.create(gt_poly)
                 x1, y1, x2, y2 = gt_bb.get_components()
-                candidates : torch.Tensor = pd_label_matrix[y1:y2, x1:x2].unique()
-                candidates :list = candidates.tolist()
+                candidates: torch.Tensor = pd_label_matrix[y1:y2, x1:x2].unique()
+                candidates: list = candidates.tolist()
                 try:
                     candidates.remove(-1)
-                except:
-                    None;
-                
+                except ValueError:
+                    pass
+
                 for pid in candidates:
                     pd_poly, _ = pd_buildings[pid]
                     intersection = gt_poly.intersection(pd_poly).area
                     union = gt_poly.union(pd_poly).area
                     relation[gid][pid] = intersection / union if union > 0 else 0.0
 
-            #Asignación hungara para transformar la relación en binaría.
+            # Asignación hungara para transformar la relación en binaría.
             cost_matrix = 1 - relation
             row_indices, col_indices = linear_sum_assignment(cost_matrix)
             for gid, pid in zip(row_indices, col_indices):
@@ -166,9 +163,9 @@ class MatrixComputer:
         """
         log = LoggerSingleton()
 
-        gt_buildings = get_buildings(target_mask, labels_set)
+        gt_buildings = get_buildings(target_mask)
         gt_label_matrix = get_instance_mask(gt_buildings)
-        pd_buildings = get_buildings(pred_mask, labels_set)
+        pd_buildings = get_buildings(pred_mask)
         pd_label_matrix = get_instance_mask(pd_buildings)
         log.info('\n' +
                  f"{len(gt_buildings)} buildings found in ground truth mask" +
@@ -211,7 +208,7 @@ class MatrixComputer:
     def conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set):
         conf_mrtx = []
         for c in labels_set:
-            if(len(IoU_df) > 0):
+            if (len(IoU_df) > 0):
                 curr_df = IoU_df[IoU_df["glabel"] == c]
                 tp = (curr_df["glabel"] == curr_df["plabel"]).sum()
             else:
@@ -253,7 +250,7 @@ class MatrixComputer:
         size = l_size + 2  # +2 para 'Undetected' y 'Total'
         mat = torch.zeros(size=(size, size), dtype=torch.int32)
 
-        if(len(IoU_df) > 0):
+        if (len(IoU_df) > 0):
             for gt_lab in labels_set:
                 for pd_lab in labels_set:
                     gt_labxpd_lab = (IoU_df["glabel"] == gt_lab) & (IoU_df["plabel"] == pd_lab)
@@ -261,7 +258,7 @@ class MatrixComputer:
 
         # Adding Undetected column
         for gt_lab in labels_set:
-            mat[gt_lab - 1 , size - 2] = (gt_labels == gt_lab).sum()
+            mat[gt_lab - 1, size - 2] = (gt_labels == gt_lab).sum()
             mat[gt_lab - 1, size - 1] = \
                 mat[gt_lab - 1, size - 2] - mat[gt_lab - 1, 0:len(labels_set)].sum()
 
@@ -269,15 +266,15 @@ class MatrixComputer:
         for pd_lab in labels_set:
             mat[size - 2, pd_lab - 1] = (pd_labels == pd_lab).sum()
             mat[size - 1, pd_lab - 1] = \
-                mat[size - 2, pd_lab - 1] - mat[0:len(labels_set), pd_lab - 1].sum()        
-        
+                mat[size - 2, pd_lab - 1] - mat[0:len(labels_set), pd_lab - 1].sum()
+
         # Total predicted
         mat[size - 2, size - 2] = mat[:, size - 2].sum()
         mat[size - 2, size - 1] = mat[:, size - 1].sum()
         mat[size - 1, size - 2] = mat[size - 1, :].sum()
 
         # Convertir a DataFrame de pandas
-        mat_df = pd.DataFrame(mat.numpy(), 
+        mat_df = pd.DataFrame(mat.numpy(),
                               columns=labels_set + ['Total', 'Undetected'],
                               index=labels_set + ['Total', 'Ghost'])
         return mat_df
@@ -285,23 +282,25 @@ class MatrixComputer:
     @staticmethod
     def tile_obj_conf_matrices(dmg_mask, pred_mask, labels_set, iou_threshold=0.5):
         """Returns a confusión matrix for one image"""
-        IoU_df, gt_labels, pd_labels = MatrixComputer.evaluate_polygon_iou(dmg_mask, pred_mask, labels_set, iou_threshold)
+        IoU_df, gt_labels, pd_labels = MatrixComputer.evaluate_polygon_iou(
+            dmg_mask, pred_mask, labels_set, iou_threshold)
         conf_mrtx = MatrixComputer.conf_mtrx_obj_by_cls(gt_labels, pd_labels, IoU_df, labels_set)
-        multi_conf_mtrx = MatrixComputer.obj_multiclass_conf_mtrx(gt_labels, pd_labels, IoU_df, labels_set)
+        multi_conf_mtrx = MatrixComputer.obj_multiclass_conf_mtrx(
+            gt_labels, pd_labels, IoU_df, labels_set)
         return conf_mrtx, multi_conf_mtrx
 
     # BINARY MASKS
     @staticmethod
     def compute_bin_matrices_px(bin_pred_tensor: torch.Tensor,
                                 bin_true_tensor: torch.Tensor) -> torch.Tensor:
-        axis = (-2,-1)
+        axis = (-2, -1)
         tp = torch.sum(bin_true_tensor & bin_pred_tensor, axis).sum(axis=1)
         fn = torch.sum(bin_true_tensor & ~bin_pred_tensor, axis).sum(axis=1)
         fp = torch.sum(~bin_true_tensor & bin_pred_tensor, axis).sum(axis=1)
         tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis).sum(axis=1)
         batch = torch.stack([tp, fp, fn, tn], axis=1)
         return batch
-    
+
     @staticmethod
     def compute_bin_matrices_obj(bin_pred_tensor: torch.Tensor,
                                  bin_true_tensor: torch.Tensor) -> torch.Tensor:

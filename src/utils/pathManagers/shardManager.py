@@ -42,7 +42,7 @@ class ShardPathManager:
                 is_npy(shard_path)
                 shard_name = shard.split(".")[0]
                 split_id, type_id, shard_id = shard_name.split("_")
-                shards_dict[split_id][type_id.replace("-","_")][shard_id] = shard_path
+                shards_dict[split_id][type_id.replace("-", "_")][shard_id] = shard_path
 
             idx_json = join(shard_dir_path, f"{subset}_shard_idxs.json")
             is_json(idx_json)

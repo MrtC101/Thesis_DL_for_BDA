@@ -1,11 +1,12 @@
-
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from collections import defaultdict
 import random
 from typing import Dict
 import numpy as np
 import pandas as pd
 from shapely import Polygon, wkt
-from tqdm import tqdm
+import shapely
 from preprocessing.raw.split_raw_dataset import get_buildings, get_tiles_count
 from utils.common.pathManager import FilePath
 from rasterio.features import rasterize
@@ -15,6 +16,7 @@ from torchvision.io import read_image
 from torchvision.utils import save_image
 from utils.loggers.console_logger import LoggerSingleton
 import torch
+
 
 def save_new_tile(dis_id: str, tile_id: str,
                   images: dict[str, torch.Tensor],
@@ -54,7 +56,6 @@ def save_new_tile(dis_id: str, tile_id: str,
         tile_dict["train"][dis_id][new_tile_id][prefix][t] = img_path
 
 
-
 def random_crop(img: torch.Tensor, max_pad: int = 50) -> torch.Tensor:
     """
     Replicates the `iaa.Crop` functionality from the imgaug library by
@@ -62,7 +63,7 @@ def random_crop(img: torch.Tensor, max_pad: int = 50) -> torch.Tensor:
 
     Args:
         img (torch.Tensor): The input image tensor to be cropped.
-        max_pad (int, optional): Maximum number of pixels to pad on each 
+        max_pad (int, optional): Maximum number of pixels to pad on each
         side of the image. Default is 50.
 
     Returns:
@@ -74,6 +75,7 @@ def random_crop(img: torch.Tensor, max_pad: int = 50) -> torch.Tensor:
     pad_bottom = torch.randint(0, max_pad + 1, (1,)).item()
     padding = (pad_left, pad_top, pad_right, pad_bottom)
     return transforms.Pad(padding)(img)
+
 
 # Sequence of spatial transformations
 spatial_transforms = transforms.Compose([
@@ -101,7 +103,25 @@ color_transforms = transforms.ColorJitter(
     contrast=(0.75, 1.25),
     brightness=(0.75, 1.25))
 
-def augment_imgs(pre_img, post_img, bld_mask, dmg_mask, **kargs):
+
+def augment_imgs(pre_img: torch.Tensor, post_img: torch.Tensor, bld_mask: torch.Tensor,
+                 dmg_mask: torch.Tensor, **kargs) -> dict:
+    """Applies spatial and color transformations to the input images and masks.
+
+    This function takes in a set of images and corresponding masks, applies spatial
+    transformations to all images, and then applies color transformations to the
+    pre- and post-images. The resulting transformed images and masks are returned in a
+    dictionary.
+
+    Args:
+        pre_img : The pre-disaster image tensor.
+        post_img : The post-disaster image tensor.
+        bld_mask : The building mask tensor.
+        dmg_mask : The damage mask tensor.
+
+    Returns:
+        dict: A dictionary containing the transformed images and masks
+    """
     # Aplicar transformaciones espaciales
     stacked_imgs = torch.stack([pre_img, post_img, bld_mask, dmg_mask],
                                dim=0)
@@ -123,7 +143,8 @@ def augment_imgs(pre_img, post_img, bld_mask, dmg_mask, **kargs):
     return images
 
 
-def read_tile(tile_dict):
+def read_tile(tile_dict: dict) -> dict:
+    """Loads images from a tile dictionary and returns a dictionary with all of them."""
     img_dict = {
         "pre_img": read_image(tile_dict["pre"]["image"]),
         "post_img": read_image(tile_dict["post"]["image"]),
@@ -135,7 +156,10 @@ def read_tile(tile_dict):
     return img_dict
 
 
-def get_square(tile, poly):
+def get_square(tile: dict, poly: shapely.Polygon) -> dict:
+    """Returns the corresponding content inside the bounding box of the `poly` in
+    a dictionary for each pre and post image and bld,damage mask.
+    """
     x1, y1, x2, y2 = [round(e) for e in poly.bounds]
     mask_matrix = rasterize([poly], out_shape=(
         1024, 1024), fill=0, dtype=np.uint8)
@@ -150,7 +174,8 @@ def get_square(tile, poly):
     return reg_dict
 
 
-def get_poly(tile, list_id):
+def get_poly(tile, list_id) -> shapely.Polygon:
+    """Loads the polygon with wkt format"""
     return wkt.loads(tile["post_json"]["features"]["xy"][list_id]["wkt"])
 
 # Función para calcular el momento de inercia
@@ -174,7 +199,8 @@ def farthest_points(polygon: Polygon):
         polygon (Polygon): El polígono de entrada.
 
     Returns:
-        tuple: Dos puntos (como tuplas de coordenadas) más alejados entre sí en el borde del polígono.
+        tuple: Dos puntos (como tuplas de coordenadas) más alejados entre sí en el
+        borde del polígono.
     """
     exterior_coords = np.array(polygon.exterior.coords)
     max_distance = 0
@@ -197,6 +223,17 @@ def vector_between_points(point1, point2):
 
 
 def calculate_scale(new_poly: Polygon, org_poly: Polygon):
+    """
+    Calculate the scale factors (width and height) required to resize
+    a new polygon to match the bounds of an original polygon.
+
+    Args:
+        new_poly (Polygon): The new polygon to be scaled.
+        org_poly (Polygon): The original polygon to match.
+
+    Returns:
+        tuple: A tuple containing the width and height scale factors.
+    """
     nx1, ny1, nx2, ny2 = new_poly.bounds
     ox1, oy1, ox2, oy2 = org_poly.bounds
     dx = (ox2 - ox1) / (nx2 - nx1)
@@ -204,6 +241,7 @@ def calculate_scale(new_poly: Polygon, org_poly: Polygon):
     dy = (oy2 - oy1) / (ny2 - ny1)
     h = round((ny2 - ny1) * dy)
     return w, h
+
 
 def vector_from_center(poly: Polygon):
     x1, y1, x2, y2 = poly.bounds
@@ -217,6 +255,7 @@ def vector_from_center(poly: Polygon):
     vec_c = vec1 if np.linalg.norm(vec1) >= np.linalg.norm(vec2) else vec2
     return vec_c
 
+
 def calculate_rotation_angle(vec1, vec2):
     unit_vec1 = vec1 / np.linalg.norm(vec1)
     unit_vec2 = vec2 / np.linalg.norm(vec2)
@@ -226,6 +265,7 @@ def calculate_rotation_angle(vec1, vec2):
     # Determinar el signo del ángulo
     return angle_degrees if np.cross(unit_vec1, unit_vec2) > 0 else - angle_degrees
 
+
 def modify_image_based_on_polygon(replacement_region: Dict[str, torch.Tensor],
                                   new_polygon: Polygon, original_polygon: Polygon):
     # Apilar las imágenes
@@ -234,10 +274,9 @@ def modify_image_based_on_polygon(replacement_region: Dict[str, torch.Tensor],
     bld_mask = replacement_region['bld_mask']
     dmg_mask = replacement_region['dmg_mask']
 
-    
     stacked_imgs = torch.stack([pre_img, post_img, bld_mask, dmg_mask],
                                dim=0)
-    
+
     # Calculate rotation degree
     vec1 = vector_from_center(new_polygon)
     vec2 = vector_from_center(original_polygon)
@@ -258,9 +297,11 @@ def modify_image_based_on_polygon(replacement_region: Dict[str, torch.Tensor],
     return replacement_region
 
 
-def replace_region(new_tile: Dict[str, torch.Tensor], modified_region: Dict[str, torch.Tensor], new_poly: Polygon, org_poly: Polygon) -> Dict[str, torch.Tensor]:
+def replace_region(new_tile: Dict[str, torch.Tensor], modified_region: Dict[str, torch.Tensor],
+                   new_poly: Polygon, org_poly: Polygon) -> Dict[str, torch.Tensor]:
     """
-    Replaces a region in the new_tile based on the modified_region and aligns it according to the polygons.
+    Replaces a region in the new_tile based on the modified_region and aligns it according to
+    the polygons.
 
     Args:
         new_tile (Dict[str, torch.Tensor]): The tile to be modified.
@@ -269,7 +310,7 @@ def replace_region(new_tile: Dict[str, torch.Tensor], modified_region: Dict[str,
         org_poly (Polygon): The target polygon representing the position to move the region to.
 
     Returns:
-        Dict[str, torch.Tensor]: The updated tile with the replaced region.
+        Dict: The updated tile with the replaced region.
     """
     # Get the bounds of the new polygon and adjust them based on the translation
     x1, y1, x2, y2 = org_poly.bounds
@@ -294,18 +335,34 @@ def replace_region(new_tile: Dict[str, torch.Tensor], modified_region: Dict[str,
     return new_tile
 
 
-def make_replacement(new_list_id, rep_tile, org_list_id, new_tile):
+def make_replacement(new_list_id: list, rep_tile, org_list_id: list, new_tile: dict):
+    """Adds each building to cover up its corresponding replaceable building"""
     new_poly = get_poly(rep_tile, new_list_id)
     org_poly = get_poly(new_tile, org_list_id)
     replacement_region: tuple = get_square(rep_tile, new_poly)
-    modified_region = modify_image_based_on_polygon(
-        replacement_region, new_poly, org_poly)
-    new_tile = replace_region(
-        new_tile, modified_region, new_poly, org_poly)
+    modified_region = modify_image_based_on_polygon(replacement_region, new_poly, org_poly)
+    new_tile = replace_region(new_tile, modified_region, new_poly, org_poly)
     return new_tile
 
 
 def create_new_tile(tile_dict, replaceable_blds):
+    """Creates a new tile by replacing specified buildings in an original tile.
+
+    This function reads an original tile and replaces buildings based on the provided
+    `replaceable_blds` DataFrame, which contains information about the buildings to
+    be replaced and their corresponding replacements. The resulting tile is then augmented
+    to enhance its features.
+
+    Args:
+        tile_dict (dict): A dictionary containing tiles indexed by their IDs.
+        replaceable_blds (pd.DataFrame): A DataFrame containing information about
+                                          buildings to be replaced and their replacements,
+                                          with columns for original and new tile IDs.
+
+    Returns:
+        aug_tile: The augmented tile after applying building replacements.
+    """
+
     org_tile_id = list(replaceable_blds["org_tile_id"].unique())[0]
     new_tile = read_tile(tile_dict[org_tile_id])
     for bld_tile_id in replaceable_blds['new_tile_id'].unique():
@@ -318,40 +375,63 @@ def create_new_tile(tile_dict, replaceable_blds):
     return aug_tile
 
 
-def new_tile_count(replaceable_blds, tile, label):
+def new_tile_count(replaceable_blds: pd.DataFrame, tile: dict, label: list) -> list:
+    """Returns the count of buildings for each tile in a list."""
     rep_count = get_tiles_count(replaceable_blds)
     new_tile_count = tile - rep_count
     new_tile_count[label] = tile[label] + len(replaceable_blds)
     return new_tile_count
 
 
-def get_replaceable_buildings(tile_id, bld_x_tile_df, label):
+def get_replaceable_buildings(tile_id: str, bld_x_tile_df: pd.DataFrame, label: list) -> list:
+    """Builds a dataframe with all buildings used for replacement.
+    Buildings are selected randomly."""
     tile_blds = bld_x_tile_df.loc[tile_id]
     not_lab_blds = tile_blds[tile_blds["label"] != label]
     not_lab_blds = not_lab_blds.reset_index()
     rep_rate = random.randrange(5, 10, 1) / 10
-    rep_bld_ids = random.sample(
-        list(not_lab_blds.index), round(len(not_lab_blds) * rep_rate))
+    rep_bld_ids = random.sample(list(not_lab_blds.index), round(len(not_lab_blds) * rep_rate))
     replaceable_blds = not_lab_blds.loc[rep_bld_ids]
     return replaceable_blds
 
 
-def combination_of_replacement(label_blds_df: pd.DataFrame, replace_blds_df: pd.DataFrame):
+def combination_of_replacement(label_blds_df: pd.DataFrame,
+                               replace_blds_df: pd.DataFrame) -> pd.DataFrame:
+    """Returns a relation between replacement and replaceable buildings."""
     true_index = replace_blds_df.index
-    label_blds_df = label_blds_df.sample(
-        len(replace_blds_df), replace=True)
+    label_blds_df = label_blds_df.sample(len(replace_blds_df), replace=True)
     label_blds_df.reset_index(inplace=True)
-    label_blds_df.rename(
-        columns={key: "new_"+key for key in label_blds_df.columns}, inplace=True)
-    replace_blds_df.rename(
-        columns={key: "org_"+key for key in replace_blds_df.columns}, inplace=True)
+    label_blds_df.rename(columns={key: "new_"+key for key in label_blds_df.columns},
+                         inplace=True)
+    replace_blds_df.rename(columns={key: "org_"+key for key in replace_blds_df.columns},
+                           inplace=True)
     replace_blds_df.reset_index(drop=True, inplace=True)
     rep = pd.concat([label_blds_df, replace_blds_df], axis=1)
     rep.set_index(true_index, drop=True, inplace=True)
     return rep
 
 
-def augment_label(tile_dict, aug_path, out_path):
+def augment_label(tile_dict: dict, aug_path: FilePath, out_path: FilePath) -> dict:
+    """Sequential augmentation of images for the minority class to match the majority class.
+
+    This function increases the number of buildings in the minority class while minimizing
+    the sampling of other buildings to maintain balance in the dataset. It processes the
+    training tiles for each disaster, extracting building and tile counts, and then applies
+    augmentation strategies to create new tiles.
+
+    Args:
+        tile_dict (dict): A dictionary containing training tiles organized by disaster IDs.
+        aug_path (FilePath): The path where augmented tiles will be saved.
+        out_path (FilePath): The path where the training weights will be saved.
+
+    Returns:
+        dict: The updated `tile_dict` with augmented tiles for the minority classes.
+
+    Notes:
+        - The function logs the balanced dataset summary for each disaster.
+        - The output includes a JSON file with weights for specific labels based on the
+          augmented dataset.
+    """
     log = LoggerSingleton()
     n = 0
     label_sum = None
@@ -391,26 +471,33 @@ def augment_label(tile_dict, aug_path, out_path):
     return tile_dict
 
 
-def do_cutmix(tile_json_path, data_path, out_path):
+def do_cutmix(tile_json_path: FilePath, data_path: FilePath, out_path: FilePath) -> FilePath:
     """
-    1. Por cada desastre extraigo sus edificios y el conteo de cada tile.
-    2. Por cada clase ordenada desde la minoritaria a la mayoritaria filtro las tiles
-    que tienen esa clase.
-    3. Calcula la cantidad total de edificios nuevos que necesito
-    4. De manera aleatoria determino el total de edificos que voy a remplazar de cada imagen
+    1. For each disaster, extract the buildings and the count of each tile.
+    2. For each class, ordered from the minority to the majority, filter the tiles
+    that contain that class.
+    3. Calculate the total number of new buildings needed.
+    4. Randomly determine the total number of buildings to replace from each image.
 
-    5. La cantidad de imagenes crecera hasta que se balancee una clase
-    6. La idea es tomar los edificios de esa imagen, tomar los edificios de otras clases
-    y remplazarlos aleatoriamente por otro edificio de otra imagen pero del mismo daño.
-    6. Se le aplican transformaciones al parche recortado para que se ajuste mejor 
-    al edificio que se va a remplazar. AL tratarse de edificios del mismo desastre
-    y de imagenes que contienen edificios de esa clase, podemos decir que comparte parte del contexto.
-    7. La imagen completa es sometida a transformaciones para que no sea la misma imagen que la otra.
-    (Talvez hagamos que no sean tan diferentes.)
-    8.¿Como determino la cantidad de edificios a remplazar por cada imagen?
-    Suponiendo que se la cantidad de edificios nuevos que necesito la puedo determinar
-    y puedo determinar
+    5. The number of images will increase until one class is balanced.
+    6. The idea is to take the buildings from one image, take the buildings from other classes,
+    and randomly replace them with buildings from other images, but with the same damage level.
+    7. Transformations are applied to the cropped patch so that it better fits the building
+      being replaced.
+    Since they are buildings from the same disaster and from images containing buildings of the
+      same class, we can say they share part of the context.
+    8. The entire image is subjected to transformations to ensure it is not identical to the
+      other images. (Perhaps we'll make sure they are not too different.)
+    9. How do I determine the number of buildings to replace in each image?
+    Assuming I can determine the number of new buildings needed and
+    I can determine how many to replace per image
+
+    Args:
+        tile_json_path: Path to the already split file.
+        data_path: Path to the data folder.
+        out_path: Path to the path where to generate the cutmixed split json file.
     """
+
     data_path.must_be_dir()
     aug_path = data_path.join("cutmixed")
     aug_path.create_folder()
@@ -418,7 +505,7 @@ def do_cutmix(tile_json_path, data_path, out_path):
     tile_dict = tile_json_path.read_json()
 
     aug_split_json_path = augment_label(tile_dict, aug_path, out_path)
-    
+
     aug_split_json_path = tile_json_path.replace("raw", "aug")
     aug_split_json_path = FilePath(aug_split_json_path)
     aug_split_json_path.save_json(tile_dict)

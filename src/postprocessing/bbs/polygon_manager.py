@@ -6,7 +6,7 @@ from rasterio.features import shapes, rasterize
 
 
 def get_buildings(mask: torch.Tensor) -> list:
-    """ Creates a list of shapely Polygons with its corresponding damage label extracted from 
+    """ Creates a list of shapely Polygons with its corresponding damage label extracted from
     given mask.
 
     Args:

@@ -1,3 +1,5 @@
+"""Run the training step for the final model with the hole training split and the configuration
+with the highest harmonic f1 score over validation set."""
 import os
 import sys
 
@@ -18,7 +20,7 @@ if __name__ == "__main__":
     mean_std_json_path = FilePath(paths['mean_std_json_path'])
 
     param_dict = out_path.join("conf_list.json").read_json()
-    if(len(param_dict) == 1):
+    if (len(param_dict) == 1):
         best_config = param_dict[0]
     else:
         best_config = get_best_config(out_path, param_dict)

@@ -35,7 +35,7 @@ class EpochManager:
 
     def __post_init__(self):
         self.model = self.model.to(self.device)
-    
+
     def logging_wrapper(func):
         """Wrapper applied to the epoch_iteration method
           for printing messages"""
@@ -77,7 +77,8 @@ class EpochManager:
         """
         log = LoggerSingleton()
         confusion_matrices = []
-        for batch_idx, (dis_id, tile_id, patch_id, patch) in enumerate(tqdm(self.loader, desc="Step")):
+        for batch_idx, (dis_id, tile_id, patch_id, patch) in \
+                enumerate(tqdm(self.loader, desc="Step")):
             # STEP
             log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
             # move to device, e.g. GPU
@@ -91,7 +92,7 @@ class EpochManager:
                 self.optimizer.zero_grad()
             else:
                 self.model.eval()
-            
+
             # Verifica el dispositivo de entrada y el modelo
             logit_masks = self.model(x_pre, x_post)
 

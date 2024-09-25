@@ -19,7 +19,8 @@ class LossManager():
         self.losses_dmg = AverageMeter()
 
     def compute_loss(self, predicted_masks: list[torch.Tensor], input_data: torch.Tensor,
-                     segmentation_targets: torch.Tensor, mask_targets: torch.Tensor) -> torch.nn.CrossEntropyLoss:
+                     segmentation_targets: torch.Tensor,
+                     mask_targets: torch.Tensor) -> torch.nn.CrossEntropyLoss:
         """Computes loss function"""
         # List of true masks corresponding to the predicted masks
         true_masks = [segmentation_targets,

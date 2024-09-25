@@ -65,7 +65,7 @@ class TrainModel(SiamUnet):
         starting_epoch = checkpoint['epoch'] + 1
         best_acc = checkpoint.get('best_f1', 0.0)
         return optimizer, starting_epoch, best_acc
-    
+
     def load_freezed_weights(self, weights_path: FilePath, device: torch.device) -> tuple:
         """
         Loads weights from the weights_path.

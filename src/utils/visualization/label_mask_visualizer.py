@@ -4,7 +4,6 @@ import cv2
 import numpy as np
 import matplotlib
 import torch
-import matplotlib.pyplot as plt
 import matplotlib.colors as mcolors
 from utils.visualization.label_to_color import LabelDict
 

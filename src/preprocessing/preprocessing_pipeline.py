@@ -28,12 +28,12 @@ def preprocess() -> dict:
     Args:
         total_tiles (int): Total number of tiles to use for training the model.
         num_aug (int): Number of augmented images to create.
-        disasters_of_interest (List[str]): List of disaster identifiers 
-            as strings for each disaster type that will be used for training 
+        disasters_of_interest (List[str]): List of disaster identifiers
+            as strings for each disaster type that will be used for training
             the model. For example: ['midwest-flooding'].
 
     Returns:
-        Tuple[str, str, str, str, str]: Paths to the JSON files representing 
+        Tuple[str, str, str, str, str]: Paths to the JSON files representing
         splits of tiles, splits of patches, and statistical data from tiles.
     """
     pre_path = FilePath(os.environ["OUT_PATH"]).join("preprocessing")

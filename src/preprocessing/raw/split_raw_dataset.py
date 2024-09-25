@@ -11,7 +11,8 @@ from utils.loggers.console_logger import LoggerSingleton
 log = LoggerSingleton()
 
 
-def get_buildings(tiles_dict: dict):
+def get_buildings(tiles_dict: dict) -> pd.DataFrame:
+    """Iterates over all label json files and returns a `pd.Dataframe` with all buildings."""
     buildings = []
     for tile_id, tile_dict in tiles_dict.items():
         file_path = FilePath(tile_dict["post"]["json"])
@@ -33,6 +34,7 @@ all_clases = ['destroyed', 'major-damage', 'minor-damage', 'no-damage',
 
 
 def get_tiles_count(building_df: pd.DataFrame) -> pd.DataFrame:
+    """Returns a pd.Dataframe with the count of buildings per class inside each tile."""
     tile_df = building_df.value_counts(["tile_id", "label"]).unstack()
     tile_df[tile_df.isna()] = 0
     tile_df = tile_df.astype(int)
@@ -42,7 +44,13 @@ def get_tiles_count(building_df: pd.DataFrame) -> pd.DataFrame:
     return tile_df[all_clases]
 
 
-def create_test_split(tiles_dict, test_n):
+def create_test_split(tiles_dict: dict, test_n: int) -> dict:
+    """Returns a dictionary of test tiles, randomly selected from `tiles_dict`.
+
+    Returns:
+        dict: A dictionary containing randomly chosen tiles from `tiles_dict`.
+    """
+
     sampled_keys = random.sample(list(tiles_dict.keys()), test_n)
     sample = {key: tiles_dict[key] for key in sampled_keys}
     for key in sampled_keys:
@@ -51,6 +59,7 @@ def create_test_split(tiles_dict, test_n):
 
 
 def create_train_split(tiles_dict, dis_id, train_n):
+    """ Creates a train split using the building count per tile."""
     building_df = get_buildings(tiles_dict)
     tiles_df = get_tiles_count(building_df)
 
@@ -60,8 +69,7 @@ def create_train_split(tiles_dict, dis_id, train_n):
                  f"with original proportion for each {prop_df}")
 
         prop_df = (prop_df / len(tiles_df) * train_n).apply(math.ceil)
-        train_keys, count_df = select_train_tiles(
-            building_df, tiles_df, prop_df)
+        train_keys, count_df = select_train_tiles(building_df, tiles_df, prop_df)
         sample = {key: tiles_dict[key] for key in train_keys}
         log.info(f"{dis_id} train split of len {len(tiles_df)} " +
                  f"with proportion for each label {count_df}")
@@ -72,6 +80,7 @@ def create_train_split(tiles_dict, dis_id, train_n):
 
 
 def select_train_tiles(building_df, tiles_df, prop_df):
+    """Selects tiles to add to split train iteratively trying to balance the dataset."""
     train_keys = set()
     train_count = prop_df * 0
     for label in prop_df.sort_values().keys():
@@ -96,6 +105,7 @@ def select_train_tiles(building_df, tiles_df, prop_df):
 
 
 def save_splits(splits_dict, out_path):
+    """Save the dictionary in out_path"""
     split_path = out_path.join("splits").create_folder()
     split_file = split_path.join("raw_splits.json")
     split_file.save_json(splits_dict)
@@ -103,6 +113,7 @@ def save_splits(splits_dict, out_path):
 
 
 def save_proportions(splits_dict: dict, out_path: FilePath):
+    """Computes and saves the corresponding proportional weights computed from building count"""
     tiles = {f"{dis_id}-{tile_id}": tile
              for dis_id, disaster in splits_dict["train"].items()
              for tile_id, tile in disaster.items()}
@@ -141,7 +152,7 @@ def stratified_split_dataset(xbd_path, data_path, split_prop,
         splits_dict["train"][dis_id] = create_train_split(
             tiles_dict, dis_id, train_n)
         msg = f"{dis_id} length {len(tiles_dict)}," + \
-        " desired length {total_tiles}, "
+            " desired length {total_tiles}, "
         tot_len = 0
         for key, set in splits_dict.items():
             tot_len += len(set[dis_id])
@@ -224,7 +235,7 @@ def split_dataset(raw_path: FilePath, out_path: FilePath,
     for disaster_name, tiles_dict in tqdm(data_dict.items()):
 
         tiles_ids = list(tiles_dict.keys())
-        shuffle(tiles_ids)
+        random.shuffle(tiles_ids)
 
         if (len(tiles_ids) < len(splits)):
             raise Exception(f"{disaster_name} disaster number must be more\
