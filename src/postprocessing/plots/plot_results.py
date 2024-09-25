@@ -1,33 +1,37 @@
+import os
+import cv2
+import pandas as pd
+import numpy as np
+import torch
+import matplotlib
 import matplotlib.axes
+import matplotlib.pyplot as plt
+from matplotlib import gridspec
 from torchvision.utils import draw_bounding_boxes
 from utils.common.pathManager import FilePath
 from utils.visualization.label_to_color import LabelDict
 from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
-import pandas as pd
-import numpy as np
-from matplotlib import gridspec
-import os
-import cv2
-import matplotlib.pyplot as plt
-import matplotlib
-import torch
-import seaborn as sns
+
 matplotlib.use("Agg")
 
 labels_dict = LabelDict()
 
 
-def bbs_by_level_figures(dis_id, tile_id, bbs_df: pd.DataFrame, save_folder):
-    """
-    Generates a png transparent background image for each class of bounding boxes.
+def bbs_by_level_figures(dis_id: str, tile_id: str, bbs_df: pd.DataFrame, save_folder: str):
+    """Generates a png transparent background image for each class of bounding boxes.
+    Args:
+        dis_id: disaster label.
+        tile_id: tile label.
+        bbs_df: `pd.Dataframe` with all bounding boxes of an image.
+        save_folder: path to the folder where to save the image.
     """
     for cls in np.unique(bbs_df["label"]):
         # Filtrar las bounding boxes para la clase actual
         cur_df = bbs_df[bbs_df["label"] == cls]
         boxes = torch.tensor(
             cur_df[['x1', 'y1', 'x2', 'y2']].values, dtype=torch.float)
+
         # Crear una lista de etiquetas de la clase actual
-        labels = [cls] * len(cur_df)
         color = labels_dict.get_color_by_key(cls)
 
         # Crear una imagen en blanco para dibujar las bounding boxes
@@ -35,9 +39,7 @@ def bbs_by_level_figures(dis_id, tile_id, bbs_df: pd.DataFrame, save_folder):
         img_tensor = torch.zeros((3, 1024, 1024), dtype=torch.uint8)
 
         # Dibujar las bounding boxes en la imagen
-        image_with_boxes = draw_bounding_boxes(img_tensor, boxes, colors=color, width=2,
-                                               # labels=labels
-                                               )
+        image_with_boxes = draw_bounding_boxes(img_tensor, boxes, colors=color, width=2)
 
         # Convertir el tensor a una imagen numpy
         img_np = image_with_boxes.permute(1, 2, 0).numpy()
@@ -53,8 +55,18 @@ def bbs_by_level_figures(dis_id, tile_id, bbs_df: pd.DataFrame, save_folder):
         cv2.imwrite(file_path, img)
 
 
-def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
-    """Plots the given table in the given matplotlib figure axis."""
+def addPlotTable(ax: matplotlib.axes, curr_table: pd.DataFrame, fontsize: int,
+                 col_width: list, row_height: float) -> matplotlib.axes:
+    """Plots the given table in the given matplotlib figure axis.
+    Args:
+        ax: `matplotlib.axes` where to plot the table.
+        curr_table: `pd.Dataframe` the corresponding table content.
+        fontsize: font size
+        col_width: list of floats to use for the width of each row inside table.
+        row_height: one float to use as the height for all rows inside the table.
+    Returns:
+        matplotlib.axes: the axes with the plotted table.
+    """
     table = ax.table(
         colWidths=col_width,
         cellText=curr_table.values,
@@ -78,7 +90,27 @@ def addPlotTable(ax, curr_table, fontsize, col_width, row_height):
     return table
 
 
-def comparative_figure(dis_id, tile_id, pre_img, post_img, pred_mask, gt_table, pd_table, save_path):
+def comparative_figure(dis_id: str, tile_id: str, pre_img: torch.Tensor, post_img: torch.Tensor,
+                       pred_mask: torch.Tensor, gt_table: pd.DataFrame, pd_table: pd.DataFrame,
+                       save_path: str):
+    """Plots few figures.
+    1. save the pre-disaster image.
+    2. save the post-disaster image.
+    3. save the predicted damage mask image.
+    4. plots the ground truth building count table.
+    5. plots the predicted building count table.
+    6. Plots a comparative figure with 1-5 thins inside it.
+
+    Args:
+        dis_id : disaster label.
+        tile_id : tile label.
+        pre_img : pre-disaster image as a `torch.Tensor`
+        post_img : post-disaster image as a `torch.Tensor`
+        pre_mask : predicted damage mask as a `torch.Tensor`
+        gt_table : `pd.Dataframe` with the ground truth buildings.
+        pd_table : `pd.Dataframe` with the predicted buildings.
+        save_path : path to the directory where to output all figures.
+    """
     title_size = 30
     subtitle_size = 25
 
@@ -126,9 +158,19 @@ def comparative_figure(dis_id, tile_id, pre_img, post_img, pred_mask, gt_table, 
     plt.close()
 
 
-def superposed_img(dis_id, tile_id, pre_img, pred_img, save_path):
+def superposed_img(dis_id: str, tile_id: str, pre_img: torch.Tensor, pred_img: torch.Tensor,
+                   save_path: str):
     """Creates a matplotlib figure that shows 'pre_img','post_img and 'pred_img'
-        in the first row and 'curr_table' in the second row."""
+    in the first row and 'curr_table' in the second row.
+
+    Args:
+        dis_id : disaster label.
+        tile_id : tile label.
+        pre_img : pre-disaster image as a `torch.Tensor`
+        post_img : post-disaster image as a `torch.Tensor`
+        pre_mask : predicted damage mask as a `torch.Tensor`
+        save_path : path to the directory where to output the figure.
+    """
     superposed_image = cv2.addWeighted(
         pre_img.numpy(), 0.8, pred_img.numpy(), 0.5, 0)
     file_path = os.path.join(
@@ -137,6 +179,12 @@ def superposed_img(dis_id, tile_id, pre_img, pred_img, save_path):
 
 
 def plot_roc_curves(type, roc_curves, out):
+    """Plots the ROC curve
+    Args:
+        type: Name of the analysis level. ("object" or "pixel").
+        pr_curves: Precomputed roc curve for each class.
+        out: Path to the directory where to save the last thing.
+    """
     plt.figure(figsize=(10, 10), dpi=100)
 
     for label, (fpr, tpr, auc_value) in roc_curves.items():
@@ -159,7 +207,13 @@ def plot_roc_curves(type, roc_curves, out):
     plt.savefig(os.path.join(out, f"{type}_ROC_curves.png"))
 
 
-def plot_pr_curves(type, pr_curves, out):
+def plot_pr_curves(type: str, pr_curves: dict, out: str):
+    """Plot the PR curve plot
+    Args:
+        type: Name of the analysis level. ("object" or "pixel").
+        pr_curves: Precomputed precision and recall curve for each class.
+        out: path to the directory where to save the last thing.
+    """
     plt.figure(figsize=(10, 10), dpi=100)
 
     for label, (r, p, ppd, pr_value) in pr_curves.items():
@@ -183,6 +237,13 @@ def plot_pr_curves(type, pr_curves, out):
 
 
 def plot_loss(tr_l: pd.DataFrame, vl_l: pd.DataFrame, metric_dir: FilePath):
+    """Plots the loss curve over the train and validation loss over epochs
+
+    Args:
+        tr_l: Dataframe with training loss over epochs.
+        vl_l: Dataframw with validation loss over epochs.
+        metric_dir: path to the directory where to save the figure.
+    """
     tr_l = tr_l.set_index("epoch")
     vl_l = vl_l.set_index("epoch")
     tr_l = tr_l.rename(columns={"loss": "train_loss"})
@@ -201,10 +262,17 @@ def plot_loss(tr_l: pd.DataFrame, vl_l: pd.DataFrame, metric_dir: FilePath):
 
 
 def plot_harmonic_mean(tr_m: pd.DataFrame, vl_m: pd.DataFrame, metric_dir: FilePath):
-    tr = tr_m[tr_m["class"] == 0][["epoch","f1_harmonic_mean"]]
+    """Plots a figure with the harmonic mean over epochs for validation and training.
+
+    Args:
+        tr_m: Dataframe with training metrics over the epochs.
+        vl_m: Dataframe with validation metrics over the epochs.
+        metric_dir: path to the folder where to save the figure.
+    """
+    tr = tr_m[tr_m["class"] == 0][["epoch", "f1_harmonic_mean"]]
     tr = tr.rename(columns={"f1_harmonic_mean": "f1_h_train"})
     tr = tr.set_index("epoch")
-    vl = vl_m[vl_m["class"] == 0][["epoch","f1_harmonic_mean"]]
+    vl = vl_m[vl_m["class"] == 0][["epoch", "f1_harmonic_mean"]]
     vl = vl.rename(columns={"f1_harmonic_mean": "f1_h_val"})
     vl = vl.set_index("epoch")
     metrics_df = pd.concat([tr, vl], axis=1)
@@ -220,6 +288,14 @@ def plot_harmonic_mean(tr_m: pd.DataFrame, vl_m: pd.DataFrame, metric_dir: FileP
 
 
 def plot_metric_per_class(tr_m: pd.DataFrame, metric: str, prefix: str, metric_dir: FilePath):
+    """Plot a figure of each class metric evolution over epochs.
+
+    Args:
+        tr_m: Dataframe with training metrics for each epoch.
+        metric: name of the metric to be plot
+        prefix: prefix to use for the save file. "dmg" or "bld"
+        metric_dir: path to the directory where to save the metrics.
+    """
     tr_m['class'] = tr_m['class'].apply(labels_dict.get_key_by_num)
     tr = tr_m.pivot(index='epoch', columns='class', values=metric)
     ax: matplotlib.axes.Axes

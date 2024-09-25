@@ -49,10 +49,8 @@ def save_bbs(out_dir: FilePath, dis_id: str, tile_id: str, prefix: str, bbs_df: 
 
 
 def save_metrics_and_matrices(out_dir: FilePath, px_conf_tot: pd.DataFrame,
-                              px_multi_conf_tot: pd.DataFrame,
-                              obj_conf_tot: pd.DataFrame,
-                              obj_multi_conf_tot: pd.DataFrame,
-                              dmg_labels: list):
+                              px_multi_conf_tot: pd.DataFrame, obj_conf_tot: pd.DataFrame,
+                              obj_multi_conf_tot: pd.DataFrame, dmg_labels: list):
     """
     Save the metrics and confusion matrices to the output directory.
 
