@@ -57,7 +57,7 @@ def inference_on_test(configs: dict, paths: dict):
     model = TrainModel().to(device=device)
 
     log.info(f'Loading checkpoint from {weights_path}')
-    optimizer, starting_epoch, best_acc = model.load_best(weights_path,device)
+    optimizer, starting_epoch, best_acc = model.load_freezed_weights(weights_path, device)
 
     log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}")
     epochs = configs['tot_epochs']

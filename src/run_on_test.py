@@ -17,7 +17,7 @@ if __name__ == "__main__":
     mean_std_json_path = FilePath(paths['mean_std_json_path'])
 
     param_dict = out_path.join("conf_list.json").read_json()
-    if(len(param_dict) == 1):
+    if (len(param_dict) == 1):
         best_config = param_dict[0]
     else:
         best_config = get_best_config(out_path, param_dict)

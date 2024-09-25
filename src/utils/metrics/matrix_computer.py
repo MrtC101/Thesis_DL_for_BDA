@@ -301,6 +301,7 @@ class MatrixComputer:
         tn = torch.sum(~bin_true_tensor & ~bin_pred_tensor, axis).sum(axis=1)
         batch = torch.stack([tp, fp, fn, tn], axis=1)
         return batch
+    
     @staticmethod
     def compute_bin_matrices_obj(bin_pred_tensor: torch.Tensor,
                                  bin_true_tensor: torch.Tensor) -> torch.Tensor:

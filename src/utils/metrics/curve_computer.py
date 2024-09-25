@@ -1,6 +1,6 @@
 from collections import defaultdict
 from torch.utils.data import DataLoader
-from tqdm import trange
+from tqdm import tqdm
 import torch
 
 from models.trainable_model import TrainModel

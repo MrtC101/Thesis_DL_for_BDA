@@ -68,7 +68,7 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir,
 
 
 def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint: bool,
-                 device, init_learning_rate, tb_logger, new_optimizer):
+                 device, init_learning_rate, tb_logger, freeze_seg):
     """
     Resume the model from a checkpoint or start from scratch.
 
@@ -78,7 +78,7 @@ def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint: bool,
         device: Device for model training.
         init_learning_rate: Initial learning rate.
         tb_logger: TensorBoard logger.
-        new_optimizer: Boolean to determine if a new optimizer is needed.
+        new_optimizer: Boolean to determine if segmentation branch is freezed.
 
     Returns:
         tuple: (optimizer, starting_epoch, best_acc)
@@ -86,10 +86,9 @@ def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint: bool,
 
     files = len(checkpoint_path.get_files_names())
     if checkpoint and files > 0:
-        log.info(f'Loading checkpoint from {checkpoint_path}')
-        return model.resume_from_checkpoint(checkpoint_path, device,
-                                            init_learning_rate,
-                                            tb_logger, new_optimizer)
+        log.info(f'Loading checkpoint from {checkpoint_path} ...')
+        return model.resume_from_checkpoint(checkpoint_path, device, init_learning_rate,
+                                            tb_logger, freeze_seg)
     else:
         log.info('No valid checkpoint provided. Training from scratch...')
         return model.resume_from_scratch(init_learning_rate)
@@ -159,7 +158,7 @@ def train_model(configs: dict[str],
                      device,
                      configs['learning_rate'],
                      tb_logger,
-                     configs['new_optimizer'])
+                     configs['freeze_seg'])
     log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, " +
              f" best f1 is {best_acc}")
 
