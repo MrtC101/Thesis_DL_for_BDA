@@ -1,3 +1,4 @@
+"""Code to aumatically generate slurm scripts and queue them with slurm"""
 from collections import defaultdict
 import subprocess
 import yaml
@@ -83,7 +84,6 @@ echo "($start,$end) Execution time was ${execution_time} seconds." > "$output_fi
     subprocess.run(['chmod', '777', run_script_file])
     # Submit job using sbatch
     return slurm_script_file
-    
 
 
 if __name__ == "__main__":
@@ -91,24 +91,24 @@ if __name__ == "__main__":
     conf = 'exp3_job.yaml'
     config = load(f"{out_path}/{conf}")
     job_ids = defaultdict(str)
-    dependency = None 
+    dependency = None
     for job in config['jobs']:
         slurm_script_file = run_job(job, config['node'], config['paths'], out_path)
 
         if str(job["job_name"]).startswith("cv"):
             last_work = job_ids["pre"]
-            dependency = f"--dependency=afterok:{last_work}"  
+            dependency = f"--dependency=afterok:{last_work}"
         elif str(job["job_name"]).startswith("defini"):
             last_work = ""
             for key, id in job_ids.items():
                 if key.startswith("cv"):
-                    last_work+=f"{id}:"
+                    last_work += f"{id}:"
             last_work = last_work.strip(":")
-            dependency = f"--dependency=afterok:{last_work}"  
+            dependency = f"--dependency=afterok:{last_work}"
         elif str(job["job_name"]).startswith("post"):
-            last_work = f"{job_ids['defini']}" 
-            dependency = f"--dependency=afterok:{last_work}"  
-            
+            last_work = f"{job_ids['defini']}"
+            dependency = f"--dependency=afterok:{last_work}"
+
         if dependency:
             print(dependency)
             command = f'sbatch {dependency} {slurm_script_file}'
@@ -117,12 +117,11 @@ if __name__ == "__main__":
             command = f'sbatch {slurm_script_file}'
         # Usa subprocess.run para ejecutar el comando y capturar el job ID
         result = subprocess.run(command, shell=True, capture_output=True, text=True)
-        
+
         # Captura el ID del trabajo actual
         if result.returncode == 0:
             job_id = result.stdout.strip().split()[-1]
-            job_ids[job["job_name"]] = f"{job_id}" 
+            job_ids[job["job_name"]] = f"{job_id}"
         else:
             print(f"Error submitting job: {result.stderr}")
             last_work = None
-
