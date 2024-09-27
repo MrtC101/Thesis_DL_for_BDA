@@ -1,11 +1,46 @@
-@import "https://cdn.jsdelivr.net/npm/bulma@1.0.2/css/bulma.min.css";
 
 #top-bar {
+    color: black;
+    background-color: whitesmoke;
     font-family: Georgia, 'Times New Roman', Times, serif;
-    font-size: ;
-    background-color:whitesmoke;
 }
 
-#button-bar {
-    background-color:whitesmoke;
+#bottom-bar {
+    color: black;
+    background-color: whitesmoke;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+@media (max-width: 576px) {
+    h1 {
+        font-size: 1rem;
+    }
+}
+
+
+
+#lang-spang {
+    display: inline;
+}
+
+@media (max-width: 826px) {
+    #lang-span {
+        display: none;
+    }
+}
+
+#title {
+    font-size: clamp(16px, 4vw, 30px);
+}
+
+@media (max-width: 400px) {
+    header .btn {
+        font-size: clamp(16px, 4vw, 30px);
+        --bs-btn-padding-x: 0.3rem;
+        --bs-btn-padding-y: 0.1rem;
+    }
+}
+
+:root {
+    --bs-primary: whitesmoke;
 }

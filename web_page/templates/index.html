@@ -3,61 +3,70 @@
 {% block content %}
 <div id="overlay">
     <div class="loader"></div>
-  </div>
-<div class="d-flex justify-content-center py-3">
-    <button id="fetchButton" class="btn btn-warning" onclick="process()">{{ _("process") }}</button>
 </div>
-<div class="container">
+<div class="container-xl">
+    <button id="fetchButton" class="row align-items-center btn btn-warning" onclick="process()">
+        {{ _("process") }}
+    </button>
     <div class="row">
-        <div class="col-12 col-md-6 col-lg-6">
-            <div class="card">
-                <header>
-                    <h3>{{ _("pre") }}</h3>
-                    <input id="pre-input" for="pre-preview" type="file" accept="image/png, image/jpeg, image/gif"/>    
-                </header>
-                <img id="pre-preview" src="{{ url_for('static', filename='image/preview_img_2.png') }}">
-            </div>
-            <div class="card">
-                <header>
-                    <h3>{{ _("post") }}</h3>
-                    <input id="post-input" for="post-preview" type="file" accept="image/png, image/jpeg, image/gif"/>                
-                </header>
-                <img class="" id="post-preview" src="{{ url_for('static', filename='image/preview_img_2.png') }}">
+        <div class="col card">
+            <header>
+                <h3>{{ _("pre") }}</h3>
+                <input id="pre-input" for="pre-preview" type="file" accept="image/png, image/jpeg, image/gif" />
+            </header>
+            <img id="pre-preview" src="{{ url_for('static', filename='image/preview_img_2.png') }}">
+        </div>
+
+        <div class="col card">
+            <header>
+                <h3>{{ _("output") }}</h3>
+            </header>
+            <div id="out-img-container" class="image-container">
+                <img id="output-preview" src="">
             </div>
         </div>
-        <div class="col-12 col-md-6 col-lg-6">
+
+    </div>
+
+    <div class="row">
+
+        <div class="col card">
+            <header>
+                <h3>{{ _("post") }}</h3>
+                <input id="post-input" for="post-preview" type="file" accept="image/png, image/jpeg, image/gif" />
+            </header>
+            <img class="" id="post-preview" src="{{ url_for('static', filename='image/preview_img_2.png') }}">
+        </div>    
+
+        <div class="col">
             <div class="card">
-                <header>
-                    <h3>{{ _("output") }}</h3>
-                </header>
-                <div id="out-img-container" class="image-container">
-                    <img id="output-preview" src="">
-                </div>
-            </div>
-            
-            <div class="card d-flex align-items-center justify-content-center">
                 <header>
                     <h3>{{ _("settings") }}</h3>
                 </header>
-                <table id="setting-t" class="table"> 
-                    <tr><td></td><td></td></tr>
+                <table id="setting-t" class="table">
+                    <tr>
+                        <td></td>
+                        <td></td>
+                    </tr>
                 </table>
             </div>
-
             <div class="card">
                 <header>
                     <h3>{{ _("table") }}</h3>
                 </header>
-                <table id="count-tbl" class="table"> 
+                <table id="count-tbl" class="table">
                     <thead>
                         <th>{{_("level")}}</th>
                         <th>{{_("class")}}</th>
                     </thead>
-                    <tr><td></td><td></td></tr>
+                    <tr>
+                        <td></td>
+                        <td></td>
+                    </tr>
                 </table>
-                
             </div>
         </div>
-    </div> 
+
+    </div>    
 </div>
 {% endblock %}
