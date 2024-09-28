@@ -37,20 +37,25 @@ function build_table(table_arr) {
 }
 
 function set_images(mask_obj, bbs_arr) {
-    const out_img = document.getElementById('output-preview');
-    out_img.src = mask_obj;
 
     const container = document.getElementById('out-img-container');
 
     // Remover imágenes existentes
-    const existingImages = container.querySelectorAll('img[id^="bb-"]');
+    const existingImages = container.querySelectorAll('img');
     existingImages.forEach(img => img.remove());
 
+    const out_img = document.createElement('img');
+    out_img.src = mask_obj;
+    out_img.className = "img-fluid img-thumbnail stack-img";
+    container.appendChild(out_img);
+
+    
     for (const path of bbs_arr) {
         const bb_img = document.createElement('img');
         i = path.split("_")[1];
         bb_img.id = `bb-${i}`;
         bb_img.src = path;
+        bb_img.className = "img-fluid stack-img";
         bb_img.style.zIndex = i;
         bb_img.style.filter = "opacity(1)";
         container.appendChild(bb_img);
