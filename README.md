@@ -1,132 +1,146 @@
-![](images/UncuyoLogo.png)
+# Bachelor's Degree in Computer Science Assessment of damage in cities caused by natural disasters using Machine Learning
 
-# Deep Learning applied on Building Damage Assessment for satellite images after natural disasters
+Final degree in computer science project from *Universidad Nacional de Cuyo, facultad de ingeniería*, focused on **Deep Learning** (DL) applied to **Building Damage Assessment** (BDA) using Very High Resolution (VHR) satellite images from the xBD dataset, part of the xView2 competition. 
 
-This is a thesis project for a degree in computer science from "Universidad Nacional de Cuyo facultad de ingeniería" related to **Deep Learning** applied on **Building Damage Assessment** for VHR satellite images taken after a natural disaster from the dataset xBD from the competition xView2. [Preview](http://mrtc101.github.io/thesis_dl_for_bda)
-
-This project is based on a Microsoft Siames Convolution Neural Network from <a target="_blank" href="https://github.com/microsoft/building-damage-assessment-cnn-siamese">this repository</a>. It involves a reimplementation and introduction of new features and modification to the training pipeline.
-
-This project have two main branches
-- master: Contains a re-implemented version of the training pipeline from main branch of Microsoft repository  
-- web_page: Contains a webpage to showcase the inference capabilities of the trained model.
+This project involves the development of a preprocessing pipeline for cropping, augmenting, and sampling xBD dataset images, as well as a multitask training pipeline for a deep learning model focused on the segmentation and damage classification of each building in pre- and post-disaster images. Additionally, it includes a postprocessing pipeline for counting buildings, generating bounding boxes, and performing object-level evaluation. This project also includes a prototype webpage as a practical application of the DL model, demonstrating its functionality.
 
 **Jump to:**
-1. [Master branch folder structure](#master-branch-folder-structure)
-1. [Data sources](#data-sources)
-1. [Data processing](#data-processing)
-1. [Data splits & augmentation](#data-splits-&-augmentation)
+1. [Folder Structure](#master-branch-folder-structure)
+1. [Dataset xBD](#data-sources)
+1. [Preprocessing Pipeline](#data-processing)
 1. [Overview of the model](#overview-of-the-model)
-1. [Running experiments](#running-experiments)
 1. [Results](#results)
-1. [Setup](#setup)
 
 
-## Master branch folder structure
+## Folder structure
+    .
+    ├── README.md                     <- Top-level README for developers using this project.
+    ├── LICENSE                       <- License file for the project.
+    ├── environment.yml               <- Conda environment file listing the libraries used in this project.
+    ├── notebooks/                    <- Jupyter notebooks for dataset exploration and result analysis.
+    ├── submit/                       <- Code used to train the model on a cluster using Slurm.
+    └── src/                          <- Source code for the project.
+        ├── models/                   <- Scripts defining the model architecture.
+        ├── preprocessing/            <- Scripts for the data preprocessing pipeline.
+        ├── training/                 <- Scripts for the model training and evaluation pipeline.
+        ├── postprocessing/           <- Scripts for the output postprocessing pipeline.        
+        ├── utils/                    <- Utility scripts shared across other modules.
+        ├── run_definitive_training.py<- Script to run the final training phase.
+        ├── run_on_test.py            <- Script to evaluate the model on the test dataset.
+        ├── run_parameter_search.py   <- Script to perform hyperparameter search.
+        ├── run_postprocessing.py     <- Script to run the postprocessing pipeline.
+        ├── run_preprocessing.py      <- Script to run the preprocessing pipeline.
+        └── env.sh                    <- Environment setup script to run src.
 
-    ├── README.md  <- The top-level README for developers using this project.
-    ├── LICENSE
-    ├── environment.yml
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    ├── data
-    │   ├── constants
-    │   └── xBD
-    |       └── raw            <- The original, immutable data dump.
-    ├── out     <- The output files generated during training
-    ├── images  <- Images used by README.md file
-    ├── notebooks          <- Jupyter notebooks.
-    ├── models             <- Pretrained and serialized model parameters
-    ├── src                <- Source code for use in this project.
-    │   ├── models              <- Scripts that defines the model architecture
-    │   ├── preprocessing       <- Scripts for data preprocessing
-    │   ├── train               <- Scripts for model training and evaluation
-    │   ├── utils               <- Scripts that implements utilities for all the other packages
-    │   └── train_pipeline.py   <- Starting point of model training pipeline project
-    └── submit  <- Files used for training in cluster
 
-## Data Sources
+## Dataset xBD
 
-We used [xBD dataset](https://xview2.org/), a publicly available dataset, to train and evaluate our proposed network performance. Detailed information about this dataset is provided in ["xBD: A Dataset for Assessing Building Damage from Satellite Imagery"](https://arxiv.org/abs/1911.09296) by Ritwik Gupta et al.
+We used [xBD dataset](https://xview2.org/), a publicly available dataset, to train and evaluate our proposed network performance. Detailed information about this dataset is provided in ["xBD: A Dataset for Assessing Building Damage from Satellite Imagery"](https://arxiv.org/abs/1911.09296) by Ritwik Gupta et al. The data exploration is shown in the `1-Data_analisis.ipynb` notebook.
 
-## Data processing
+## Preprocessing Pipeline
 
-For data preprocessing we followed next steps:
-1. Specific disasters data selection  
-    For this project did not used all the xBD dataset..
-1. Creation of disaster target masks.  
-    Because not all datasets have an image we did a step of mask generation using a modified version of <a target="_blank" href="https://github.com/DIUx-xView/xView2_baseline/blob/master/utils/mask_polygons.py">this script</a> from 
-    <a target="_blank" href="https://github.com/DIUx-xView/xView2_baseline">xView baseline repository</a>.
-1. Crooped all the images
-1. Did some agumetnation
-1. Balance the dataset
-1. Create shards different from originals
+For data preprocessing, we followed these steps:
+1. Generated segmentation masks from the label JSON files.
+2. Applied a greedy sampling strategy to select balanced images (if applied in experiment).
+3. Split the dataset into training (90%) and test (10%) sets.
+4. CutMix-based data augmentation to balance the damaged building dataset (if applied in experiment).
+5. Calculated image statistics for normalization.
+6. Cropped 1024x1024 images into 256x256 patches
 
-## Overview of the model
+## Training features
 
-The model proposed in the original repository shares some characteristics with ["An Attention-Based System for Damage Assessment Using Satellite Imagery"](https://arxiv.org/pdf/2004.06643v1.pdf) by Hanxiang Hao et al. However, they do not incorporate any attention mechanism in the network and used a fewer number of convolutional layers for the segmentation arm, which is a UNet approach. Details of our architecture are shown below:
+### Overview of the model
 
-![Network Architecture Schema](./images/my_model.png)
+The model proposed in the original repository shares some characteristics with ["An Attention-Based System for Damage Assessment Using Satellite Imagery"](https://arxiv.org/pdf/2004.06643v1.pdf) by Hanxiang Hao et al. However, we do not incorporate any attention mechanism for the segmentation arm, which is a UNet approach. The modelo is trained with Adam Optimizer, Weights Initializer Xavier Uniform and the Loss function Categorical cross Entropy for each output. Details of our architecture are shown below:
 
-This model has next characteristics:
-- 
-- 
-- 
+![Network Architecture Schema](./images/siames-arch.png)
 
-## Running experiments
+### Experiments
 
-### Training
+In this project we made four main experiments to evaluate the performance of the trainable model using a different number of images each time:
+1. Training time comparative between two clusters using only cpu and gpu.
+2. Training the model only using weighted loss function.
+3. Training with a CutMixed approach for dataset balancing.
+4. Training with a greedy sampling strategy for dataset balancing.
 
-The training has some characteristics...
+## Postprocessing Pipeline
 
-#### Running
-
-The training process can be configured editing and running `training_pipeline.py`
-```
-python src/training_pipeline.py
-```
-
-The experiment's progress can be monitored via tensorboard.
-
-```
-tensorboard --host 0.0.0.0 --logdir ./outputs/experiment_name/logs/ --port 8009
-```
-## Evaluation metrics
-
-For the evaluation step we used a few new things...
+The steps followed during postprocessing are:
+1. Merging patches into 1024x1024 predicted mask image.
+2. Creating predicted bounding boxes.
+3. Computing metrics of pixel level evaluation for the all predicted images.
+4. Computing metrics of object level evaluation for the all predicted images. 
 
 ## Results
+For the evaluation of the model performance after each training we used the follow metrics:
+- Accuracy (ACC)
+- Recall (R)
+- Precision (P)
+- F1-score (F1)
+- Harmonic Mean F1-score (HMF1) (Used to summarize segmentation and clarification performance)
 
-We show the results on validation and test sets of our splits along with some segmenation maps with damage level.
-![Results]()
+Here is shown the table metrics of the best trained mode from experiment 4:
 
-### Inference
+train set = 1000 imgs | test = 111 |
+Mejor Configuración: 7 | 
+Mejor época: 193       |
+*val\_loss* = 0.0863   |
+*test\_loss* = 0.1263
 
-Code for inference step can be found in code `inference.py` and have this characteristics.
+| Split          | Class          | HMF1   | P      | R      | F1     | ACC    |
+|----------------|----------------|--------|--------|--------|--------|--------|
+|                | *background*   | 0.5567 | 0.3108 | 0.5108 | 0.3864 | 0.9573 |
+|                | *building*     |        | 1.0000 | 0.9901 | 0.9950 | 0.9996 |
+|                |----------------|--------|--------|--------|--------|--------|
+|                | *background*   |        | 0.3108 | 0.5108 | 0.3864 | 0.9573 |
+| **Validación** | *no-damage*    |        | 0.9747 | 0.9591 | 0.9668 | 0.9992 |
+|                | *minor-damage* | 0.7401 | 0.9549 | 0.9573 | 0.9561 | 0.9993 |
+|                | *major-damage* |        | 0.9643 | 0.9680 | 0.9662 | 0.9991 |
+|                | *destroyed*    |        | 0.9737 | 0.9267 | 0.9496 | 0.9992 |
+|----------------|----------------|--------|--------|--------|--------|--------|
+|                | *background*   | 0.3209 | 0.1608 | 0.2389 | 0.1922 | 0.7934 |
+|                | *building*     |        | 1.0000 | 0.9454 | 0.9719 | 0.9967 |
+|                |----------------|--------|--------|--------|--------|--------|
+|                | *background*   |        | 0.1608 | 0.2389 | 0.1922 | 0.7934 |
+|   **Prueba**   | *no-damage*    |        | 0.7041 | 0.6811 | 0.6924 | 0.9907 |
+|                | *minor-damage* | 0.4384 | 0.4521 | 0.4404 | 0.4461 | 0.9904 |
+|                | *major-damage* |        | 0.7386 | 0.7821 | 0.7597 | 0.9917 |
+|                | *destroyed*    |        | 0.9118 | 0.7691 | 0.8344 | 0.9957 |
+|----------------|----------------|--------|--------|--------|--------|--------|
 
-We developed a web page for showcase of the inference capabilities of the trained model here (URL) o utilizar la imagen de docker para levantar la página web de manera local
 
-#### Docker
+Conjunto & Clase & \acrshort{hf1} & \acrshort{pr} & \acrshort{re} & \acrshort{f1} & \acrshort{acc} \\
+\multirow{6}{*}{\textbf{Validación}} &
+    \emph{background} & \multirow{2}{*}{0.6610} & 0.3510 & 0.8612 & 0.4987 & 0.7631 \\
+    &\emph{building} & & 1.0000 & 0.9603 & 0.9797 & 0.9983 \\
+    \cline{2-7}
+    &\emph{background} & \multirow{5}{*}{0.8199} & 0.3510 & 0.8612 & 0.4987 & 0.7631 \\
+    &\emph{no-damage} & & 0.9956 & 0.9641 & 0.9796 & 0.9995 \\
+    &\emph{minor-damage} & & 0.9956 & 0.9548 & 0.9748 & 0.9996 \\
+    &\emph{major-damage} & & 0.9961 & 0.9604 & 0.9779 & 0.9994 \\
+    &\emph{destroyed} & & 0.9961 & 0.9584 & 0.9769 & 0.9996 \\
+\midrule
+\multirow{6}{*}{\textbf{Prueba}} &
+\emph{background} & \multirow{2}{*}{0.6384} & 0.3510 & 0.8612 & 0.4987 & 0.7631 \\
+    &\emph{building} & & 1.0000 & 0.7968 & 0.8869 & 0.9904 \\
+    \cline{2-7}
+    &\emph{background} & \multirow{5}{*}{0.4096} & 0.0989 & 0.6369 & 0.1712 & 0.4988 \\
+    &\emph{no-damage} &  & 0.7731 & 0.5852 & 0.6662 & 0.9931 \\
+    &\emph{minor-damage} &  & 0.7114 & 0.3336 & 0.4542 & 0.9899 \\
+    &\emph{major-damage} &  & 0.6816 & 0.7308 & 0.7053 & 0.9909 \\
+    &\emph{destroyed} &  & 0.8578 & 0.7539 & 0.8025 & 0.9973 \\
+\bottomrule
 
-(Dockerización de página web?)
-
-## Setup
-
-### Creating the conda environment
-
-At the root directory of this repo, use environment.yml to create a conda virtual environment called `develop`:
-
-```
-conda env create --file environment.yml
-```
+This plot shows the evolution of the métric F1 for damage clasification of each class over the validation set.
+![F1 score over Epochs](./images/f1.png)
+This plot shows the evolution of the métric HMF1 for the damage clasification task over the validation set..
+![Harmonic F1 score over Epochs](./images/hf1.png)
+This plot shows the evolution of the loss function for the damage mask output over the epochs over the validation set.
+![Loss function over Epochs](./images/loss.png)
+This is an example of a prediction achived with the model.
+![Example of a predicted image](./images/hurricane-matthew-00000345_predicted_dmg_mask.png)
 
 ## Author
 
-- Martín Cogo Belver
-- Tutor: Dra. Ana Carolina Olivera
-
-## Acknowledgment
-- Mi familia
-- Toko
-- Docentes
-- jefa de carrera
-- Jurado
+- Student: ***Martín Cogo Belver***
+- Tutor: ***Dra. Ana Carolina Olivera***
