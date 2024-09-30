@@ -1,7 +1,9 @@
 import os
+import re
 import sys
 import csv
 import shutil
+from typing import List
 from urllib import response
 import flask
 from flask import Flask, json, redirect, render_template, request, abort, g, url_for
@@ -13,9 +15,6 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 from utils.common.pathManager import FilePath
 from utils.visualization.label_to_color import LabelDict
 from models.deployable_model import DeployModel
-
-# Global var
-
 
 # MODEL
 model = DeployModel()
@@ -87,7 +86,9 @@ def predict():
     with open(table_path, mode='r') as file:
         csv_reader = csv.reader(file, skipinitialspace=True)
         next(csv_reader)
-        for row in csv_reader:
+        rows = sorted(list(csv_reader), key=lambda x: labels_dict.get_num_by_key(x[0]))
+        print(rows)
+        for row in rows:
             key = row[0]
             i = labels_dict.get_num_by_key(key)
             c = labels_dict.get_color_by_key(key)
@@ -97,7 +98,6 @@ def predict():
                 "label": key,
                 "color": c
             })
-
     return json.jsonify({"table": table, "mask": dmg_pred, "bbs": bbs})
 
 

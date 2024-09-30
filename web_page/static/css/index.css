@@ -11,19 +11,20 @@ main h3 {
         padding: 0.2rem;
     }
 }
-
+/* image superposition*/
 .stack {
     display: grid;
     position: relative;
-    grid-template-areas: "overlay";
 }
 .stack-img {
+    padding: .25rem;
     position: absolute;
-    grid-area: overlay;
 }
 
+
+
 /* Estilos para el overlay */
-#overlay {
+.overlay {
     position: fixed; /* Asegura que el overlay cubra toda la ventana */
     top: 0;
     left: 0;
@@ -38,23 +39,37 @@ main h3 {
     font-size: 24px;
   }
 
-/* Estilo para el loader */
-.loader {
-border: 16px solid #f3f3f3; /* Light grey */
-border-top: 16px solid #3498db; /* Blue */
-border-radius: 50%;
-width: 120px;
-height: 120px;
-animation: spin 2s linear infinite;
-}
-
-@keyframes spin {
-0% { transform: rotate(0deg); }
-100% { transform: rotate(360deg); }
-}
-
 /* Estilos para el contenido de la página */
 .content {
 padding: 20px;
 margin-top: 20px;
 }
+
+/*zoom*/
+
+/* Ícono de lupa */
+.zoom-icon {
+    display:inline-block;
+    width: 50px;
+    height: 50px;
+    font-size: 30px;
+    border-radius: 50%;
+    background-color: rgba(0, 0, 0, 0.3);;
+}
+  
+.zoom-div {
+    display: none;
+    width: 100%; 
+    height: 100%; 
+    justify-content: center;
+    align-content: center;
+}
+
+.image-container:hover+.zoom-div {
+    display:block; /* Mostrar ícono de lupa al hacer hover */
+}
+
+.image-container:hover .zoom-div {
+    display:block; /* Mostrar ícono de lupa al hacer hover */
+}
+

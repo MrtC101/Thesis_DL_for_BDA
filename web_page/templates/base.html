@@ -39,7 +39,7 @@
     <link rel="stylesheet" href="{{ url_for('static', filename='css/index.css') }}">
 
 </head> 
-<body>
+<body class="d-flex flex-column min-vh-100">
 
     <header id="top-bar" class="navbar navbar-expand-lg bd-navbar sticky-top">
         <nav class="container-fluid navbar-light container-fluid justify-content-between">
@@ -61,27 +61,26 @@
         </nav>
     </header>
 
-    <main id="main" role="main" class="container full-height flex-grow-0">
+    <main class="flex-fill">
         {% block content %}{% endblock %}
     </main>
 
-    <footer id="bottom-bar" class="navbar navbar-expand-lg bd-navbar sticky-bottom">
-        <a href="https://ingenieria.uncuyo.edu.ar/" class="d-flex" aria-label="{{ _('Visit UNCuyo') }}">
-            <img src="{{ url_for('static', filename='image/UncuyoLogo.png') }}" alt="{{ _('UNCuyo Logo') }}"
-                height="20">
-        </a>
-        <span class="mb-3 mb-md-0 text-muted">{{ _('project') }}</span>
-        <ul class="nav col-md-4 justify-content-end list-unstyled d-flex">
-            <li><a href="#" class="nav-link px-2 text-white" aria-label="{{ _('Social Media') }}"></a></li>
-        </ul>
+    <footer id="bottom-bar" class="navbar mt-auto bg-light">
+        <div class="container-fluid justify-content-between">
+            <a class="col-md-3 col-7" href="https://ingenieria.uncuyo.edu.ar/">
+                <img class="img-fluid" src="{{ url_for('static', filename='image/UncuyoLogo.png') }}"  alt="{{ _('UNCuyo Logo') }}">
+            </a>
+            <span class="col-5 px-2 d-none d-md-flex text-break text-center">{{ _('project') }}</span>
+            <a class="col-1" href="https://github.com/MrtC101/Thesis_DL_for_BDA">
+                <i class="bi bi-github" style="font-size: clamp(1rem,10vw,2rem); color: black !important;"></i>
+            </a>
+        </div>
     </footer>
 
     <!-- Scripts -->
     
     <!-- js scripts -->
     <script src="{{ url_for('static', filename='js/index.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/input_preview.js') }}"></script>
-    <script src="{{ url_for('static', filename='js/process.js') }}"></script>
     <script>
         // Definir las variables en JavaScript utilizando Jinja
         window.predictURL = "{{ predict }}";
