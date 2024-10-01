@@ -147,12 +147,10 @@ def stratified_split_dataset(xbd_path, data_path, split_prop,
 
     splits_dict = defaultdict(lambda: defaultdict(lambda: {}))
     for dis_id, tiles_dict in disasters.items():
-        splits_dict["test"][dis_id] = create_test_split(
-            tiles_dict, test_n)
-        splits_dict["train"][dis_id] = create_train_split(
-            tiles_dict, dis_id, train_n)
-        msg = f"{dis_id} length {len(tiles_dict)}," + \
-            " desired length {total_tiles}, "
+        splits_dict["test"][dis_id] = create_test_split(tiles_dict, test_n)
+        splits_dict["train"][dis_id] = create_train_split(tiles_dict, dis_id, train_n)
+        split_dataset
+        msg = f"{dis_id} length {len(tiles_dict)}, desired length {total_tiles}, "
         tot_len = 0
         for key, set in splits_dict.items():
             tot_len += len(set[dis_id])
