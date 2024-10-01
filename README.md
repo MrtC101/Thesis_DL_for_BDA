@@ -108,29 +108,6 @@ Mejor época: 193       |
 |                | *destroyed*    |        | 0.9118 | 0.7691 | 0.8344 | 0.9957 |
 |----------------|----------------|--------|--------|--------|--------|--------|
 
-
-Conjunto & Clase & \acrshort{hf1} & \acrshort{pr} & \acrshort{re} & \acrshort{f1} & \acrshort{acc} \\
-\multirow{6}{*}{\textbf{Validación}} &
-    \emph{background} & \multirow{2}{*}{0.6610} & 0.3510 & 0.8612 & 0.4987 & 0.7631 \\
-    &\emph{building} & & 1.0000 & 0.9603 & 0.9797 & 0.9983 \\
-    \cline{2-7}
-    &\emph{background} & \multirow{5}{*}{0.8199} & 0.3510 & 0.8612 & 0.4987 & 0.7631 \\
-    &\emph{no-damage} & & 0.9956 & 0.9641 & 0.9796 & 0.9995 \\
-    &\emph{minor-damage} & & 0.9956 & 0.9548 & 0.9748 & 0.9996 \\
-    &\emph{major-damage} & & 0.9961 & 0.9604 & 0.9779 & 0.9994 \\
-    &\emph{destroyed} & & 0.9961 & 0.9584 & 0.9769 & 0.9996 \\
-\midrule
-\multirow{6}{*}{\textbf{Prueba}} &
-\emph{background} & \multirow{2}{*}{0.6384} & 0.3510 & 0.8612 & 0.4987 & 0.7631 \\
-    &\emph{building} & & 1.0000 & 0.7968 & 0.8869 & 0.9904 \\
-    \cline{2-7}
-    &\emph{background} & \multirow{5}{*}{0.4096} & 0.0989 & 0.6369 & 0.1712 & 0.4988 \\
-    &\emph{no-damage} &  & 0.7731 & 0.5852 & 0.6662 & 0.9931 \\
-    &\emph{minor-damage} &  & 0.7114 & 0.3336 & 0.4542 & 0.9899 \\
-    &\emph{major-damage} &  & 0.6816 & 0.7308 & 0.7053 & 0.9909 \\
-    &\emph{destroyed} &  & 0.8578 & 0.7539 & 0.8025 & 0.9973 \\
-\bottomrule
-
 This plot shows the evolution of the métric F1 for damage clasification of each class over the validation set.
 ![F1 score over Epochs](./images/f1.png)
 This plot shows the evolution of the métric HMF1 for the damage clasification task over the validation set..
