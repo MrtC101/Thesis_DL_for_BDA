@@ -107,11 +107,8 @@ class EpochManager:
             pred_masks = self.model.compute_predictions(logit_masks)
 
             step_matrices = self.metric_manager.compute_confusion_matrices(
-                batch_idx,
-                gt_bld_mask=y_seg,
-                gt_dmg_mask=y_cls,
-                pd_bld_mask=pred_masks[0],
-                pd_dmg_mask=pred_masks[2],
+                batch_idx, gt_bld_mask=y_seg, gt_dmg_mask=y_cls,
+                pd_bld_mask=pred_masks[0], pd_dmg_mask=pred_masks[2],
                 levels=[Level.PX_DMG, Level.PX_BLD]
             )
             confusion_matrices.append(step_matrices)
@@ -119,17 +116,13 @@ class EpochManager:
             if (save_path is not None):
                 PredictedDataset.save_pred_patch(pred_masks[2], batch_idx, dis_id,
                                                  tile_id, patch_id, save_path)
-                log.info(
-                    f'Prediction with size {pred_masks[2].size()} saved: {save_path}')
+                log.info(f'Prediction with size {pred_masks[2].size()} saved: {save_path}')
 
         self.loss_manager.log_losses(self.tb_logger, self.mode.value, epoch)
-        self.tb_logger.tb_log_images(
-            self.mode.value, self.loader, self.model, epoch, self.device)
+        self.tb_logger.tb_log_images(self.mode.value, self.loader, self.model, epoch, self.device)
 
-        metrics = self.metric_manager.\
-            compute_epoch_metrics(epoch, confusion_matrices,
-                                  levels=[Level.PX_DMG, Level.PX_BLD])
-        self.metric_manager.log_metrics(phase=self.mode.value,
-                                        tb_log=self.tb_logger,
+        metrics = self.metric_manager.compute_epoch_metrics(epoch, confusion_matrices,
+                                                            levels=[Level.PX_DMG, Level.PX_BLD])
+        self.metric_manager.log_metrics(phase=self.mode.value, tb_log=self.tb_logger,
                                         metrics=metrics)
         return metrics, self.loss_manager.combined_losses.avg

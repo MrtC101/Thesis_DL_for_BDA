@@ -4,6 +4,7 @@ from tqdm import tqdm
 from postprocessing.file_creation.post_file_save import save_bbs, save_df, save_img, save_mask, \
     save_metrics_and_matrices
 from utils.common.pathManager import FilePath
+from utils.common.timeManager import measure_time
 from utils.visualization.label_to_color import LabelDict
 from utils.metrics.matrix_computer import MatrixComputer
 from utils.metrics.metric_manager import MetricComputer
@@ -105,7 +106,7 @@ def add_confusion_matrices(conf_tot: pd.DataFrame, conf: pd.DataFrame):
         conf_tot = conf_tot.add(conf.iloc[:, 1:], fill_value=0).astype(int)
     return conf_tot
 
-
+@measure_time
 def postprocess(split_json: FilePath, pred_dir: FilePath,
                 out_dir: FilePath):
     """

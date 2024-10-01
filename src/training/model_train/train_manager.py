@@ -7,7 +7,6 @@ from tqdm import trange
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.common.pathManager import FilePath
-from utils.metrics.curve_computer import pixel_metric_curves
 from models.trainable_model import TrainModel
 from training.model_train.epoch_manager import EpochManager
 from utils.dataloaders.train_dataloader import TrainDataLoader
@@ -28,14 +27,14 @@ def save_configs(config_dir: FilePath, configs: dict):
         configs (dict): Configuration parameters.
     """
     config_dir.join('configs.json').save_json(configs)
-    df = pd.DataFrame(data=[list(configs.keys()),
-                            list(configs.values())]).transpose()
+    df = pd.DataFrame(data=[list(configs.keys()), list(configs.values())]).transpose()
     df.columns = ["Parameters", "Values"]
     df.to_latex(config_dir.join('configs.tex'))
 
 
-def save_if_best(metrics_df, best_acc, checkpoint_dir,
-                 model, optimizer, epoch) -> float:
+def save_if_best(metrics_df: pd.DataFrame, best_hf1: float, checkpoint_dir: FilePath,
+                 model: TrainModel, optimizer: torch.optim.optimizer, epoch: int,
+                 save_all_checkpoints: bool) -> float:
     """
     Save the checkpoint if the current model has the best f1_harmonic_mean
     score.
@@ -48,23 +47,23 @@ def save_if_best(metrics_df, best_acc, checkpoint_dir,
         optimizer: Optimizer for the model.
         epoch: Current epoch number.
 
-    Returns:
+    Returns:save_all_checkpoitns
         float: Updated best accuracy score.
     """
-    pixel_h_f1 = metrics_df["dmg_pixel_level"]["f1_harmonic_mean"].mean()
-    is_best = pixel_h_f1 >= best_acc
-    best_acc = max(pixel_h_f1, best_acc)
-    log.info(f'Saved checkpoint for epoch {epoch}.' +
-             f'Highest f1 checkpoint so far: {is_best}\n')
+    pixel_hf1 = metrics_df["dmg_pixel_level"]["f1_harmonic_mean"].mean()
+    is_best = pixel_hf1 >= best_hf1
+    best_score = max(pixel_hf1, best_hf1)
+    if save_all_checkpoints or is_best:
+        log.info(f'Saved checkpoint for epoch {epoch}. Highest f1 checkpoint so far: {is_best}\n')
 
-    model.save_checkpoint({
-        'epoch': epoch,
-        'state_dict': model.state_dict(),
-        'optimizer': optimizer.state_dict(),
-        'val_f1_avg': pixel_h_f1,
-        'best_f1': best_acc
-    }, is_best, checkpoint_dir)
-    return best_acc
+        model.save_checkpoint({
+            'epoch': epoch,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+            'val_f1_avg': pixel_hf1,
+            'best_f1': best_score
+        }, is_best, checkpoint_dir)
+    return best_score
 
 
 def resume_model(model: TrainModel, checkpoint_path: FilePath, checkpoint: bool,
@@ -113,11 +112,8 @@ def get_dirs(out_dir: FilePath) -> Tuple[FilePath]:
     )
 
 
-def train_model(configs: dict[str],
-                paths: dict[str],
-                train_loader: TrainDataLoader,
-                val_loader: TrainDataLoader,
-                test_loader: TrainDataLoader = None) -> float:
+def train_model(configs: dict[str], paths: dict[str], train_loader: TrainDataLoader,
+                val_loader: TrainDataLoader, save_all_checkpoints: bool = True):
     """
     Train the model using the specified configurations.
 
@@ -126,15 +122,13 @@ def train_model(configs: dict[str],
         paths (dict): Paths for saving files and logs.
         train_loader: DataLoader for training.
         val_loader: DataLoader for validation.
-        test_loader: Optional DataLoader for testing.
 
     Returns:
         float: The best accuracy score achieved.
     """
 
     out_dir = FilePath(paths['out_dir'])
-    log = LoggerSingleton(
-        out_dir.basename().capitalize(), folder_path=out_dir)
+    log = LoggerSingleton(out_dir.basename().capitalize(), folder_path=out_dir)
 
     # setup output directories
     checkpoint_dir, tb_logger_dir, config_dir, metric_dir = get_dirs(out_dir)
@@ -143,24 +137,17 @@ def train_model(configs: dict[str],
     # Device & Model
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     log.info(f'Using device: {device}.')
-
     model = TrainModel().to(device)
 
-    # log.info(model.model_summary())
-
     # samples are for tensorboard visualization of same images through epochs
-    tb_logger = TensorBoardLogger(
-        tb_logger_dir, configs['num_chips_to_viz'])
+    tb_logger = TensorBoardLogger(tb_logger_dir, configs['num_chips_to_viz'])
 
     # resume from a checkpoint if provided
-    optimizer, starting_epoch, best_acc = \
-        resume_model(model, checkpoint_dir, configs["checkpoint"],
-                     device,
-                     configs['learning_rate'],
-                     tb_logger,
-                     configs['freeze_seg'])
-    log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, " +
-             f" best f1 is {best_acc}")
+    optimizer, starting_epoch, best_score = resume_model(model, checkpoint_dir,
+                                                         configs["checkpoint"],
+                                                         device, configs['learning_rate'],
+                                                         tb_logger, configs['freeze_seg'])
+    log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_score}")
 
     # loss functions
     w_seg = torch.FloatTensor(configs['weights_seg'])
@@ -171,9 +158,8 @@ def train_model(configs: dict[str],
 
     # managers
     loss_manager = LossManager(configs['weights_loss'], criterions)
-    metric_manager = MetricManager(configs['labels_bld'],
-                                   configs['labels_dmg'])
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=10)
+    metric_manager = MetricManager(configs['labels_bld'], configs['labels_dmg'])
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=configs["RLROP_patience"])
 
     epochs = configs['tot_epochs']
 
@@ -188,10 +174,8 @@ def train_model(configs: dict[str],
     }
 
     # Objects for training
-    training = EpochManager(mode=EpochManager.Mode.TRAINING,
-                            loader=train_loader, **sheared_vars)
-    validation = EpochManager(mode=EpochManager.Mode.VALIDATION,
-                              loader=val_loader, **sheared_vars)
+    training = EpochManager(mode=EpochManager.Mode.TRAINING, loader=train_loader, **sheared_vars)
+    validation = EpochManager(mode=EpochManager.Mode.VALIDATION, loader=val_loader, **sheared_vars)
 
     # Metrics
     train_metrics = []
@@ -217,28 +201,11 @@ def train_model(configs: dict[str],
                  f"train loss:{tr_epoch_loss:3f};" +
                  f"val loss:{val_epoch_loss:3f};")
         # CHECKPOINT
-        best_acc = save_if_best(val_epoch_metrics, best_acc,
-                                checkpoint_dir, model, optimizer, epoch)
+        best_score = save_if_best(val_epoch_metrics, best_score, checkpoint_dir, model,
+                                  optimizer, epoch, save_all_checkpoints)
 
-    MetricManager.save_metrics(
-        train_metrics, train_loss, metric_dir, "train")
+    MetricManager.save_metrics(train_metrics, train_loss, metric_dir, "train")
     MetricManager.save_metrics(val_metrics, val_loss, metric_dir, "val")
-
-    # TESTING the las epoch model
-    if (test_loader is not None):
-        predicted_dir = out_dir.join("test_pred_masks")
-        predicted_dir.create_folder()
-        testing = EpochManager(
-            mode=EpochManager.Mode.TESTING, loader=test_loader, **sheared_vars)
-        with torch.no_grad():
-            test_metrics, test_loss = testing.run_epoch(1, predicted_dir)
-        MetricManager.save_metrics([test_metrics],
-                                   [{"epoch": epoch, "loss": test_loss}],
-                                   metric_dir, "test")
-        log.info(f"Loss over testing split: {test_loss:3f};")
-        best_acc = test_metrics["dmg_pixel_level"]["f1_harmonic_mean"].mean()
-        pixel_metric_curves(test_loader, model, device, metric_dir)
 
     tb_logger.flush()
     tb_logger.close()
-    return best_acc

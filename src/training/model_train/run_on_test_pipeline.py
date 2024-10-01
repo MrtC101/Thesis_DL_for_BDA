@@ -2,7 +2,7 @@ import torch
 
 from models.trainable_model import TrainModel
 from training.model_train.epoch_manager import EpochManager
-from training.train_pipeline import set_threads
+from training.train_final_pipeline import set_threads
 from utils.common.pathManager import FilePath
 from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.datasets.train_dataset import TrainDataset
@@ -14,41 +14,30 @@ from utils.metrics.metric_manager import MetricManager
 
 
 def inference_on_test(configs: dict, paths: dict):
-    """
-    Start the training process based on the provided configurations
-      and dataset splits.
+    """ Loads the beast parameters from the final model tests into the test split.
 
     Args:
         configs (dict): Configuration dictionary.
         paths (dict): Dictionary of paths used in the process.
-        xBD_train: Training dataset.
-        xBD_test: Optional test dataset.
-        train_idx: Optional training indices for cross-validation.
-        val_idx: Optional validation indices for cross-validation.
-
-    Returns:
-        float: The score of the training process.
     """
+
     # PATHS
-    out_dir = FilePath(paths['out_dir']).create_folder()
-    log_out = out_dir.join("console_logs")
-    predicted_dir = out_dir.join("test_pred_masks").create_folder()
+    out_dir = FilePath(paths['out_dir'])
+    tb_logger_dir = out_dir.join('tb_logs')
     weights_path = out_dir.join('checkpoints', "model_best.pth.tar")
-    tb_logger_dir = out_dir.join('test_tb_logs').create_folder()
-    metric_dir = out_dir.join('best_metrics').create_folder()
+    predicted_dir = out_dir.join("test_pred_masks").create_folder()
+    metric_dir = out_dir.join('metrics').create_folder()
 
     # loggers
-    log = LoggerSingleton("MODEL_ON_TEST", folder_path=log_out)
-
+    log = LoggerSingleton("MODEL_ON_TEST")
     tb_logger = TensorBoardLogger(tb_logger_dir, configs['num_chips_to_viz'])
 
     # Load DATA
     xBD_test = TrainDataset('test', paths['split_json'], paths['mean_json'])
     log.info(f'xBD_disaster_dataset test length: {len(xBD_test)}')
     test_loader = TrainDataLoader(xBD_test,
-                                  batch_size=configs['batch_size'], shuffle=False,
-                                  num_workers=configs['batch_workers'], pin_memory=False
-                                  )
+                                  batch_size=configs['batch_size'],
+                                  num_workers=configs['batch_workers'])
 
     # Device & Model
     set_threads()
@@ -56,10 +45,9 @@ def inference_on_test(configs: dict, paths: dict):
     model = TrainModel().to(device=device)
 
     log.info(f'Loading checkpoint from {weights_path}')
-    optimizer, starting_epoch, best_acc = model.load_freezed_weights(weights_path, device)
+    optimizer, starting_epoch, best_score = model.load_freezed_weights(weights_path, device)
 
-    log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, best f1 is {best_acc}")
-    epochs = configs['tot_epochs']
+    log.info(f"Loaded checkpoint, starting epoch is {starting_epoch}, best hf1 is {best_score}")
 
     # loss functions & managers
     w_seg = torch.FloatTensor(configs['weights_seg'])
@@ -77,15 +65,16 @@ def inference_on_test(configs: dict, paths: dict):
             loss_manager=loss_manager,
             metric_manager=metric_manager,
             tb_logger=tb_logger,
-            tot_epochs=epochs,
+            tot_epochs=starting_epoch,
             optimizer=optimizer,
             model=model,
             device=device
         )
 
         # TESTING
-        test_metrics, test_loss = testing_manager.run_epoch(1, predicted_dir)
-        MetricManager.save_metrics([test_metrics], [{"epoch": 1, "loss": test_loss}],
+        test_metrics, test_loss = testing_manager.run_epoch(starting_epoch, predicted_dir)
+        MetricManager.save_metrics([test_metrics],
+                                   [{"epoch": starting_epoch, "loss": test_loss}],
                                    metric_dir, "test")
         log.info(f"Testing Loss: {test_loss:.3f}")
         pixel_metric_curves(test_loader, model, device, metric_dir)

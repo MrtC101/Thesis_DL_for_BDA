@@ -132,7 +132,9 @@ class FilePath(str):
     def is_dir(self) -> bool:
         return os.path.isdir(self)
 
-    def create_folder(self) -> 'FilePath':
+    def create_folder(self, delete_if_exist=False) -> 'FilePath':
+        if self.is_dir() and delete_if_exist:
+            self.remove()
         os.makedirs(self, exist_ok=True)
         return self
 

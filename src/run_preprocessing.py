@@ -7,16 +7,13 @@ import sys
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
 
-from preprocessing.create_params.create_params import create_params
-from utils.common.timeManager import measure_time
 from utils.common.pathManager import FilePath
 from preprocessing.preprocessing_pipeline import preprocess
 
 if __name__ == "__main__":
     out_path = FilePath(os.environ["OUT_PATH"])
-    paths = measure_time(preprocess)
+    exp_path = FilePath(os.environ["EXP_PATH"])
+    xbd_path = FilePath(os.environ["XBD_PATH"])
+    data_path = FilePath(os.environ["DATA_PATH"])
+    paths = preprocess(out_path, exp_path, xbd_path, data_path)
     out_path.join("data_paths.json").save_json(paths)
-    # LOAD PARAMETERS
-    params = FilePath(os.environ["EXP_PATH"]) \
-        .join("params.yml").read_yaml()
-    create_params(params)
