@@ -224,7 +224,7 @@ def train_model(configs: dict[str],
         train_metrics, train_loss, metric_dir, "train")
     MetricManager.save_metrics(val_metrics, val_loss, metric_dir, "val")
 
-    # TESTING
+    # TESTING the las epoch model
     if (test_loader is not None):
         predicted_dir = out_dir.join("test_pred_masks")
         predicted_dir.create_folder()

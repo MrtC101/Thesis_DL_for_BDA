@@ -50,18 +50,24 @@ def compute_pixel_weights(data_path: FilePath, split_json_path: FilePath):
                 imgs_dict = tile_dict[tile_id]["post"]
                 mask_path = FilePath(imgs_dict["mask"])
                 px_count = _count_pixels(mask_path)
-                rows.append([split_id, dis_id, tile_id]+px_count)
+                rows.append([split_id, dis_id, tile_id] + px_count)
+
     px_Count = pd.DataFrame(rows, columns=["split_id", "dis_id",
-                            "tile_id"]+list(LabelDict().labels.keys()))
-    weights_s = px_Count.set_index(["split_id", "dis_id", "tile_id"]).sum()
-    weights_s = weights_s.sum() / weights_s
+                            "tile_id"] + list(LabelDict().labels.keys()))
+    weights_s = px_Count.set_index(["split_id", "dis_id", "tile_id"])
+    dmg_weights = weights_s.sum().sum() / weights_s.sum()
+    dmg_weights: pd.Series = dmg_weights.loc[LabelDict().keys_list[0:5]]
+
+    seg_weights = pd.Series(data=[
+        dmg_weights.loc["background"],
+        dmg_weights.loc[LabelDict().keys_list[1:4]].sum()
+    ], index=["background", "building"])
+
+    seg_weights: pd.Series = seg_weights / seg_weights.sum()
 
     weights = {
-        "dmg": {label: w for label, w in weights_s.items() if label in LabelDict().keys_list},
-        "seg": {
-            'building': weights_s[LabelDict().keys_list[1:5]].sum(),
-            'background': weights_s['background']
-        }
+        "seg": {label: w for label, w in dmg_weights.items()},
+        "dmg": {label: w for label, w in seg_weights.items()}
     }
 
     data_path.create_folder()

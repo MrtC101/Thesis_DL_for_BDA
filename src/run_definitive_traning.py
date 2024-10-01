@@ -30,5 +30,5 @@ if __name__ == "__main__":
         "out_dir": out_path.join("definitive_model"),
         "checkpoint": None
     }
-
+    
     definitive_acc_score = measure_time(train_definitive, best_config, paths_dict)

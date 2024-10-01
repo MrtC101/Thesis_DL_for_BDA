@@ -40,8 +40,7 @@ def preprocess() -> dict:
     LoggerSingleton("PREPROCESSING", folder_path=pre_path)
 
     # LOAD PARAMETERS
-    params = FilePath(os.environ["EXP_PATH"]) \
-        .join("params.yml").read_yaml()
+    params = FilePath(os.environ["EXP_PATH"]).join("params.yml").read_yaml()
 
     log_Title("Creating target masks")
     xbd_path = FilePath(os.environ["XBD_PATH"])
@@ -50,7 +49,7 @@ def preprocess() -> dict:
     data_path = FilePath(os.environ["DATA_PATH"])
     if data_path.is_dir():
         data_path.remove()
-    split_prop = {"train": 0.9, "test": 0.1}
+    split_prop = {"train": 0.8, "val": 0.1, "test": 0.1}
     total_tiles = params["preprocessing"]["img_num"]
     # Estrategía de gready sampling
 

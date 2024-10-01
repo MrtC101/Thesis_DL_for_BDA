@@ -17,13 +17,7 @@ from utils.datasets.train_dataset import TrainDataset
 
 
 def set_threads():
-    """
-    Configure PyTorch threads for performance.
-
-    Args:
-        torch_threads: Number of threads for PyTorch.
-        torch_op_threads: Number of inter-op threads for PyTorch.
-    """
+    """Configure PyTorch threads for performance."""
     physical_cores = multiprocessing.cpu_count()
     if torch.get_num_threads() < physical_cores or \
        torch.get_num_interop_threads() < physical_cores:
@@ -71,6 +65,7 @@ def start_train(configs: dict, paths: dict, xBD_train, xBD_test=None,
         shuffle=(val_sampler is None),
         sampler=val_sampler
     )
+
     test_loader = TrainDataLoader(
         xBD_test,
         batch_size=configs['batch_size'],
@@ -99,14 +94,22 @@ def train_definitive(configs: dict[str, any], paths: dict[str, any]):
     out_dir = FilePath(paths['out_dir'])
     log_out = out_dir.join("console_logs")
     log = LoggerSingleton("DEFINITIVE MODEL", folder_path=log_out)
-    log.info(f"Using bet configuration with number {configs[0]}")
+    log.info(f"Using best configuration with number {configs[0]}")
     configs = configs[1]
     set_threads()
 
+    configs['tot_epochs'] = configs['final_epochs']
+
     # Load Dataset
     xBD_train = TrainDataset('train', paths['split_json'], paths['mean_json'])
-    log.info(f'xBD_disaster_dataset train length: {len(xBD_train)}')
+    log.info(f'xBD_disaster_dataset TRAIN length: {len(xBD_train)}')
+    xBD_val = TrainDataset('val', paths['split_json'], paths['mean_json'])
+    log.info(f'xBD_disaster_dataset VAL length: {len(xBD_train)}')
     xBD_test = TrainDataset('test', paths['split_json'], paths['mean_json'])
-    log.info(f'xBD_disaster_dataset test length: {len(xBD_test)}')
+    log.info(f'xBD_disaster_dataset TEST length: {len(xBD_test)}')
 
-    return start_train(configs, paths, xBD_train, xBD_test)
+    train_loader = TrainDataLoader(xBD_train, batch_size=configs['batch_size'])
+    val_loader = TrainDataLoader(xBD_val, batch_size=configs['batch_size'])
+    test_loader = TrainDataLoader(xBD_test, batch_size=configs['batch_size'])
+
+    return train_model(configs, paths, train_loader, val_loader, test_loader)

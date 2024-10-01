@@ -28,6 +28,9 @@ def k_cross_validation(k: int, configs: dict[str, any],
     log = LoggerSingleton(f"config-{exp_i}", folder_path=out_dir)
     set_threads()
 
+    #
+    configs['tot_epochs'] = configs['hps_epochs']
+
     # Load Datasets
     xBD_train = TrainDataset('train', paths['split_json'], paths['mean_json'])
     log.info(f'xBD_disaster_dataset train length: {len(xBD_train)}')
