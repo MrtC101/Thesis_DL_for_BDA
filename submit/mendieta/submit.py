@@ -10,41 +10,38 @@ def load(path):
 
 
 def environment_script(paths):
-    return f"""
-    export PROJ_PATH="{paths["proj_path"]}"
-    export EXP_NAME="{paths["exp_name"]}"
-    export SRC_PATH="{paths["src_path"]}"
-    export XBD_PATH="{paths["xbd_path"]}"
-    export EXP_PATH="{paths["exp_path"]}"
-    export DATA_PATH="{paths["data_path"]}"
-    export OUT_PATH="{paths["out_path"]}"
-    export FILE_LIST=({str(job["file_list"]).strip("[]").replace(",","").replace("'",'"')})
-    export CONF_NUM={job["conf_num"]}
-    """
+    return f"""export PROJ_PATH="{paths["proj_path"]}"
+export EXP_NAME="{paths["exp_name"]}"
+export SRC_PATH="{paths["src_path"]}"
+export XBD_PATH="{paths["xbd_path"]}"
+export EXP_PATH="{paths["exp_path"]}"
+export DATA_PATH="{paths["data_path"]}"
+export OUT_PATH="{paths["out_path"]}"
+export FILE_LIST=({str(job["file_list"]).strip("[]").replace(",","").replace("'",'"')})
+export CONF_NUM={job["conf_num"]}
+"""
 
 
 def python_run_script(out_path, job):
-    return f"""
-    #!/bin/bash
+    return f"""#!/bin/bash
 
-    source {out_path}/{job['job_name']}_temp_env.sh
-    """ + """
-    output_file="$OUT_PATH/time.txt"
+source {out_path}/{job['job_name']}_temp_env.sh
+""" + """
+output_file="$OUT_PATH/time.txt"
 
-    # Initialize conda
-    source "$(conda info --base)/etc/profile.d/conda.sh"
-    conda activate develop
+# Initialize conda
+source "$(conda info --base)/etc/profile.d/conda.sh"
+conda activate develop
 
-    # Run the training script
-    for file in ${FILE_LIST[@]}; do
-        python "${file}"
-    done
-    """
+# Run the training script
+for file in ${FILE_LIST[@]}; do
+    python "${file}"
+done
+"""
 
 
 def slurm_script(paths, node, job):
-    return f"""
-    #!/bin/bash
+    return f"""#!/bin/bash
 
     #SBATCH --job-name="{job['job_name']}"
     #SBATCH --output={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.log
@@ -99,7 +96,7 @@ def create_temp_files(job: dict, node: str, paths: dict, out_path: str) -> str:
     # Create SLURM job script
     slurm_script_file = os.path.join(out_path, f"{job['job_name']}_temp_slurm.sh")
     with open(slurm_script_file, 'w') as file:
-        file.write(slurm_script(node, job))
+        file.write(slurm_script( paths, node, job))
     set_file_permissions(slurm_script_file, script_permissions)
 
     return slurm_script_file
