@@ -9,7 +9,6 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 
 from training.model_train.utils import get_best_config
 from utils.common.pathManager import FilePath
-from utils.common.timeManager import measure_time
 from training.train_final_pipeline import train_final_model
 
 if __name__ == "__main__":

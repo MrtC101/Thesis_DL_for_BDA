@@ -1,6 +1,6 @@
 import torch
 from models.trainable_model import TrainModel
-from utils.dataloaders.train_dataloader import TrainDataLoader
+from training.model_train.utils import TrainDataLoader
 from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 from torch.utils.tensorboard import SummaryWriter
 

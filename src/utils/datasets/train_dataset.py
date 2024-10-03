@@ -15,8 +15,8 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 
 
 class TrainDataset(Dataset):
-    """Class that implements the corresponding methods to }
-    access raw xBD dataset data."""
+    """`torch.utils.data.Dataset` class that implements the corresponding methods to access cropped
+    patches from  from the xBD dataset."""
 
     def __init__(self, split_name: str, splits_json_path: FilePath,
                  mean_stdv_json_path: FilePath):

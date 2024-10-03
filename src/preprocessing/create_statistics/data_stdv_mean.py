@@ -1,14 +1,11 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
 import numpy as np
-import pandas as pd
 from tqdm import tqdm
-from utils.common.defaultDictFactory import nested_defaultdict
+from utils.pathManagers.defaultDictFactory import nested_defaultdict
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.raw_datasets import TileDataset
-from utils.visualization.label_to_color import LabelDict
-from cv2 import imread
 
 log = LoggerSingleton()
 

@@ -1,11 +1,8 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-from collections import defaultdict
 import os
 import sys
 import pandas as pd
-from sklearn.metrics import auc
-import torch
 
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
@@ -28,10 +25,8 @@ class MetricComputer:
     # Compute Metrics
     @staticmethod
     def compute_metrics(conf_mtrx_list: pd.Series, label_set: list):
-        conf_matrices_df = pd.concat(list(conf_mtrx_list),
-                                     axis=0, ignore_index=True)
-        class_metrics = MetricComputer.compute_eval_metrics(conf_matrices_df,
-                                                            label_set)
+        conf_matrices_df = pd.concat(list(conf_mtrx_list), axis=0, ignore_index=True)
+        class_metrics = MetricComputer.compute_eval_metrics(conf_matrices_df, label_set)
         return class_metrics
 
     @staticmethod
@@ -68,57 +63,8 @@ class MetricComputer:
             # F1_harmonico
             f1_harmonic_mean += 1.0 / (f1) if f1 > 0.0 else 0.0
 
-        f1_harmonic_mean = len(labels_set) / \
-            f1_harmonic_mean if f1_harmonic_mean > 0.0 else 0.0
+        f1_harmonic_mean = len(labels_set) / f1_harmonic_mean if f1_harmonic_mean > 0.0 else 0.0
 
         metrics = pd.DataFrame(eval_results)
         metrics.insert(0, "f1_harmonic_mean", f1_harmonic_mean)
         return metrics
-
-    @staticmethod
-    def compute_ROC(conf_dict: dict[torch.Tensor]):
-        # Almacenar las curvas ROC para cada clase y umbral
-        curves = defaultdict(lambda: defaultdict(list))
-
-        for th, conf_tensor in conf_dict.items():
-            for i_label in range(conf_tensor.shape[0]):
-                tp, fp, fn, tn = map(float, conf_tensor[i_label])
-                sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
-                specificity = tn / (fp + tn) if (fp + tn) > 0 else 0
-                curves[i_label][th] = (1 - specificity, sensitivity)  # FPR, TPR
-
-        # Calcular el AUC para cada curva ROC
-        roc_curves = {}
-        for label, th_curves in curves.items():
-            x, y = zip(*sorted(th_curves.values()))  # Ordenar por FPR
-            auc_value = auc(x, y)
-            roc_curves[label] = (x, y, auc_value)
-        return roc_curves
-
-    @staticmethod
-    def _compute_ap(precision, recall):
-        ap = 0.0
-        for i in range(len(recall)):
-            if i == 0:
-                ap += precision[i] * recall[i]
-            else:
-                ap += precision[i] * (recall[i] - recall[i-1])
-        return ap
-
-    @staticmethod
-    def compute_PR(conf_dict: dict[torch.Tensor]):
-        pr_curves = {}
-        conf = torch.stack([t for t in conf_dict.values()], dim=0)
-        conf_list = torch.unbind(conf, dim=1)
-        for i_label in range(conf.shape[1]):
-            tp, fp, fn, tn = torch.unbind(conf_list[i_label], dim=1)
-            precision = tp / (tp + fp)
-            precision = torch.where(torch.isnan(
-                precision), torch.tensor(1.0), precision)
-            recall = tp / (tp + fn)
-            recall = torch.where(torch.isnan(
-                recall), torch.tensor(0.0), recall)
-            base_precision = tp.max() / (tp.max() + tn.max())
-            pr_curves[i_label] = (recall, precision, base_precision,
-                                  MetricComputer._compute_ap(precision, recall))
-        return pr_curves

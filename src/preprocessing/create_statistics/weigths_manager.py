@@ -68,7 +68,7 @@ def create_configs(params_path: FilePath, weights: dict) -> dict:
           hyperparameter combinations.
     """
     params_dict = params_path.read_yaml()
-    
+
     configs = {**params_dict['train'], **params_dict['visual'],
                **params_dict['preprocessing'], **params_dict['weights']}
     configs["weights_dmg"] = weights["dmg"]

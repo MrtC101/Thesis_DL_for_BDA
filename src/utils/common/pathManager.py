@@ -7,6 +7,8 @@ import numpy as np
 
 
 class FilePath(str):
+    """This class is a wrapper for os.path methods to manipulate paths during
+    data access."""
     lock = threading.Lock()
 
     def basename(self):

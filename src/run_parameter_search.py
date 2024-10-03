@@ -6,7 +6,7 @@ import sys
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
-    
+
 from training.cross_validation_pipeline import k_cross_validation
 from utils.common.pathManager import FilePath
 

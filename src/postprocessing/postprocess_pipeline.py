@@ -6,7 +6,8 @@ from postprocessing.file_creation.post_file_save import save_bbs, save_df, save_
 from utils.common.pathManager import FilePath
 from utils.common.timeManager import measure_time
 from utils.visualization.label_to_color import LabelDict
-from utils.metrics.matrix_computer import MatrixComputer
+from utils.metrics.matrix_computer import px_multiclass_conf_mtrx, tile_obj_conf_matrices, \
+    tile_px_conf_mtrx
 from utils.metrics.metric_manager import MetricComputer
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.predicted_dataset import PredictedDataset
@@ -25,12 +26,12 @@ def pixel_analysis(tile_dict: dict, pred_mask: torch.Tensor, dmg_labels: list, p
         pd.Dataframe: Current predicted mask confusion matrix.
         pd.Dataframe: Current predicted mask prediction table.
     """
-    conf = MatrixComputer.tile_px_conf_mtrx(tile_dict["bld_mask"], tile_dict["dmg_mask"],
-                                            pred_mask, dmg_labels)
+    conf = tile_px_conf_mtrx(tile_dict["bld_mask"], tile_dict["dmg_mask"],
+                             pred_mask, dmg_labels)
     save_df(conf, pred_out, "pixel_confusion_matrix")
 
-    multi_conf = MatrixComputer.px_multiclass_conf_mtrx(tile_dict["dmg_mask"], pred_mask,
-                                                        dmg_labels)
+    multi_conf = px_multiclass_conf_mtrx(tile_dict["dmg_mask"], pred_mask,
+                                         dmg_labels)
     save_df(multi_conf, pred_out, "pixel_multiclass_confusion_matrix")
 
     metrics = MetricComputer.compute_eval_metrics(conf, dmg_labels)
@@ -51,8 +52,7 @@ def object_analysis(tile_dict: dict, pred_mask: torch.Tensor, dmg_labels: list,
         pd.Dataframe: Current predicted mask prediction table.
     """
 
-    conf, multi_conf = MatrixComputer.\
-        tile_obj_conf_matrices(tile_dict["dmg_mask"], pred_mask, dmg_labels)
+    conf, multi_conf = tile_obj_conf_matrices(tile_dict["dmg_mask"], pred_mask, dmg_labels)
     save_df(conf, pred_out, "object_confusion_matrix")
     save_df(multi_conf, pred_out, "object_multiclass_confusion_matrix")
 
@@ -105,6 +105,7 @@ def add_confusion_matrices(conf_tot: pd.DataFrame, conf: pd.DataFrame):
     else:
         conf_tot = conf_tot.add(conf.iloc[:, 1:], fill_value=0).astype(int)
     return conf_tot
+
 
 @measure_time
 def postprocess(split_json: FilePath, pred_dir: FilePath,

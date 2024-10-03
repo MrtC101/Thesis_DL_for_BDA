@@ -2,9 +2,8 @@ import torch
 
 from models.trainable_model import TrainModel
 from training.model_train.epoch_manager import EpochManager
-from training.train_final_pipeline import set_threads
+from training.train_final_pipeline import TrainDataLoader, set_threads
 from utils.common.pathManager import FilePath
-from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.datasets.train_dataset import TrainDataset
 from utils.loggers.console_logger import LoggerSingleton
 from utils.loggers.tensorboard_logger import TensorBoardLogger

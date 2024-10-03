@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 from tqdm import tqdm
 from utils.common.pathManager import FilePath
-from utils.common.defaultDictFactory import nested_defaultdict
+from utils.pathManagers.defaultDictFactory import nested_defaultdict
 
 
 class SlicedPathManager:

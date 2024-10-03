@@ -24,7 +24,8 @@ def log_Title(title: str):
 
 
 @measure_time
-def preprocess(out_path: FilePath, exp_path: FilePath, xbd_path: FilePath, data_path: FilePath) -> dict:
+def preprocess(out_path: FilePath, exp_path: FilePath, xbd_path: FilePath,
+               data_path: FilePath) -> dict:
     """
     Pipeline sequence for data preprocessing.
 

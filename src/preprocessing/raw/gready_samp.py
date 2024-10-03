@@ -201,6 +201,7 @@ def split_empty_images(dmg_by_tile_df, columns):
 
 
 def greedy_sampling(xbd_path: FilePath, img_num: int) -> FilePath:
+    """Returns the corresponding balanced sample obtained with a greedy approach."""
     log.info("Balanced Sampling...")
     labels = ["destroyed", "major-damage", "minor-damage", "no-damage", "un-classified"]
     dmg_by_tile_df: pd.DataFrame = create_bld_dmg_dataframe(xbd_path, labels)
@@ -227,49 +228,79 @@ def greedy_split_dataset(xbd_path: FilePath, data_path: FilePath, img_total: int
     Returns:
         FilePath: Path to the JSON file containing the train/test image splits.
     """
+    # loads raw dataset
+    data_dict = RawPathManager.load_paths(xbd_path, ("all"))
+
     # Sampling
     sample = greedy_sampling(xbd_path, img_total)
-    ids_df = sample[["dis_id", "tile_id"]]
-    ids_df = ids_df.reset_index(drop=True)
 
     log.info(f"Building distribution: \n{sample.sum(axis=0, numeric_only=True)}")
+
+    splits_dfs = get_split_dataframes(sample, split_prop)
+    splits_dict = build_split_dict(splits_dfs, data_dict)
 
     # creates splits folder
     split_path = data_path.join("splits")
     split_path.create_folder()
-
-    # loads raw dataset
-    data_dict = RawPathManager.load_paths(xbd_path, ("all"))
-    tiles_file = split_path.join("all_disaster.json")
-    tiles_file.save_json(data_dict)
-
-    total_tiles = len(ids_df)
-
-    train_ids_df = ids_df.sample(math.ceil(total_tiles * split_prop["train"]))
-    test_ids_df = ids_df.drop(train_ids_df.index)
-
-    train_keys = list(train_ids_df.itertuples(index=False, name=None))
-    test_keys = list(test_ids_df.itertuples(index=False, name=None))
-
-    splits_dict = defaultdict(lambda: defaultdict(lambda: {}))
-    for dis_id, tiles_dict in data_dict.items():
-        for tile_id in tiles_dict.keys():
-            tup = (dis_id, tile_id)
-            if tup in test_keys:
-                for i in range(1, test_keys.count(tup)+1):
-                    new_tile_id = tile_id
-                    if i > 1:
-                        new_tile_id = str(i) + 'a' + tile_id
-                    splits_dict["test"][dis_id][new_tile_id] = tiles_dict[tile_id]
-            if tup in train_keys:
-                for i in range(1, train_keys.count(tup)+1):
-                    new_tile_id = tile_id
-                    if i > 1:
-                        new_tile_id = str(i) + 'a' + tile_id
-                    splits_dict["train"][dis_id][new_tile_id] = tiles_dict[tile_id]
-
-    log.info(f"Total imgs {total_tiles}: train length {len(train_keys)} " +
-             f"test length {len(test_keys)} desired length {img_total}")
     balanced_file = split_path.join("raw_splits.json")
     balanced_file.save_json(splits_dict)
     return balanced_file
+
+
+def get_split_dataframes(sample: pd.DataFrame, props: dict) -> dict:
+    """Creates a dictionary of dataframes with splits from the sampled xBD dataset
+    with the corresponding name and proportion from de dictionary props."""
+    ids_df = sample[["dis_id", "tile_id"]]
+    ids_df = ids_df.reset_index(drop=True)
+
+    splits: dict = {}
+    tot_prop: float = 0.0
+    remaining_ids_df = ids_df.copy()
+    remaining_prop = 1.0
+    for split, prop in list(props.items()):
+        tot_prop += prop
+        if (prop / remaining_prop) < 1:
+            split_ids = remaining_ids_df.sample(frac=prop / remaining_prop)
+            remaining_ids_df = remaining_ids_df.drop(split_ids.index)
+            remaining_prop -= prop
+        else:
+            split_ids = remaining_ids_df
+        splits[split] = split_ids
+
+    if tot_prop != 1.0:
+        raise Exception("Split proportions must sum 1")
+
+    # log lengths
+    msg = f"Total imgs {len(ids_df)}:\n"
+    for split_name, split_df in list(splits.items()):
+        msg += f"{split_name} length {len(split_df)} \n"
+    log.info(msg)
+
+    return splits
+
+
+def build_split_dict(splits_dfs: dict, data_dict: dict) -> dict:
+    """
+        Iterates over the xBD dataset and builds a dictionary representation
+        of all splits using the sampled splits_dfs.
+    """
+    split_keys_dict = {split_name: list(split_df.itertuples(index=False, name=None))
+                       for split_name, split_df in splits_dfs.items()}
+    # iterates over all disasters in xBD
+    splits_dict = defaultdict(lambda: defaultdict(lambda: {}))
+    for dis_id, tiles_dict in data_dict.items():
+        # iterates over all tiles in the disaster
+        for tile_id in tiles_dict.keys():
+            tup = (dis_id, tile_id)
+            # iterates over all calculated splits
+            for split_name, split_keys in split_keys_dict.items():
+                # same tile can be over sampled in other splits
+                if tup in split_keys:
+                    for i in range(1, split_keys.count(tup)+1):
+                        new_tile_id = tile_id
+                        if i > 1:
+                            # create a new id is needed
+                            new_tile_id = str(i) + 'a' + tile_id
+                        splits_dict[split_name][dis_id][new_tile_id] = tiles_dict[tile_id]
+
+    return splits_dict

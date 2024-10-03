@@ -4,40 +4,34 @@ from utils.loggers.console_logger import LoggerSingleton
 log = LoggerSingleton()
 
 
-def measure_time(func, *args, **kwargs):
+def measure_time(func):
     """
-    Measures the execution time of a function and logs the results beautifully.
+    Decorador que mide el tiempo de ejecución de una función y registra los resultados.
 
     Args:
-        func (callable): The function to be timed.
-        *args: Positional arguments to be passed to the function.
-        **kwargs: Keyword arguments to be passed to the function.
+        func (callable): La función a ser cronometrada.
 
     Returns:
-        The result of the function being timed.
-
-    Raises:
-        TypeError: If `func` is not a callable.
+        callable: La función decorada que mide el tiempo de ejecución.
     """
 
-    if not callable(func):
-        raise TypeError("`func` must be a callable object (function).")
+    def wrapper(*args, **kwargs):
+        start_time = time.perf_counter()  # Use high-resolution timer
+        result = func(*args, **kwargs)
+        end_time = time.perf_counter()
 
-    start_time = time.perf_counter()  # Use high-resolution timer
+        execution_time = end_time - start_time
 
-    result = func(*args, **kwargs)
-    end_time = time.perf_counter()
+        # Calculate time components in a more concise and efficient way
+        hours, remainder = divmod(execution_time, 3600)
+        minutes, seconds = divmod(remainder, 60)
 
-    execution_time = end_time - start_time
+        # Use f-string for cleaner formatting with appropriate precision
+        log_message = f"Function '{func.__name__}' execution time: " + \
+            f"{hours:.2f}h | {minutes:.2f}m | {seconds:.2f}s\n" + \
+            f"Total seconds: {execution_time:.6f}"
+        log.info(log_message)
 
-    # Calculate time components in a more concise and efficient way
-    hours, remainder = divmod(execution_time, 3600)
-    minutes, seconds = divmod(remainder, 60)
+        return result
 
-    # Use f-string for cleaner formatting with appropriate precision
-    log_message = f"Function '{func.__name__}' execution time: " + \
-        f"{hours:.2f}h | {minutes:.2f}m | {seconds:.2f}s\n" + \
-        f"Total seconds: {execution_time:.6f}"
-    log.info(log_message)
-
-    return result
+    return wrapper

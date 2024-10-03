@@ -4,10 +4,9 @@ from tqdm import tqdm
 from torch.utils.data import SubsetRandomSampler
 from sklearn.model_selection import KFold
 from training.model_train.train_manager import train_model
-from training.train_final_pipeline import set_threads
+from training.model_train.utils import TrainDataLoader, set_threads
 from utils.common.pathManager import FilePath
 from utils.common.timeManager import measure_time
-from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.datasets.train_dataset import TrainDataset
 from utils.loggers.console_logger import LoggerSingleton
 

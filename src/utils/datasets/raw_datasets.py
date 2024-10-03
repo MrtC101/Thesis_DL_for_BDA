@@ -6,8 +6,8 @@ from utils.common.pathManager import FilePath
 
 
 class TileDataset(Dataset):
-    """Class that implements the corresponding methods to access raw xBD
-    dataset data."""
+    """`torch.utils.data.Dataset` class that implements the corresponding methods to access tiles
+      from the raw xBD dataset folder."""
 
     def __init__(self, split_name: FilePath, splits_json_path: FilePath):
         self.split_name = split_name

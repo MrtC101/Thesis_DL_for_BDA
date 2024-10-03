@@ -7,14 +7,11 @@ scripts inside `preprocessing`, `train` and `test`
 packages, to implement the data preprocessing,
 model training and testing pipeline for this project.
 """
-import torch
-import multiprocessing
 from training.model_train.train_manager import train_model
 from training.model_train.run_on_test_pipeline import inference_on_test
-from training.model_train.utils import set_threads
+from training.model_train.utils import TrainDataLoader, set_threads
 from utils.common.pathManager import FilePath
 from utils.common.timeManager import measure_time
-from utils.dataloaders.train_dataloader import TrainDataLoader
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.train_dataset import TrainDataset
 

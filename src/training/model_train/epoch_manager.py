@@ -3,7 +3,8 @@ import torch
 from tqdm import tqdm
 from dataclasses import dataclass
 from datetime import datetime
-from utils.dataloaders.train_dataloader import TrainDataLoader
+
+from training.train_final_pipeline import TrainDataLoader
 from utils.loggers.console_logger import LoggerSingleton
 from utils.loggers.tensorboard_logger import TensorBoardLogger
 from models.trainable_model import SiamUnet
@@ -96,8 +97,7 @@ class EpochManager:
             # Verifica el dispositivo de entrada y el modelo
             logit_masks = self.model(x_pre, x_post)
 
-            loss = self.loss_manager.\
-                compute_loss(logit_masks, x_pre, y_seg, y_cls)
+            loss = self.loss_manager.compute_loss(logit_masks, x_pre, y_seg, y_cls)
 
             if (self.mode == self.mode.TRAINING):
                 loss.backward()  # compute gradients

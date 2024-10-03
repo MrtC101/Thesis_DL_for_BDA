@@ -1,12 +1,8 @@
 import os
-import re
 import sys
 import csv
 import shutil
-from typing import List
-from urllib import response
-import flask
-from flask import Flask, json, redirect, render_template, request, abort, g, url_for
+from flask import Flask, json, redirect, render_template, request, abort, url_for
 from flask_babel import Babel, _
 
 if (os.environ.get("SRC_PATH") not in sys.path):

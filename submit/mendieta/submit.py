@@ -96,7 +96,7 @@ def create_temp_files(job: dict, node: str, paths: dict, out_path: str) -> str:
     # Create SLURM job script
     slurm_script_file = os.path.join(out_path, f"{job['job_name']}_temp_slurm.sh")
     with open(slurm_script_file, 'w') as file:
-        file.write(slurm_script( paths, node, job))
+        file.write(slurm_script(paths, node, job))
     set_file_permissions(slurm_script_file, script_permissions)
 
     return slurm_script_file

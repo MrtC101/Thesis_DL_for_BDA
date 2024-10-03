@@ -9,7 +9,7 @@ from torch.optim.lr_scheduler import ReduceLROnPlateau
 from utils.common.pathManager import FilePath
 from models.trainable_model import TrainModel
 from training.model_train.epoch_manager import EpochManager
-from utils.dataloaders.train_dataloader import TrainDataLoader
+from training.model_train.utils import TrainDataLoader
 from utils.metrics.loss_manager import LossManager
 from utils.metrics.metric_manager import MetricManager
 from utils.loggers.console_logger import LoggerSingleton
@@ -190,8 +190,7 @@ def train_model(configs: dict[str], paths: dict[str], train_loader: TrainDataLoa
         train_loss.append({"epoch": epoch, "loss": tr_epoch_loss})
         # VALIDATION
         with torch.no_grad():
-            val_epoch_metrics, val_epoch_loss = validation.run_epoch(
-                epoch)
+            val_epoch_metrics, val_epoch_loss = validation.run_epoch(epoch)
         val_metrics.append(val_epoch_metrics)
         val_loss.append({"epoch": epoch, "loss": val_epoch_loss})
 
