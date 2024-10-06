@@ -62,7 +62,7 @@ def predict():
     post_img.save(post_img_path)
 
     pred_folder = full_upload_folder.join("predicted")
-    shutil.rmtree(pred_folder)
+    pred_folder.create_folder(delete_if_exist=True)
     model.make_prediction(pre_img_path, post_img_path, pred_folder)
 
     # images paths
