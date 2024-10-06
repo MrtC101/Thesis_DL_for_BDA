@@ -1,0 +1,5 @@
+{
+    "tile_splits_json_path": "/home/mrtc101/Desktop/tesina/repo/main/fake_exp/data/splits/raw_splits.json",
+    "patch_split_json_path": "/home/mrtc101/Desktop/tesina/repo/main/fake_exp/data/splits/sliced_splits.json",
+    "mean_std_json_path": "/home/mrtc101/Desktop/tesina/repo/main/fake_exp/data/dataset_statistics/all_tiles_mean_stddev.json"
+}

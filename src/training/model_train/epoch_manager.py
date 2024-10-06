@@ -4,11 +4,13 @@ from tqdm import tqdm
 from dataclasses import dataclass
 from datetime import datetime
 
-from training.train_final_pipeline import TrainDataLoader
+from models.trainable_model import SiamUnet
+from training.model_train.utils import TrainDataLoader
+
 from utils.loggers.console_logger import LoggerSingleton
 from utils.loggers.tensorboard_logger import TensorBoardLogger
-from models.trainable_model import SiamUnet
-from utils.metrics.metric_manager import Level, MetricManager
+from utils.metrics.matrix_computer import Level
+from utils.metrics.metric_manager import MetricManager
 from utils.metrics.loss_manager import LossManager
 from utils.datasets.predicted_dataset import PredictedDataset
 

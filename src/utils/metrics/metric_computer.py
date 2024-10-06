@@ -1,11 +1,6 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import os
-import sys
 import pandas as pd
-
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
 
 
 class MetricComputer:

@@ -1,25 +1,15 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import pandas as pd
 import torch
+import pandas as pd
+import concurrent.futures
 from postprocessing.plots.plot_results import plot_harmonic_mean, plot_loss, \
     plot_metric_per_class
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
 from utils.metrics.metric_computer import MetricComputer
 from utils.loggers.table_print import to_table
-import concurrent.futures
-from utils.metrics.matrix_computer import patches_obj_conf_mtrx, patches_px_conf_mtrx
-
-import enum
-
-
-class Level(enum.Enum):
-    """lvl = {"matrix_key":"","metric_key":""}"""
-    PX_BLD = {"matrix_key": "px_bld_matrices", "metric_key": "bld_pixel_level"}
-    PX_DMG = {"matrix_key": "px_dmg_matrices", "metric_key": "dmg_pixel_level"}
-    OBJ_BLD = {"matrix_key": "obj_bld_matrices", "metric_key": "bld_object_level"}
-    OBJ_DMG = {"matrix_key": "obj_dmg_matrices", "metric_key": "dmg_object_level"}
+from utils.metrics.matrix_computer import Level, patches_obj_conf_mtrx, patches_px_conf_mtrx
 
 
 class MetricManager:

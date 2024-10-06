@@ -6,10 +6,13 @@ from typing import Tuple
 from tqdm import trange
 from torch import nn
 from torch.optim.lr_scheduler import ReduceLROnPlateau
-from utils.common.pathManager import FilePath
+from torch.optim.optimizer import Optimizer
 from models.trainable_model import TrainModel
+
 from training.model_train.epoch_manager import EpochManager
 from training.model_train.utils import TrainDataLoader
+
+from utils.common.pathManager import FilePath
 from utils.metrics.loss_manager import LossManager
 from utils.metrics.metric_manager import MetricManager
 from utils.loggers.console_logger import LoggerSingleton
@@ -33,7 +36,7 @@ def save_configs(config_dir: FilePath, configs: dict):
 
 
 def save_if_best(metrics_df: pd.DataFrame, best_hf1: float, checkpoint_dir: FilePath,
-                 model: TrainModel, optimizer: torch.optim.optimizer, epoch: int,
+                 model: TrainModel, optimizer: Optimizer, epoch: int,
                  save_all_checkpoints: bool) -> float:
     """
     Save the checkpoint if the current model has the best f1_harmonic_mean

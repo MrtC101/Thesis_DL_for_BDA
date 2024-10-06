@@ -86,7 +86,7 @@ def get_best_config(out_path: FilePath, param_list: list) -> dict:
         fold_df = fold_df.sort_values(by=["Conf", "Fold"])
         fold_df = fold_df.groupby('Conf').apply(lambda x: x.set_index('Fold'), include_groups=False)
         best_conf = fold_df["Harmonic-mean-f1"].idxmax()[0]
-    return (best_conf, param_list[best_conf])
+    return (best_conf, param_list[str(best_conf)])
 
 
 def set_threads():

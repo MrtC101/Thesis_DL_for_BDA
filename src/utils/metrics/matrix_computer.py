@@ -4,14 +4,24 @@ import random
 import pandas as pd
 import torch
 from tqdm import tqdm
-from postprocessing.bbs.bounding_boxes import BoundingBox
-from utils.loggers.console_logger import LoggerSingleton
 
+from postprocessing.bbs.bounding_boxes import BoundingBox
 from postprocessing.bbs.polygon_manager import get_buildings, get_instance_mask
-from utils.metrics.metric_manager import Level
+
+from utils.loggers.console_logger import LoggerSingleton
+import enum
+
 from scipy.optimize import linear_sum_assignment
 
 # matplotlib.use("TkAgg")
+
+
+class Level(enum.Enum):
+    """lvl = {"matrix_key":"","metric_key":""}"""
+    PX_BLD = {"matrix_key": "px_bld_matrices", "metric_key": "bld_pixel_level"}
+    PX_DMG = {"matrix_key": "px_dmg_matrices", "metric_key": "dmg_pixel_level"}
+    OBJ_BLD = {"matrix_key": "obj_bld_matrices", "metric_key": "bld_object_level"}
+    OBJ_DMG = {"matrix_key": "obj_dmg_matrices", "metric_key": "dmg_object_level"}
 
 
 # PIXEL LEVEL

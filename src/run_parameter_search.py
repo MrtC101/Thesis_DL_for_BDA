@@ -24,7 +24,7 @@ if __name__ == "__main__":
 
     param_list = out_path.join("conf_list.json").read_json()
     conf_num = int(os.environ["CONF_NUM"])
-    config = param_list[conf_num]
+    config = param_list[str(conf_num)]
 
     paths_dict['out_dir'] = FilePath(paths_dict['out_dir']).join(f'config-{conf_num}')
     paths_dict['out_dir'].create_folder()
