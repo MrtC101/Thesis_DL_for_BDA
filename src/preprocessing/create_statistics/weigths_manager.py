@@ -3,6 +3,7 @@ from cv2 import imread
 import numpy as np
 from sklearn.model_selection import ParameterGrid
 from utils.common.pathManager import FilePath
+from utils.loggers.console_logger import LoggerSingleton
 from utils.visualization.label_to_color import LabelDict
 
 
@@ -24,6 +25,7 @@ def compute_pixel_weights(split_json_path: FilePath):
     Returns:
         dict: A dictionary with the corresponding weights for classification and segmentation.
     """
+    log = LoggerSingleton()
 
     # Counting pixels from each tile's damage mask.
     rows = []
@@ -37,22 +39,25 @@ def compute_pixel_weights(split_json_path: FilePath):
     # Building a DataFrame of tiles with each corresponding count
     index_cols = ["split_id", "dis_id", "tile_id"]
     labels_list = list(LabelDict().labels.keys())
-    weights_s = pd.DataFrame(rows, columns=index_cols + labels_list).set_index(index_cols)
+    bld_per_tile = pd.DataFrame(rows, columns=index_cols + labels_list).set_index(index_cols)
+    count_per_class_dmg = bld_per_tile.sum()
 
     # Computing weights for damage labels ignoring "unclassified"
-    dmg_weights = weights_s.sum().sum() / weights_s.sum()
+    dmg_weights = count_per_class_dmg.sum() / count_per_class_dmg
+    dmg_weights[(count_per_class_dmg <= 0)] = 0.0
     dmg_weights: pd.Series = dmg_weights.loc[labels_list[0:5]]
+    dmg_w_list = [round(dmg_weights.loc[label], 4) for label in labels_list[0:5]]
+    log.info(dmg_weights)
 
     # Computing weights for segmentation labels summing all the others different from "background"
     seg_labels = ["background", "building"]
-    seg_weights = pd.Series(data=[
-        dmg_weights.loc["background"],
-        dmg_weights.loc[labels_list[1:5]].sum()
+    count_per_class_seg = pd.Series(data=[
+        count_per_class_dmg.loc["background"],
+        count_per_class_dmg.loc[labels_list[1:5]].sum()
     ], index=seg_labels)
-    seg_weights: pd.Series = seg_weights / seg_weights.sum()
-
-    dmg_w_list = [round(dmg_weights.loc[label], 4) for label in labels_list[0:5]]
+    seg_weights: pd.Series = count_per_class_seg.sum() / count_per_class_seg
     seg_w_list = [round(seg_weights.loc[label], 4) for label in seg_labels]
+    log.info(seg_weights)
 
     return {"seg": seg_w_list, "dmg": dmg_w_list}
 

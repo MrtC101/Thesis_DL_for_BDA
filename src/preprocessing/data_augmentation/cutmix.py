@@ -7,7 +7,6 @@ import numpy as np
 import pandas as pd
 from shapely import Polygon, wkt
 import shapely
-from preprocessing.raw.split_raw_dataset import get_buildings, get_tiles_count
 from utils.common.pathManager import FilePath
 from rasterio.features import rasterize
 from torchvision.transforms import transforms
@@ -16,6 +15,37 @@ from torchvision.io import read_image
 from torchvision.utils import save_image
 from utils.loggers.console_logger import LoggerSingleton
 import torch
+
+
+def get_buildings(tiles_dict: dict):
+    buildings = []
+    for tile_id, tile_dict in tiles_dict.items():
+        file_path = FilePath(tile_dict["post"]["json"])
+        label_json = file_path.read_json()
+        bld_list = label_json['features']['xy']
+        if not len(bld_list) > 0:
+            buildings.append([tile_id, "no-buildings"])
+        for i, building in enumerate(bld_list):
+            dmg_label = building['properties'].get(
+                'subtype', 'no-damage')
+            buildings.append([tile_id, i, dmg_label])
+    df = pd.DataFrame(buildings, columns=["tile_id", "list_id", "label"])
+    df.set_index(["tile_id"], inplace=True)
+    return df
+
+
+all_clases = ['destroyed', 'major-damage', 'minor-damage', 'no-damage',
+              'un-classified', 'no-buildings']
+
+
+def get_tiles_count(building_df: pd.DataFrame) -> pd.DataFrame:
+    tile_df = building_df.value_counts(["tile_id", "label"]).unstack()
+    tile_df[tile_df.isna()] = 0
+    tile_df = tile_df.astype(int)
+    for col in all_clases:
+        if col not in tile_df.columns:
+            tile_df[col] = 0
+    return tile_df[all_clases]
 
 
 def save_new_tile(dis_id: str, tile_id: str,
