@@ -8,7 +8,7 @@ from preprocessing.data_augmentation.cutmix import do_cutmix
 from preprocessing.raw.gready_samp import greedy_split_dataset
 from preprocessing.sliced.make_smaller_tiles import slice_dataset
 from preprocessing.prepare_folder.create_label_masks import create_masks
-from preprocessing.raw.split_raw_dataset import split_dataset
+from preprocessing.raw.split_raw_dataset import stratified_split_dataset
 from preprocessing.sliced.split_sliced_dataset import split_sliced_dataset
 from preprocessing.data_augmentation.augmentation import make_augmentations
 from preprocessing.create_statistics.data_stdv_mean import create_data_dicts
@@ -58,7 +58,7 @@ def preprocess(out_path: FilePath, exp_path: FilePath, xbd_path: FilePath,
     else:
         log_Title("Split disasters")
         disasters_of_interest = tuple(params["preprocessing"]["disasters"])
-        tile_splits_json_path = split_dataset(xbd_path, data_path, split_prop,
+        tile_splits_json_path = stratified_split_dataset(xbd_path, data_path, split_prop,
                                               disasters_of_interest)
 
     # Data augmentation

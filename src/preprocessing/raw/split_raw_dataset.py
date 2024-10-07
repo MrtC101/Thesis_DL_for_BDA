@@ -46,6 +46,7 @@ def stratified_sample(tiles_keys_list, tiles_df, prop, curr_prop):
         n_labels = math.floor(len(candidates_df) * (prop / curr_prop))
         log.info(f"{len(candidates_df)} candidates | {n_labels} taken for {lab}")
         lab_tiles_ids = list(candidates_df.sample(n_labels).index)
+        #076 142 59
         avaliable_tiles = avaliable_tiles.drop(candidates_df.index)
         tiles_ids += lab_tiles_ids
     return tiles_ids
