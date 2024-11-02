@@ -11,27 +11,26 @@ This project involves the development of a preprocessing pipeline for cropping, 
 1. [Overview of the model](#overview-of-the-model)
 1. [Results](#results)
 
-
 ## Folder structure
     .
-    ├── README.md                     <- Top-level README for developers using this project.
-    ├── LICENSE                       <- License file for the project.
-    ├── environment.yml               <- Conda environment file listing the libraries used in this project.
-    ├── notebooks/                    <- Jupyter notebooks for dataset exploration and result analysis.
-    ├── submit/                       <- Code used to train the model on a cluster using Slurm.
-    └── src/                          <- Source code for the project.
-        ├── models/                   <- Scripts defining the model architecture.
-        ├── preprocessing/            <- Scripts for the data preprocessing pipeline.
-        ├── training/                 <- Scripts for the model training and evaluation pipeline.
-        ├── postprocessing/           <- Scripts for the output postprocessing pipeline.        
-        ├── utils/                    <- Utility scripts shared across other modules.
-        ├── run_definitive_training.py<- Script to run the final training phase.
-        ├── run_on_test.py            <- Script to evaluate the model on the test dataset.
-        ├── run_parameter_search.py   <- Script to perform hyperparameter search.
-        ├── run_postprocessing.py     <- Script to run the postprocessing pipeline.
-        ├── run_preprocessing.py      <- Script to run the preprocessing pipeline.
-        └── env.sh                    <- Environment setup script to run src.
-
+    ├── README.md                      <- Top-level README for developers using this project.
+    ├── LICENSE                        <- License file for the project.
+    ├── environment.yml                <- Conda environment file listing the libraries used in this project.
+    ├── notebooks/                     <- Jupyter notebooks for dataset exploration and result analysis.
+    ├── submit/                        <- Code used to train the model on a cluster using Slurm.
+    |── src/                           <- Source code for the project.
+    |    ├── models/                   <- Scripts defining the model architecture.
+    |    ├── preprocessing/            <- Scripts for the data preprocessing pipeline.
+    |    ├── training/                 <- Scripts for the model training and evaluation pipeline.
+    |    ├── postprocessing/           <- Scripts for the output postprocessing pipeline.        
+    |    ├── utils/                    <- Utility scripts shared across other modules.
+    |    ├── run_definitive_training.py<- Script to run the final training phase.
+    |    ├── run_on_test.py            <- Script to evaluate the model on the test dataset.
+    |    ├── run_parameter_search.py   <- Script to perform hyperparameter search.
+    |    ├── run_postprocessing.py     <- Script to run the postprocessing pipeline.
+    |    ├── run_preprocessing.py      <- Script to run the preprocessing pipeline.
+    |    └── env.sh                    <- Environment setup script to run src.
+    └── web_page/                      <- Showcase webpage source code
 
 ## Dataset xBD
 

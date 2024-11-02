@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import multiprocessing
 import pandas as pd
 import torch
@@ -69,12 +71,11 @@ def build_fold_table(out_path: FilePath):
             best_f1_hm = dmg_df["f1_harmonic_mean"].max()
             best_epoch = dmg_df["f1_harmonic_mean"].idxmax()[0]
             val_loss = loss_df.loc[best_epoch].iloc[0]
-            seg_f1 = bld_df.loc[best_epoch, "f1"].iloc[0]
+            seg_f1 = bld_df.loc[best_epoch, "f1_harmonic_mean"].iloc[0]
             row = [conf, fold, best_epoch, best_f1_hm, val_loss, seg_f1]
             fold_list.append(row)
 
-    fold_df = pd.DataFrame(fold_list, columns=["Conf", "Fold", "Best epoch", "val-loss",
-                                               "Harmonic-mean-f1", "Seg-f1"])
+    fold_df = pd.DataFrame(fold_list, columns=["Conf", "Fold", "Best epoch", "dmg-hf1", "val-loss", "seg-hf1"])
     fold_df = fold_df.sort_values(by=["Conf"])
     return fold_df
 
@@ -85,7 +86,7 @@ def get_best_config(out_path: FilePath, param_list: list) -> dict:
         fold_df = build_fold_table(out_path)
         fold_df = fold_df.sort_values(by=["Conf", "Fold"])
         fold_df = fold_df.groupby('Conf').apply(lambda x: x.set_index('Fold'), include_groups=False)
-        best_conf = fold_df["Harmonic-mean-f1"].idxmax()[0]
+        best_conf = fold_df["dmg-hf1"].idxmax()[0]
     return (best_conf, param_list[str(best_conf)])
 
 

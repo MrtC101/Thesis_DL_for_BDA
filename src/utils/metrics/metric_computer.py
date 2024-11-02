@@ -56,7 +56,7 @@ class MetricComputer:
                                  'recall': recall, 'f1': f1,
                                  'accuracy': accuracy})
             # F1_harmonico
-            f1_harmonic_mean += 1.0 / (f1) if f1 > 0.0 else 0.0
+            f1_harmonic_mean += 1.0 / (f1 + float(1e-10))
 
         f1_harmonic_mean = len(labels_set) / f1_harmonic_mean if f1_harmonic_mean > 0.0 else 0.0
 

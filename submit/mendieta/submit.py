@@ -27,35 +27,35 @@ def python_run_script(out_path, job):
 
 source {out_path}/{job['job_name']}_temp_env.sh
 """ + """
-output_file="$OUT_PATH/time.txt"
-
 # Initialize conda
 source "$(conda info --base)/etc/profile.d/conda.sh"
 conda activate develop
 
 # Run the training script
 for file in ${FILE_LIST[@]}; do
-    python "${file}"
+python "${file}"
 done
+
+conda deactivate
 """
 
 
 def slurm_script(paths, node, job):
     return f"""#!/bin/bash
 
-    #SBATCH --job-name="{job['job_name']}"
-    #SBATCH --output={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.log
-    #SBATCH --error={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.err
-    #SBATCH --nodes=1
-    #SBATCH --ntasks=1
-    #SBATCH --gpus-per-task=1
-    #SBATCH --cpus-per-task={node['cpu_num']}
-    #SBATCH --partition={node['partition']}
-    #SBATCH --time={node['hours']}-00:00:00
-    ##SBATCH --nodelist={node['node_name']}
+#SBATCH --job-name="{job['job_name']}"
+#SBATCH --output={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.log
+#SBATCH --error={paths['proj_path']}/{paths['exp_name']}/out/jobs/{job['job_name']}.err
+#SBATCH --nodes=1
+#SBATCH --ntasks=1
+#SBATCH --gpus-per-task=1
+#SBATCH --cpus-per-task={node['cpu_num']}
+#SBATCH --partition={node['partition']}
+#SBATCH --time={node['hours']}-00:00:00
+##SBATCH --nodelist={node['node_name']}
 
-    /bin/bash -c "{out_path}/{job['job_name']}_run.sh"
-    """
+/bin/bash -c "{out_path}/{job['job_name']}_run.sh"
+"""
 
 
 def create_temp_files(job: dict, node: str, paths: dict, out_path: str) -> str:
@@ -96,7 +96,7 @@ def create_temp_files(job: dict, node: str, paths: dict, out_path: str) -> str:
     # Create SLURM job script
     slurm_script_file = os.path.join(out_path, f"{job['job_name']}_temp_slurm.sh")
     with open(slurm_script_file, 'w') as file:
-        file.write(slurm_script(paths, node, job))
+        file.write(slurm_script( paths, node, job))
     set_file_permissions(slurm_script_file, script_permissions)
 
     return slurm_script_file
@@ -109,13 +109,13 @@ def run_job(job: dict, job_ids: dict[str, list], slurm_script_file: str) -> dict
         "pre": "",
         "cv": "pre",
         "final": "cv",
-        "post": "post"
+        "post": "final"
     }
 
     job_name = str(job["job_name"])
     # Añade las dependencias
     dependency = ""
-    for key, dep in prefix_to_dependency:
+    for key, dep in list(prefix_to_dependency.items()):
         if job_name.startswith(key) and len(job_ids[dep]) > 0:
             dependency = "--dependency=afterok"
             for id in job_ids[dep]:
@@ -142,12 +142,13 @@ def run_job(job: dict, job_ids: dict[str, list], slurm_script_file: str) -> dict
 
 if __name__ == "__main__":
     # Arguments
-    out_path = '/home/mcogo/scratch/submit/mendieta/exp5'
-    config = load(f"{out_path}/exp5_job.yaml")
+    i = 9
+    out_path = f'/home/mcogo/scratch/submit/mendieta/exp{i}_b'
+    config = load(f"{out_path}/exp{i}_job.yaml")
     run = False
 
     job_ids = defaultdict(list)
     for job in config['jobs']:
         slurm_script_file = create_temp_files(job, config['node'], config['paths'], out_path)
         if run:
-            job_ids = run_job(job_ids)
+            job_ids = run_job(job, job_ids ,slurm_script_file)

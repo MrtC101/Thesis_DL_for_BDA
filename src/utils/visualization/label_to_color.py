@@ -1,5 +1,6 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from collections import OrderedDict
-
 
 class LabelDict:
     """Service to access elements form a matplotlib

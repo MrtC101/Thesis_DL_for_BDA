@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 """Run the training step for the final model with the hole training split and the configuration
 with the highest harmonic f1 score over validation set."""
 import os
@@ -23,4 +25,5 @@ if __name__ == "__main__":
         "mean_json": FilePath(paths['mean_std_json_path']),
         "out_dir": out_path.join("final_model")
     }
+    
     train_final_model(best_config, paths_dict)

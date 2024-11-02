@@ -64,7 +64,7 @@ def conf_mtrx_px_by_cls(gt_mask: torch.Tensor, pd_mask: torch.Tensor, label: lis
 
 
 def px_multiclass_conf_mtrx(dmg_mask: torch.Tensor, pred_mask: torch.Tensor,
-                            dmg_labels: list[int]) -> pd.DataFrame:
+                            dmg_labels: list[int] = [0,1,2,3,4]) -> pd.DataFrame:
     l_size = len(dmg_labels)
     mat = torch.zeros(size=(l_size + 1, l_size + 1), dtype=torch.int32)
 
@@ -81,10 +81,9 @@ def px_multiclass_conf_mtrx(dmg_mask: torch.Tensor, pred_mask: torch.Tensor,
     for prd in range(l_size):
         mat[l_size][prd] = torch.sum(mat[:l_size, prd]).item()
 
-    mat[l_size][l_size] = torch.sum(mat[:l_size, :l_size]).item()
+    mat[l_size][l_size] = torch.sum(mat[l_size, :l_size]).item()
     # Convertir a DataFrame de pandas
-    mat_df = pd.DataFrame(mat.numpy(), columns=dmg_labels + ['Total'],
-                          index=dmg_labels + ['Total'])
+    mat_df = pd.DataFrame(mat.numpy(), columns=dmg_labels + ['Total'], index=dmg_labels + ['Total'])
     return mat_df
 
 

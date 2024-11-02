@@ -493,11 +493,6 @@ def augment_label(tile_dict: dict, aug_path: FilePath, out_path: FilePath) -> di
             label_sum = new_df.sum()
         else:
             label_sum += new_df.sum()
-    weights_df = label_sum.sum() / label_sum
-    weights_df[label_sum.isna()] = 0.0
-    weights = {label: w for label, w in weights_df.items()
-               if label in ['destroyed', 'major-damage', 'minor-damage', 'no-damage']}
-    out_path.join("train_weights.json").save_json(weights)
     return tile_dict
 
 

@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import pandas as pd
 import torch
 from tqdm import tqdm
@@ -26,12 +28,10 @@ def pixel_analysis(tile_dict: dict, pred_mask: torch.Tensor, dmg_labels: list, p
         pd.Dataframe: Current predicted mask confusion matrix.
         pd.Dataframe: Current predicted mask prediction table.
     """
-    conf = tile_px_conf_mtrx(tile_dict["bld_mask"], tile_dict["dmg_mask"],
-                             pred_mask, dmg_labels)
+    conf = tile_px_conf_mtrx(tile_dict["dmg_mask"], pred_mask, dmg_labels)
     save_df(conf, pred_out, "pixel_confusion_matrix")
 
-    multi_conf = px_multiclass_conf_mtrx(tile_dict["dmg_mask"], pred_mask,
-                                         dmg_labels)
+    multi_conf = px_multiclass_conf_mtrx(tile_dict["dmg_mask"], pred_mask)
     save_df(multi_conf, pred_out, "pixel_multiclass_confusion_matrix")
 
     metrics = MetricComputer.compute_eval_metrics(conf, dmg_labels)
@@ -103,7 +103,10 @@ def add_confusion_matrices(conf_tot: pd.DataFrame, conf: pd.DataFrame):
     if conf_tot.empty:
         conf_tot = conf.copy()
     else:
-        conf_tot = conf_tot.add(conf.iloc[:, 1:], fill_value=0).astype(int)
+        if conf.columns[0] == "class":
+            conf_tot = conf_tot.add(conf.iloc[:, 1:], fill_value=0).astype(int)
+        else:
+            conf_tot = conf_tot.add(conf.iloc[:, :], fill_value=0).astype(int)
     return conf_tot
 
 

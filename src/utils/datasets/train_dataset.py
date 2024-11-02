@@ -53,7 +53,8 @@ class TrainDataset(Dataset):
         # Compute mean and standard deviation for each channel
         mean_rgb = [mean[ch] for ch in ["R", "G", "B"]]
         std_rgb = [stdv[ch] for ch in ["R", "G", "B"]]
-
+        # if 0 then 
+        std_rgb = [s if s != 0 else 1e-6 for s in std_rgb]
         # Define normalization steps
         normalization = transforms.Compose([
             lambda img: img.to(torch.float32) / 255.0,

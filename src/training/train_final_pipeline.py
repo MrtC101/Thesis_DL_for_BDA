@@ -14,6 +14,7 @@ from utils.common.pathManager import FilePath
 from utils.common.timeManager import measure_time
 from utils.loggers.console_logger import LoggerSingleton
 from utils.datasets.train_dataset import TrainDataset
+from torch.utils.data import SubsetRandomSampler
 
 
 @measure_time
@@ -41,7 +42,8 @@ def train_final_model(configs: dict[str, any], paths: dict[str, any]):
 
     # Load Dataset
     xBD_train = TrainDataset('train', paths['split_json'], paths['mean_json'])
-    train_loader = TrainDataLoader(xBD_train, batch_size=configs['batch_size'])
+    train_loader = TrainDataLoader(xBD_train, batch_size=configs['batch_size'],
+                                   sampler=SubsetRandomSampler(list(range(len(xBD_train)))))
     log.info(f'xBD_disaster_dataset TRAIN length: {len(xBD_train)}')
 
     xBD_val = TrainDataset('val', paths['split_json'], paths['mean_json'])

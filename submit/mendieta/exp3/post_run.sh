@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source /home/mcogo/scratch/submit/mendieta/exp3/post_temp_env.sh
+source /home/mcogo/scratch/submit/mendieta/exp4/post_temp_env.sh
 
 output_file="$OUT_PATH/time.txt"
 

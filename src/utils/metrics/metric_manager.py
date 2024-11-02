@@ -153,19 +153,20 @@ class MetricManager:
                 tb_log.add_scalars(msg, params, int(epoch))
 
     @staticmethod
-    def save_metrics(metrics: dict, loss: list, metric_dir: FilePath, file_prefix: str):
+    def save_metrics(metric_by_epoch: list, loss: list, metric_dir: FilePath, file_prefix: str):
         """Save metrics in csv"""
         log = LoggerSingleton()
         csv_dir = metric_dir.join("csv").create_folder()
         tex_dir = metric_dir.join("tex").create_folder()
-        for key, met_df in metrics.items():
-            met_df: pd.DataFrame
-            epoch = met_df['epoch'].iloc[0]
-            mode = "w" if not epoch > 0 else "a"
-            header = not epoch > 0
-            met_df.to_csv(csv_dir.join(f'{file_prefix}_{key}.csv'),
-                          mode=mode, header=header, index=False)
-            met_df.to_latex(tex_dir.join(f'{file_prefix}_{key}.tex'))
+        for epoch_dict in metric_by_epoch:
+            for key, met_df in epoch_dict.items():
+                met_df: pd.DataFrame
+                epoch = met_df['epoch'].iloc[0]
+                mode = "w" if not epoch > 1 else "a"
+                header = not epoch > 1
+                met_df.to_csv(csv_dir.join(f'{file_prefix}_{key}.csv'),
+                            mode=mode, header=header, index=False)
+                met_df.to_latex(tex_dir.join(f'{file_prefix}_{key}.tex'))
 
         df = pd.DataFrame(loss)
         df.to_csv(csv_dir.join(f"{file_prefix}_loss.csv"), mode="w", index=False)

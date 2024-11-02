@@ -1,5 +1,0 @@
-10-03-2024 15:21 Final_model  INFO     Using device: cpu.
-10-03-2024 15:21 Final_model  INFO     No valid checkpoint provided. Training from scratch...
-10-03-2024 15:21 Final_model  INFO     Loaded checkpoint, starting epoch is 1, best f1 is 0.0
-10-03-2024 15:21 train Step   INFO     TRAIN  epoch: 1/1
-10-03-2024 15:21 train Step   INFO     Step: 1/889

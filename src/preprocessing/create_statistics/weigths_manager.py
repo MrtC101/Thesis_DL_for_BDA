@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import pandas as pd
 from cv2 import imread
 import numpy as np
@@ -46,7 +48,7 @@ def compute_pixel_weights(split_json_path: FilePath):
     dmg_weights = count_per_class_dmg.sum() / count_per_class_dmg
     dmg_weights[(count_per_class_dmg <= 0)] = 0.0
     dmg_weights: pd.Series = dmg_weights.loc[labels_list[0:5]]
-    dmg_w_list = [round(dmg_weights.loc[label], 0) for label in labels_list[0:5]]
+    dmg_w_list = [round(dmg_weights.loc[label], 2) for label in labels_list[0:5]]
     log.info(dmg_weights)
 
     # Computing weights for segmentation labels summing all the others different from "background"
@@ -56,7 +58,7 @@ def compute_pixel_weights(split_json_path: FilePath):
         count_per_class_dmg.loc[labels_list[1:5]].sum()
     ], index=seg_labels)
     seg_weights: pd.Series = count_per_class_seg.sum() / count_per_class_seg
-    seg_w_list = [round(seg_weights.loc[label], 0) for label in seg_labels]
+    seg_w_list = [round(seg_weights.loc[label], 2) for label in seg_labels]
     log.info(seg_weights)
 
     return {"seg": seg_w_list, "dmg": dmg_w_list}

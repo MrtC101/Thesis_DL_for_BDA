@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import enum
 import torch
 from tqdm import tqdm
@@ -47,8 +49,13 @@ class EpochManager:
             self = args[0]
             epoch = args[1]
             log = LoggerSingleton(name=f"{self.mode.value} Step")
-            log.info(
-                f'{self.mode.value.upper()}  epoch: {epoch}/{self.tot_epochs}')
+            log.info(f'{self.mode.value.upper()} epoch: {epoch}/{self.tot_epochs} lr: {self.optimizer.param_groups[0]["lr"]}')
+            self.tb_logger.add_scalar(
+                f'{self.mode.value}/learning_rate',
+                self.optimizer.param_groups[0]["lr"],
+                epoch
+            )
+
             start_time = datetime.now()
 
             result = func(*args)
@@ -59,6 +66,7 @@ class EpochManager:
                 duration.total_seconds(),
                 epoch
             )
+
             return result
         return decorator
 
@@ -83,7 +91,7 @@ class EpochManager:
         for batch_idx, (dis_id, tile_id, patch_id, patch) in \
                 enumerate(tqdm(self.loader, desc="Step")):
             # STEP
-            log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
+            # log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
             # move to device, e.g. GPU
             x_pre = patch['pre_img'].to(device=self.device)
             x_post = patch['post_img'].to(device=self.device)

@@ -162,13 +162,11 @@ def train_model(configs: dict[str], paths: dict[str], train_loader: TrainDataLoa
     # managers
     loss_manager = LossManager(configs['weights_loss'], criterions)
     metric_manager = MetricManager(configs['labels_bld'], configs['labels_dmg'])
-    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=configs["RLROP_patience"])
+    scheduler = ReduceLROnPlateau(optimizer, mode='min', patience=configs["RLROP_patience"], threshold=0.0001)
 
     epochs = configs['tot_epochs']
 
     sheared_vars = {
-        'loss_manager': loss_manager,
-        'metric_manager': metric_manager,
         'tb_logger': tb_logger,
         'tot_epochs': epochs,
         'optimizer': optimizer,
@@ -177,8 +175,17 @@ def train_model(configs: dict[str], paths: dict[str], train_loader: TrainDataLoa
     }
 
     # Objects for training
-    training = EpochManager(mode=EpochManager.Mode.TRAINING, loader=train_loader, **sheared_vars)
-    validation = EpochManager(mode=EpochManager.Mode.VALIDATION, loader=val_loader, **sheared_vars)
+    training = EpochManager(mode=EpochManager.Mode.TRAINING,
+                            loader=train_loader,
+                            loss_manager=LossManager(configs['weights_loss'], criterions),
+                            metric_manager=MetricManager(
+                                configs['labels_bld'], configs['labels_dmg']),
+                            **sheared_vars)
+    validation = EpochManager(mode=EpochManager.Mode.VALIDATION, loader=val_loader,
+                              loss_manager=LossManager(configs['weights_loss'], criterions),
+                              metric_manager=MetricManager(
+                                  configs['labels_bld'], configs['labels_dmg']),
+                              **sheared_vars)
 
     # Metrics
     train_metrics = []

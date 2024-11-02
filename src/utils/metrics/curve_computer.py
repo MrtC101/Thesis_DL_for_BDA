@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from collections import defaultdict
 from sklearn.metrics import auc
 from torch.utils.data import DataLoader

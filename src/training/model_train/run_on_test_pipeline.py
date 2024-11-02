@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import torch
 
 from models.trainable_model import TrainModel
@@ -6,7 +8,6 @@ from training.model_train.epoch_manager import EpochManager
 
 from training.model_train.utils import TrainDataLoader, set_threads
 from utils.common.pathManager import FilePath
-from utils.datasets.train_dataset import TrainDataset
 from utils.loggers.console_logger import LoggerSingleton
 from utils.loggers.tensorboard_logger import TensorBoardLogger
 from utils.metrics.curve_computer import pixel_metric_curves
@@ -14,7 +15,7 @@ from utils.metrics.loss_manager import LossManager
 from utils.metrics.metric_manager import MetricManager
 
 
-def inference_on_test(configs: dict, paths: dict):
+def inference_on_test(configs: dict, paths: dict, test_loader: TrainDataLoader):
     """ Loads the beast parameters from the final model tests into the test split.
 
     Args:
@@ -26,19 +27,12 @@ def inference_on_test(configs: dict, paths: dict):
     out_dir = FilePath(paths['out_dir'])
     tb_logger_dir = out_dir.join('tb_logs')
     weights_path = out_dir.join('checkpoints', "model_best.pth.tar")
-    predicted_dir = out_dir.join("test_pred_masks").create_folder()
+    predicted_dir = out_dir.join("test_pred_masks").create_folder(delete_if_exist=True)
     metric_dir = out_dir.join('metrics').create_folder()
 
     # loggers
     log = LoggerSingleton("MODEL_ON_TEST")
     tb_logger = TensorBoardLogger(tb_logger_dir, configs['num_chips_to_viz'])
-
-    # Load DATA
-    xBD_test = TrainDataset('test', paths['split_json'], paths['mean_json'])
-    log.info(f'xBD_disaster_dataset test length: {len(xBD_test)}')
-    test_loader = TrainDataLoader(xBD_test,
-                                  batch_size=configs['batch_size'],
-                                  num_workers=configs['batch_workers'])
 
     # Device & Model
     set_threads()
