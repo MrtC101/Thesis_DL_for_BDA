@@ -56,7 +56,7 @@ function moveLens(event, elementIDS) {
     });
 }
 
-(() => {
+function addMouseListeners(){
     const elementIDS = {
         "pre-zoom-div": {"imgID": "pre-preview", "lenID": "pre-lens", "portID": "pre-zoom-port"},
         "post-zoom-div": {"imgID": "post-preview", "lenID": "post-lens", "portID": "post-zoom-port"},
@@ -84,4 +84,5 @@ function moveLens(event, elementIDS) {
             observer.observe(parent, { childList: true, subtree: true }); 
         }
     });
-})();
+}
+addMouseListeners();
