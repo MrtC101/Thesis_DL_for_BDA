@@ -1,6 +1,8 @@
 conda activate develop
 source ./src/env.sh
-python -m run_preprocessing.py
-python -m run_paramsearch.py
-python -m run_final_model_training.py
-python -m run_postprocessing.py
+cd ./src
+python run_preprocessing.py
+python run_parameter_search.py
+python run_final_training.py
+python run_postprocessing.py
+cd ..
