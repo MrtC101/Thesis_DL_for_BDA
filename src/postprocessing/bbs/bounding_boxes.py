@@ -1,10 +1,13 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import math
 import numpy as np
 import pandas as pd
 import shapely
+from torch import Tensor
 from shapely.wkt import loads
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Tuple
 
 from postprocessing.bbs.polygon_manager import get_buildings
 from utils.visualization.label_to_color import LabelDict
@@ -12,6 +15,7 @@ from utils.visualization.label_to_color import LabelDict
 
 @dataclass
 class Point:
+    """Simple class to represent a point or pixel inside an image"""
     x: int
     y: int
 
@@ -23,6 +27,7 @@ class Point:
 
 
 class BoundingBox:
+    """A class that represents a bounding box of an object"""
 
     def __init__(self, x1, y1, x2, y2):
         self.x1 = max(x1, 0)
@@ -42,6 +47,7 @@ class BoundingBox:
 
     @staticmethod
     def create(poly: shapely.Polygon) -> 'BoundingBox':
+        """Creates a `BoundingBox` object for the given polygon"""
         x_e, y_e = poly.exterior.xy
         min_p = math.floor(np.min(x_e)), math.floor(np.min(y_e))
         max_p = math.floor(np.max(x_e)), math.floor(np.max(y_e))
@@ -55,7 +61,12 @@ class BoundingBox:
 
 
 def get_bbs_from_json(label_dict: dict) -> pd.DataFrame:
-    """Create a pandas DataFrame with bounding boxes from JSON."""
+    """Create a pandas DataFrame with bounding boxes from JSON.
+    Args:
+        label_dict: dictionary with all buildings from xBD json file.
+    Returns:
+        `pd.Dataframe`: A Dataframe with all bounding boxes from given image buildings.
+    """
     buildings_list = label_dict['features']['xy']
     bbs_list = []
     for build in buildings_list:
@@ -72,13 +83,16 @@ def get_bbs_from_json(label_dict: dict) -> pd.DataFrame:
 labels_dict = LabelDict()
 
 
-def get_bbs_from_mask(mask, parallel=True) -> pd.DataFrame:
-    """Create a pandas DataFrame with bounding boxes from predicted mask."""
-    bld_list = get_buildings(mask, parallel)
+def get_bbs_from_mask(mask: Tensor) -> pd.DataFrame:
+    """Create a pandas DataFrame with bounding boxes from predicted mask.
+    Args:
+        masks: the ground truth or predicted mask where to extract buildings.
+        parallel: Whether to use threading parallelism or not.
+    """
     bbs_list = []
+    bld_list = get_buildings(mask)
     for id, (bld, lab_num) in enumerate(bld_list):
         x1, y1, x2, y2 = BoundingBox.create(bld).get_components()
         label = labels_dict.get_key_by_num(lab_num)
-        bbs_list.append({"x1": x1, "y1": y1, "x2": x2,
-                        "y2": y2, "label": label, "uid": id})
+        bbs_list.append({"x1": x1, "y1": y1, "x2": x2, "y2": y2, "label": label, "uid": id})
     return pd.DataFrame(bbs_list, columns=["x1", "y1", "x2", "y2", "label", "uid"])

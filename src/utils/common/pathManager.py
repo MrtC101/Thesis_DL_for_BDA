@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import os
 import json
 import yaml
@@ -7,6 +9,8 @@ import numpy as np
 
 
 class FilePath(str):
+    """This class is a wrapper for os.path methods to manipulate paths during
+    data access."""
     lock = threading.Lock()
 
     def basename(self):
@@ -132,7 +136,9 @@ class FilePath(str):
     def is_dir(self) -> bool:
         return os.path.isdir(self)
 
-    def create_folder(self) -> 'FilePath':
+    def create_folder(self, delete_if_exist=False) -> 'FilePath':
+        if self.is_dir() and delete_if_exist:
+            self.remove()
         os.makedirs(self, exist_ok=True)
         return self
 

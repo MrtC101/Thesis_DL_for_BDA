@@ -1,14 +1,10 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import os
-import sys
-if (os.environ.get("SRC_PATH") not in sys.path):
-    sys.path.append(os.environ.get("SRC_PATH"))
-from utils.metrics.common import AverageMeter
 import torch
 
 
 class LossManager():
+    """Methods to compute loss"""
 
     def __init__(self, wights, criterions):
         self.weights = wights
@@ -19,7 +15,8 @@ class LossManager():
         self.losses_dmg = AverageMeter()
 
     def compute_loss(self, predicted_masks: list[torch.Tensor], input_data: torch.Tensor,
-                     segmentation_targets: torch.Tensor, mask_targets: torch.Tensor) -> torch.nn.CrossEntropyLoss:
+                     segmentation_targets: torch.Tensor,
+                     mask_targets: torch.Tensor) -> torch.nn.CrossEntropyLoss:
         """Computes loss function"""
         # List of true masks corresponding to the predicted masks
         true_masks = [segmentation_targets,
@@ -33,8 +30,7 @@ class LossManager():
         combined_loss = sum(weight * loss for weight,
                             loss in zip(self.weights, individual_losses))
         # Update the tracked losses
-        self.update_losses(
-            combined_loss, individual_losses, input_data.size(0))
+        self.update_losses(combined_loss, individual_losses, input_data.size(0))
         return combined_loss
 
     def update_losses(self, combined_loss, losses, x_pre_size):
@@ -52,3 +48,30 @@ class LossManager():
             'tot_loss': self.combined_losses.avg
         }
         tb_log.add_scalars(f'{phase}/loss', obj, epoch)
+
+
+class AverageMeter(object):
+    """Computes and stores the average and current value
+    https://github.com/pytorch/examples/blob/master/imagenet/main.py
+    """
+
+    def __init__(self):
+        self.reset()
+
+    def reset(self):
+        self.val = 0
+        self.avg = 0
+        self.sum = 0
+        self.count = 0
+
+    def update(self, val, n=1):
+        """
+
+        Args:
+            val: mini-batch loss or accuracy value
+            n: mini-batch size
+        """
+        self.val = val
+        self.sum += val
+        self.count += n
+        self.avg = self.sum / self.count

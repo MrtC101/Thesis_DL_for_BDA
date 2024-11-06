@@ -1,3 +1,4 @@
+submit/
 data/
 debugg/
 experiments
@@ -5,6 +6,8 @@ setup.cfg
 *.editorconfig
 not_aug
 aug
+web_page/static/image/predicted
+web_page/static/image/uploaded
 
 # Byte-compiled / optimized / DLL files
 **/__pycache__

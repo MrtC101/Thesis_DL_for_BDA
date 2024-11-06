@@ -1,11 +1,13 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from collections import OrderedDict
 
 class LabelDict:
-    """Service to access elements form a matplotlib 
+    """Service to access elements form a matplotlib
     label to color dict."""
-    
-    labels : OrderedDict =  {
-        "background" : ("Background","black"),
+
+    labels: OrderedDict = {
+        "background": ("Background", "black"),
         "no-damage": ("No Damage", "gray"),
         "minor-damage": ("Minor Damage", "limegreen"),
         "major-damage": ("Major Damage", "orange"),
@@ -19,18 +21,18 @@ class LabelDict:
 
     def __len__(self):
         return len(self.keys_list)
-    
-    def get_num_by_key(self, key : str) -> int:
-            return self.keys_list.index(key)
-        
-    def get_key_by_num(self, i : int) -> str:
+
+    def get_num_by_key(self, key: str) -> int:
+        return self.keys_list.index(key)
+
+    def get_key_by_num(self, i: int) -> str:
         return self.keys_list[i]
 
-    def get_color_by_num(self, i : int) -> str:
+    def get_color_by_num(self, i: int) -> str:
         return self.color_list[i]
-    
-    def get_color_by_key(self, key : str) -> str:
-         return self.labels[key][1]
 
-    def __getitem__(self, key :  str) -> tuple[str, str]:
+    def get_color_by_key(self, key: str) -> str:
+        return self.labels[key][1]
+
+    def __getitem__(self, key:  str) -> tuple[str, str]:
         return self.labels[key]

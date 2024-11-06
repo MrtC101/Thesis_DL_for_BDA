@@ -1,15 +1,15 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
-import pandas as pd
 import torch
-from postprocessing.plots.plot_results import plot_harmonic_mean, plot_loss, plot_metric_per_class
+import pandas as pd
+import concurrent.futures
+from postprocessing.plots.plot_results import plot_harmonic_mean, plot_loss, \
+    plot_metric_per_class
 from utils.common.pathManager import FilePath
 from utils.loggers.console_logger import LoggerSingleton
-from utils.metrics.common import Level
 from utils.metrics.metric_computer import MetricComputer
 from utils.loggers.table_print import to_table
-import concurrent.futures
-from utils.metrics.matrix_computer import MatrixComputer
+from utils.metrics.matrix_computer import Level, patches_obj_conf_mtrx, patches_px_conf_mtrx
 
 
 class MetricManager:
@@ -48,17 +48,13 @@ class MetricManager:
             *args: Additional arguments required for computing confusion matrices.
         """
         if (level == Level.PX_BLD):
-            return MatrixComputer.\
-                patches_px_conf_mtrx(level, self.bld_labels, **args)
+            return patches_px_conf_mtrx(level, self.bld_labels, **args)
         elif (level == Level.PX_DMG):
-            return MatrixComputer.\
-                patches_px_conf_mtrx(level, self.dmg_labels, **args)
+            return patches_px_conf_mtrx(level, self.dmg_labels, **args)
         elif (level == Level.OBJ_BLD):
-            return MatrixComputer.\
-                patches_obj_conf_mtrx(level, self.bld_labels, 3, **args)
+            return patches_obj_conf_mtrx(level, self.bld_labels, 3, **args)
         elif (level == Level.OBJ_DMG):
-            return MatrixComputer.\
-                patches_obj_conf_mtrx(level, self.dmg_labels, 3, **args)
+            return patches_obj_conf_mtrx(level, self.dmg_labels, 3, **args)
 
     def compute_confusion_matrices(self, batch_idx,
                                    gt_bld_mask: torch.Tensor,
@@ -81,8 +77,7 @@ class MetricManager:
             *kwargs: Additional arguments.
 
         Returns:
-            dict: Dictionary containing confusion matrices and 
-            batch identifier.
+            dict: Dictionary containing confusion matrices and batch identifier.
         """
 
         def get_confusion_matrix_for_level(lvl, batch_idx):
@@ -107,7 +102,7 @@ class MetricManager:
                     lvl, batch_idx)
         return matrices
 
-    def compute_metrics_for(self, level: Level, conf_df: pd.Series):
+    def compute_metrics_for(self, level: Level, conf_df: pd.Series) -> pd.DataFrame:
         """Computes metrics for a given level."""
         if (level == Level.PX_BLD):
             return MetricComputer.compute_metrics(conf_df, self.bld_labels)
@@ -120,8 +115,7 @@ class MetricManager:
 
     def compute_epoch_metrics(self, epoch: int, confusion_matrices: list,
                               levels=[Level.PX_DMG, Level.PX_BLD,
-                                      Level.OBJ_DMG, Level.OBJ_BLD],
-                              parallelism=False) -> dict:
+                                      Level.OBJ_DMG, Level.OBJ_BLD]) -> dict:
         """Computes metrics for damage and building classification
         for the current phase in the current epoch.
 
@@ -133,23 +127,12 @@ class MetricManager:
             dict: Dictionary containing computed metrics for damage and building classification.
         """
         confusion_matrices_df = pd.DataFrame(confusion_matrices)
-
-        def compute_metrics_for_level(lvl):
-            key = lvl.value["matrix_key"]
-            matrix = self.compute_metrics_for(
-                lvl, confusion_matrices_df[key])
-            matrix.insert(0, "epoch", epoch)
-            return matrix
-
         metrics = {}
-        if parallelism:
-            metrics = self.\
-                parallelism_by_level(levels, "metric_key",
-                                     compute_metrics_for_level)
-        else:
-            for lvl in levels:
-                key = lvl.value["metric_key"]
-                metrics[key] = compute_metrics_for_level(lvl)
+        for lvl in levels:
+            curr_conf = confusion_matrices_df[lvl.value["matrix_key"]]
+            matrix: pd.DataFrame = self.compute_metrics_for(lvl, curr_conf)
+            matrix.insert(0, "epoch", epoch)
+            metrics[lvl.value["metric_key"]] = matrix
         return metrics
 
     @staticmethod
@@ -170,33 +153,31 @@ class MetricManager:
                 tb_log.add_scalars(msg, params, int(epoch))
 
     @staticmethod
-    def save_metrics(metrics: list, loss: list, metric_dir: FilePath, file_prefix: str):
+    def save_metrics(metric_by_epoch: list, loss: list, metric_dir: FilePath, file_prefix: str):
         """Save metrics in csv"""
+        log = LoggerSingleton()
         csv_dir = metric_dir.join("csv").create_folder()
         tex_dir = metric_dir.join("tex").create_folder()
-        # save evalution metrics
-        log = LoggerSingleton()
-        for epoch in range(len(metrics)):
-            for key, met in metrics[epoch].items():
-                mode = "w" if not epoch > 0 else "a"
-                header = not epoch > 0
-                met: pd.DataFrame
-                met.to_csv(csv_dir.join(f'{file_prefix}_{key}.csv'),
-                           mode=mode,
-                           header=header,
-                           index=False)
-                met.to_latex(tex_dir.join(f'{file_prefix}_{key}.tex'))
+        for epoch_dict in metric_by_epoch:
+            for key, met_df in epoch_dict.items():
+                met_df: pd.DataFrame
+                epoch = met_df['epoch'].iloc[0]
+                mode = "w" if not epoch > 1 else "a"
+                header = not epoch > 1
+                met_df.to_csv(csv_dir.join(f'{file_prefix}_{key}.csv'),
+                            mode=mode, header=header, index=False)
+                met_df.to_latex(tex_dir.join(f'{file_prefix}_{key}.tex'))
+
         df = pd.DataFrame(loss)
-        df.to_csv(csv_dir.join(f"{file_prefix}_loss.csv"),
-                  mode="w", index=False)
+        df.to_csv(csv_dir.join(f"{file_prefix}_loss.csv"), mode="w", index=False)
         df.to_latex(tex_dir.join(f"{file_prefix}_loss.tex"))
-        log.info(f"Loss & Metrics saved")
+        log.info("Loss & Metrics saved")
         if file_prefix == "val":
-            tr_l = pd.read_csv(csv_dir.join(f"train_loss.csv"))
-            vl_l = pd.read_csv(csv_dir.join(f"val_loss.csv"))
+            tr_l = pd.read_csv(csv_dir.join("train_loss.csv"))
+            vl_l = pd.read_csv(csv_dir.join("val_loss.csv"))
             plot_loss(tr_l, vl_l, metric_dir)
-            tr_m = pd.read_csv(csv_dir.join(f"train_dmg_pixel_level.csv"))
-            vl_m = pd.read_csv(csv_dir.join(f"val_dmg_pixel_level.csv"))
+            tr_m = pd.read_csv(csv_dir.join("train_dmg_pixel_level.csv"))
+            vl_m = pd.read_csv(csv_dir.join("val_dmg_pixel_level.csv"))
             plot_harmonic_mean(tr_m, vl_m, metric_dir)
             plot_metric_per_class(tr_m, 'f1', "train", metric_dir)
             plot_metric_per_class(vl_m, 'f1', "val", metric_dir)

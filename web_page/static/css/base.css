@@ -1,0 +1,59 @@
+
+#top-bar {
+    color: black;
+    background-color: whitesmoke;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+#bottom-bar {
+    color: black;
+    background-color: whitesmoke;
+    font-family: Georgia, 'Times New Roman', Times, serif;
+}
+
+@media (max-width: 576px) {
+    h1 {
+        font-size: 1rem;
+    }
+}
+
+#lang-spang {
+    display: inline;
+}
+
+@media (max-width: 826px) {
+    #lang-span {
+        display: none;
+    }
+}
+
+#title {
+    font-size: clamp(16px, 4vw, 30px);
+}
+
+@media (max-width: 400px) {
+    header .btn {
+        font-size: clamp(16px, 4vw, 30px);
+        --bs-btn-padding-x: 0.3rem;
+        --bs-btn-padding-y: 0.1rem;
+    }
+}
+
+:root {
+    --bs-primary: whitesmoke;
+}
+
+.img-zoom-lens {
+position: absolute;
+border: 1px solid #d4d4d4;
+/*set the size of the lens:*/
+width: 10%;
+height: 10%;
+}
+
+.img-zoom-result {
+    border: 1px solid #d4d4d4;
+    width: clamp(60px, 100%, 100px);
+    aspect-ratio: 1 / 1; /* Mantiene la proporción 1:1 entre ancho y alto */
+    object-fit: cover;
+}

@@ -1,7 +1,7 @@
 # Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
 # Licensed under the MIT License.
 from utils.common.pathManager import FilePath
-from utils.common.defaultDictFactory import nested_defaultdict
+from utils.pathManagers.defaultDictFactory import nested_defaultdict
 
 
 class PredictedPathManager:

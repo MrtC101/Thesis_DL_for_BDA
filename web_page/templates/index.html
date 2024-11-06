@@ -1,63 +1,131 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="overlay">
-    <div class="loader"></div>
-  </div>
-<div class="d-flex justify-content-center py-3">
-    <button id="fetchButton" class="btn btn-warning" onclick="process()">{{ language["process"] }}</button>
+<!--Loading wheel -->
+<div id="loading" class="overlay">
+    <div class="spinner-border text-info fs-1" role="status"></div>
 </div>
-<div class="container">
-    <div class="row">
-        <div class="col-12 col-md-6 col-lg-6">
-            <div class="card">
-                <header>
-                    <h3>{{ language["pre"] }}</h3>
-                    <input id="pre-input" for="pre-preview" type="file" accept="image/png, image/jpeg, image/gif"/>    
-                </header>
-                <img id="pre-preview" src="{{ url_for('static', filename='image/preview_img_2.png') }}">
-            </div>
-            <div class="card">
-                <header>
-                    <h3>{{ language["post"] }}</h3>
-                    <input id="post-input" for="post-preview" type="file" accept="image/png, image/jpeg, image/gif"/>                
-                </header>
-                <img class="" id="post-preview" src="{{ url_for('static', filename='image/preview_img_2.png') }}">
-            </div>
+<!--Modal zoom-->
+<div id="zoom" class="modal overlay" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content position-relative">
+            <button type="button" onclick="closeZoom()" class="btn bg-seconday position-absolute start-0 top-0"
+            data-bs-dismiss="modal" aria-label="Close" style="color: white;">
+                <i class="bi bi-x-square-fill fs-4"></i>
+            </button>
+            <img id="zoomed-img" class="img-fluid" height="1024" width="1024">
         </div>
-        <div class="col-12 col-md-6 col-lg-6">
-            <div class="card">
-                <header>
-                    <h3>{{ language["output"] }}</h3>
-                </header>
-                <div id="out-img-container" class="image-container">
-                    <img id="output-preview" src="">
+    </div>
+</div>
+<div class="container text-center">
+    <div class="my-3 row justify-content-between align-bottom">
+        <div class="col-4 align-content-end px-2">
+            <button id="fetchButton" class="btn btn-warning d-inline" onclick="process()">
+                {{ _("process") }}
+            </button>    
+        </div>
+        <div class="col-8">
+            <div class="row">
+                <div class="col-4 px-1">
+                    <img id="pre-zoom-port" class="col-4 img-zoom-result">
+                </div>
+                <div class="col-4 px-1">
+                    <img id="post-zoom-port" class="col-4 img-zoom-result">
+                </div>
+                <div class="col-4 px-1">
+                    <img id="out-zoom-port" class="col-4 img-zoom-result">        
                 </div>
             </div>
-            
-            <div class="card d-flex align-items-center justify-content-center">
-                <header>
-                    <h3>{{ language["settings"] }}</h3>
-                </header>
-                <table id="setting-t" class="table"> 
-                    <tr><td></td><td></td></tr>
-                </table>
-            </div>
-
+        </div>
+    </div>
+    <div class="row">
+        <div class="col-4 px-0 px-sm-1 align-bottom">
             <div class="card">
-                <header>
-                    <h3>{{ language["table"] }}</h3>
+                <header class="card d-flex mx-0 px-0 header-size">
+                    <div class="col-12">
+                        <h3 class="mt-2 px-2">{{ _("pre") }}</h3>
+                        <input id="pre-input" class="form-control" for="pre-preview" type="file"
+                            accept="image/png, image/jpeg, image/gif" />    
+                    </div>
                 </header>
-                <table id="count-tbl" class="table"> 
-                    <thead>
-                        <th>{{language["level"]}}</th>
-                        <th>{{language["class"]}}</th>
-                    </thead>
-                    <tr><td></td><td></td></tr>
-                </table>
-                
+                <div class="container-fluid position-relative image-container px-0">
+                    <div class="img-fluid position-relative my-1">
+                        <img id="pre-preview" class="img-fluid" src="{{ url_for('static', filename='image/preview_img_1.png') }}">
+                        <div id="pre-lens" class="d-none img-zoom-lens"></div>
+                        <div id="pre-zoom-div" class="zoom-div position-absolute top-0 start-0" >
+                            <div class="zoom-icon bg-primary" onclick="openZoom('pre-preview')">
+                                <i class="bi bi-zoom-in zoom-icon bg-primary"></i>
+                            </div>
+                        </div>    
+                    </div>
+                </div>    
             </div>
         </div>
-    </div> 
+        <div class="col-4 px-0 px-sm-1 align-bottom">
+            <div class="card">
+                <header class="card d-flex header-size">
+                    <h3 class="mt-2 px-2">{{ _("post") }}</h3>
+                    <input id="post-input" class="form-control" for="post-preview" type="file"
+                        accept="image/png, image/jpeg, image/gif" />
+                </header>
+                <div class="container-fluid image-container px-0">
+                    <div class="img-fluid position-relative my-1">
+                        <img id="post-preview" class="img-fluid" src="{{ url_for('static', filename='image/preview_img_2.png') }}" />
+                        <div id="post-lens" class="d-none  img-zoom-lens"></div>
+                        <div id="post-zoom-div" class="zoom-div position-absolute top-0 start-0">
+                            <div class="zoom-icon bg-primary" onclick="openZoom('post-preview')">
+                                <i class="bi bi-zoom-in zoom-icon bg-primary"></i>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <div class="col-4 px-0 px-sm-1 align-bottom">
+            <div class="card">
+                <header class="card d-flex header-size">
+                    <h3 class="mt-2 px-2">{{ _("output") }}</h3>
+                </header>
+                <div id="out-img-container" class="d-fluid stack">
+                    <img class="img-fluid my-1" width="1024" height="1024">
+                </div>
+            </div>    
+        </div>
+    </div>
+    <div class="container-sm container-fluid my-3">
+        <div class="row justify-content-between">
+            <div class="col-sm-6 col-12">
+                <div class="card mx-1">
+                    <header class="card">
+                        <h3 class="mt-2">{{ _("settings") }}</h3>
+                    </header>
+                    <table id="setting-t" class="table">
+                        <tr>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+            <div class="col-sm-6 col-12">
+                <div class="card mx-1">
+                    <header class="card">
+                        <h3 class="mt-2">{{ _("table") }}</h3>
+                    </header>
+                    <table id="count-tbl" class="d-fluid table table-active">
+                        <thead>
+                            <th class="fs-6">{{_("level")}}</th>
+                            <th class="fs-6">{{_("class")}}</th>
+                        </thead>
+                        <tr>
+                            <td></td>
+                            <td></td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
+<script src="{{ url_for('static', filename='js/zoom.js') }}"></script>
 {% endblock %}

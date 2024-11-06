@@ -1,3 +1,5 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 from io import TextIOWrapper
 import os
 import logging
@@ -91,7 +93,7 @@ class TqdmLoggingHandler(logging.Handler):
     utilizes the method tqdm.write() for writing into both the standard output
     and the output file. By doing this, you can view each progress with logger
     messages without any problems throw the console.
-"""
+    """
 
     def __init__(self, filename, mode, console_out: bool):
         super().__init__()

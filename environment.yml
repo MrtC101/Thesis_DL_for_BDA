@@ -22,6 +22,7 @@ dependencies:
   - jupyterlab
   - nb_conda_kernels
   - pip:
+    - flask # web page
     - torchvision
     - rasterio  #object-level
     - opencv-python

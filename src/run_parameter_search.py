@@ -6,9 +6,9 @@ import sys
 # Append path for project packages
 if (os.environ.get("SRC_PATH") not in sys.path):
     sys.path.append(os.environ.get("SRC_PATH"))
+
+from training.cross_validation_pipeline import k_cross_validation
 from utils.common.pathManager import FilePath
-from utils.common.timeManager import measure_time
-from training.hiper_search_pipeline import parameter_search
 
 
 if __name__ == "__main__":
@@ -24,8 +24,9 @@ if __name__ == "__main__":
 
     param_list = out_path.join("conf_list.json").read_json()
     conf_num = int(os.environ["CONF_NUM"])
-    current_params = tuple(param_list[conf_num])
+    config = param_list[str(conf_num)]
 
-    folds = current_params[1]["folds"]
-
-    measure_time(parameter_search, folds, current_params, paths_dict)
+    paths_dict['out_dir'] = FilePath(paths_dict['out_dir']).join(f'config-{conf_num}')
+    paths_dict['out_dir'].create_folder()
+    config['configuration_num'] = conf_num
+    k_cross_validation(config["folds"], config, paths_dict)

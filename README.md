@@ -1,132 +1,218 @@
-![](images/UncuyoLogo.png)
+# Damage assessment in cities caused by natural disasters using Machine Learning
+## Bachelor's Degree in Computer Science 
 
-# Deep Learning applied on Building Damage Assessment for satellite images after natural disasters
+Final degree in computer science project from *Universidad Nacional de Cuyo, facultad de ingeniería*, focused on **Deep Learning** (DL) applied to **Building Damage Assessment** (BDA) using Very High Resolution (VHR) satellite images from the xBD dataset, part of the xView2 competition. 
 
-This is a thesis project for a degree in computer science from "Universidad Nacional de Cuyo facultad de ingeniería" related to **Deep Learning** applied on **Building Damage Assessment** for VHR satellite images taken after a natural disaster from the dataset xBD from the competition xView2. [Preview](http://mrtc101.github.io/thesis_dl_for_bda)
-
-This project is based on a Microsoft Siames Convolution Neural Network from <a target="_blank" href="https://github.com/microsoft/building-damage-assessment-cnn-siamese">this repository</a>. It involves a reimplementation and introduction of new features and modification to the training pipeline.
-
-This project have two main branches
-- master: Contains a re-implemented version of the training pipeline from main branch of Microsoft repository  
-- web_page: Contains a webpage to showcase the inference capabilities of the trained model.
+This project involves the development of a preprocessing pipeline for cropping, augmenting, and sampling xBD dataset images, as well as a multitask training pipeline for a deep learning model focused on the segmentation and damage classification of each building in pre- and post-disaster images. Additionally, it includes a postprocessing pipeline for counting buildings, generating bounding boxes, and performing object-level evaluation. This project also includes a prototype webpage as a practical application of the DL model, demonstrating its functionality.
 
 **Jump to:**
-1. [Master branch folder structure](#master-branch-folder-structure)
-1. [Data sources](#data-sources)
-1. [Data processing](#data-processing)
-1. [Data splits & augmentation](#data-splits-&-augmentation)
-1. [Overview of the model](#overview-of-the-model)
-1. [Running experiments](#running-experiments)
-1. [Results](#results)
-1. [Setup](#setup)
+1. [Folder Structure](#master-branch-folder-structure)
+2. [Dataset xBD](#data-sources)
+3. [Preprocessing Pipeline](#data-processing)
+4. [Deep Learning Model](#overview-of-the-model)
+5. [Experiments](#experiments)
+6. [Postprocessing Pipeline](#postprocessing-pipeline)
+7. [How to Run the training pipeline](#how-to-run-the-web-page)
+8. [Results](#results)
+9. [Web page](#web-page)
 
 
-## Master branch folder structure
+## Folder structure
+    .
+    ├── README.md                      <- Top-level README for developers using this project.
+    ├── LICENSE                        <- License file for the project.
+    ├── environment.yml                <- Conda environment file listing the libraries used in this project.
+    ├── notebooks/                     <- Jupyter notebooks for dataset exploration and result analysis.
+    ├── submit/                        <- Code used to train the model on a cluster using Slurm.
+    |── src/                           <- Source code for the project.
+    |    ├── models/                   <- Scripts defining the model architecture.
+    |    ├── preprocessing/            <- Scripts for the data preprocessing pipeline.
+    |    ├── training/                 <- Scripts for the model training and evaluation pipeline.
+    |    ├── postprocessing/           <- Scripts for the output postprocessing pipeline.        
+    |    ├── utils/                    <- Utility scripts shared across other modules.
+    |    ├── run_definitive_training.py<- Script to run the final training phase.
+    |    ├── run_on_test.py            <- Script to evaluate the model on the test dataset.
+    |    ├── run_parameter_search.py   <- Script to perform hyperparameter search.
+    |    ├── run_postprocessing.py     <- Script to run the postprocessing pipeline.
+    |    ├── run_preprocessing.py      <- Script to run the preprocessing pipeline.
+    |    └── env.sh                    <- Environment setup script to run src.
+    └── web_page/                      <- Showcase webpage source cod
 
-    ├── README.md  <- The top-level README for developers using this project.
-    ├── LICENSE
-    ├── environment.yml
-    ├── docs               <- A default Sphinx project; see sphinx-doc.org for details
-    │   └── figures        <- Generated graphics and figures to be used in reporting
-    ├── data
-    │   ├── constants
-    │   └── xBD
-    |       └── raw            <- The original, immutable data dump.
-    ├── out     <- The output files generated during training
-    ├── images  <- Images used by README.md file
-    ├── notebooks          <- Jupyter notebooks.
-    ├── models             <- Pretrained and serialized model parameters
-    ├── src                <- Source code for use in this project.
-    │   ├── models              <- Scripts that defines the model architecture
-    │   ├── preprocessing       <- Scripts for data preprocessing
-    │   ├── train               <- Scripts for model training and evaluation
-    │   ├── utils               <- Scripts that implements utilities for all the other packages
-    │   └── train_pipeline.py   <- Starting point of model training pipeline project
-    └── submit  <- Files used for training in cluster
+## Dataset xBD
 
-## Data Sources
+We used [xBD dataset](https://xview2.org/), a publicly available dataset, to train and evaluate our proposed network performance. Detailed information about this dataset is provided in ["xBD: A Dataset for Assessing Building Damage from Satellite Imagery"](https://arxiv.org/abs/1911.09296) by Ritwik Gupta et al. The data exploration is shown in the `1-Data_analisis.ipynb` notebook.
 
-We used [xBD dataset](https://xview2.org/), a publicly available dataset, to train and evaluate our proposed network performance. Detailed information about this dataset is provided in ["xBD: A Dataset for Assessing Building Damage from Satellite Imagery"](https://arxiv.org/abs/1911.09296) by Ritwik Gupta et al.
+## Preprocessing Pipeline
 
-## Data processing
-
-For data preprocessing we followed next steps:
-1. Specific disasters data selection  
-    For this project did not used all the xBD dataset..
-1. Creation of disaster target masks.  
-    Because not all datasets have an image we did a step of mask generation using a modified version of <a target="_blank" href="https://github.com/DIUx-xView/xView2_baseline/blob/master/utils/mask_polygons.py">this script</a> from 
-    <a target="_blank" href="https://github.com/DIUx-xView/xView2_baseline">xView baseline repository</a>.
-1. Crooped all the images
-1. Did some agumetnation
-1. Balance the dataset
-1. Create shards different from originals
+For data preprocessing, we followed these steps:
+1. Generated segmentation masks from the label JSON files.
+2. Applied a greedy sampling strategy to select balanced images (if applied in experiment).
+3. Split the dataset into training (90%) and test (10%) sets.
+4. CutMix-based data augmentation to balance the damaged building dataset (if applied in experiment).
+5. Calculated image statistics for normalization.
+6. Cropped 1024x1024 images into 256x256 patches
 
 ## Overview of the model
 
-The model proposed in the original repository shares some characteristics with ["An Attention-Based System for Damage Assessment Using Satellite Imagery"](https://arxiv.org/pdf/2004.06643v1.pdf) by Hanxiang Hao et al. However, they do not incorporate any attention mechanism in the network and used a fewer number of convolutional layers for the segmentation arm, which is a UNet approach. Details of our architecture are shown below:
+The model proposed in the original repository shares some characteristics with ["An Attention-Based System for Damage Assessment Using Satellite Imagery"](https://arxiv.org/pdf/2004.06643v1.pdf) by Hanxiang Hao et al. However, we do not incorporate any attention mechanism for the segmentation arm, which is a UNet approach. The modelo is trained with Adam Optimizer, Weights Initializer Xavier Uniform and the Loss function Categorical cross Entropy for each output. Details of our architecture are shown below:
 
-![Network Architecture Schema](./images/my_model.png)
+![Network Architecture Schema](./images/siames-arch.png)
 
-This model has next characteristics:
-- 
-- 
-- 
+## Experiments
 
-## Running experiments
+In this project we made four main experiments to evaluate the performance of the trainable model using a different number of images each time:
+1. Address imbalance with *weighted training* technique.
+2. Address imbalance with *CutMix-inspired* technique.
+3. Address imbalance with proposed *greedy sampling* technique and 1000 training images.
+4. Address imbalance with proposed *greedy sampling* technique and 3000 training images.
 
-### Training
+## Postprocessing Pipeline
 
-The training has some characteristics...
+The steps followed during postprocessing are:
+1. Merging patches into 1024x1024 predicted mask image.
+2. Creating predicted bounding boxes.
+3. Computing metrics of pixel level evaluation for the all predicted images.
+4. Computing metrics of object level evaluation for the all predicted images. 
 
-#### Running
+## How to Run the Model Training Pipeline
 
-The training process can be configured editing and running `training_pipeline.py`
-```
-python src/training_pipeline.py
-```
+This project uses [Miniconda](https://docs.conda.io/projects/conda/en/latest/index.html) for package and environment management. You can install Miniconda from [here](https://docs.anaconda.com/miniconda/).
 
-The experiment's progress can be monitored via tensorboard.
+1. **Clone this repository:**
+    ```bash
+    git clone git@github.com:MrtC101/Thesis_DL_for_BDA.git
+    ```
 
-```
-tensorboard --host 0.0.0.0 --logdir ./outputs/experiment_name/logs/ --port 8009
-```
-## Evaluation metrics
+2. **Create a new Conda environment** using the Python version and libraries specified in `environment.yml`:
+    ```bash
+    conda env create -f ./environment.yml
+    ```
 
-For the evaluation step we used a few new things...
+3. **Download the complete xBD Dataset** from the [official website](https://xview2.org/dataset).
+
+4. **Create an experiment or output folder** in the root of the project folder and inside the experiment folder, store a YAML file named "params.yml". You can copy the content from the sample experiment folder in the root project.
+    ```
+    Exp10/
+    └── params.yml -> Experiment configuration file
+    ```
+5. **Modify the `./src/env.sh` file** as follows:
+    ```bash
+    export PROJ_PATH="project root path"
+    export EXP_NAME="experiment folder name"
+    export XBD_PATH="xBD dataset folder path"
+    export CONF_NUM=0 # Configuration identifier number to use with k-fold cross-validation
+    export EXP_PATH="$PROJ_PATH/$EXP_NAME"
+    export SRC_PATH="$PROJ_PATH/src"
+    export DATA_PATH="$EXP_PATH/data"
+    export OUT_PATH="$EXP_PATH/out"
+    ```
+
+7. **Run the training phase**. Execute the `RUN.sh` bash script to start the training. This script will perform all phases of the model training pipeline, including:
+    - Data preprocessing of xBD dataset.
+    - k-Cross Validation based on the specified configuration in the environment variable.
+    - Training the final machine learning model using the best configuration (or the only configuration available).
+    - Postprocessing using predictions generated from the test data.
+    ```bash
+        source RUN.sh
+    ```
+   
+8. **The pipeline results** will be stored with a structure similar to that of the `./Sample Experiment/` directory in the experiment output directory:
+    ```
+    Example Experiment
+    ├── data -> Created patches and split JSON files directory
+    └── out -> Experiment results and processing logs
+        ├── config-0 -> Configuration 0 results
+        │   ├── 5-fold_0 -> Fold training results
+        │   │   ├── checkpoints -> Checkpoints and best epoch weights
+        │   │   ├── configs -> Configuration used in this training fold
+        │   │   ├── tb_logs -> Logs for TensorBoard
+        │   │   └── metrics
+        │   ├── 5-fold_1
+        │   ├── 5-fold_2
+        │   ├── 5-fold_3
+        │   └── 5-fold_4
+        ├── config-1
+        ├── final_model -> Model trained on all training data with the best configuration
+        │   ├── checkpoints
+        │   ├── configs
+        │   ├── console_logs -> Console output logs
+        │   ├── metrics -> Pixel-level metrics over all epochs
+        │   └── test_pred_masks -> Predicted masks for test patches
+        ├── postprocessing
+        │   ├── hurricane-florence_00000026 -> Example of image patch merge and metrics from test split
+        │   └── metrics -> Object-level metrics over the entire test split
+        ├── preprocessing -> Preprocessing logs
+        └── params.yml -> Experiment configuration file
+    ```
+
 
 ## Results
+For the evaluation of the model performance after each training we used the follow metrics:
+- Accuracy (ACC)
+- Recall (R)
+- Precision (P)
+- F1-score (F1)
+- Harmonic Mean F1-score (HMF1) (Used to summarize segmentation and clarification performance)
 
-We show the results on validation and test sets of our splits along with some segmenation maps with damage level.
-![Results]()
+Here is shown the table metrics of the best trained model from experiment 4 with 50 epochs:
 
-### Inference
+| Split | Tiles |
+|-------|-------|
+|train  | 2400  |
+|val    | 300   |
+|test   | 300   |
 
-Code for inference step can be found in code `inference.py` and have this characteristics.
+| Split          | Class          | HMF1   | P      | R      | F1     | ACC    |
+|----------------|----------------|--------|--------|--------|--------|--------|
+|                | *background*   | 0.8870 | 0.9934 | 0.9953 | 0.9944 | 0.9890 |
+|                | *building*     |        | 0.8272 | 0.7754 | 0.8005 | 0.9890 |
+|                |----------------|--------|--------|--------|--------|--------|
+|                | *background*   |        | 0.9936 | 0.9953 | 0.9945 | 0.9892 |
+| **Validation** | *no-damage*    |        | 0.7196 | 0.6577 | 0.6872 | 0.9908 |
+|                | *minor-damage* | 0.5701 | 0.3459 | 0.3523 | 0.3491 | 0.9953 |
+|                | *major-damage* |        | 0.4927 | 0.4870 | 0.4898 | 0.9956 |
+|                | *destroyed*    |        | 0.7435 | 0.6843 | 0.7127 | 0.9975 |
+|----------------|----------------|--------|--------|--------|--------|--------|
+|                | *background*   | 0.8880 | 0.9916 | 0.9945 | 0.9930 | 0.9866 |
+|                | *building*     |        | 0.8375 | 0.7712 | 0.8030 | 0.9866 |
+|                |----------------|--------|--------|--------|--------|--------|
+|                | *background*   |        | 0.9919 | 0.9944 | 0.9932 | 0.9868 |
+|   **Test**     | *no-damage*    |        | 0.7217 | 0.6401 | 0.6785 | 0.9884 |
+|                | *minor-damage* | 0.5776 | 0.3867 | 0.3150 | 0.3472 | 0.9940 |
+|                | *major-damage* |        | 0.4927 | 0.5558 | 0.5224 | 0.9943 |
+|                | *destroyed*    |        | 0.7283 | 0.7192 | 0.7237 | 0.9973 |
+|----------------|----------------|--------|--------|--------|--------|--------|
 
-We developed a web page for showcase of the inference capabilities of the trained model here (URL) o utilizar la imagen de docker para levantar la página web de manera local
+## Web page
 
-#### Docker
+For this thesis, we developed a demo web page to visualize the performance of the trained model and to demonstrate a practical application.
 
-(Dockerización de página web?)
+![web_page](./images/web_page.png)
 
-## Setup
 
-### Creating the conda environment
+### How to Run the Web Page
 
-At the root directory of this repo, use environment.yml to create a conda virtual environment called `develop`:
+This project uses [Miniconda](https://docs.conda.io/projects/conda/en/latest/index.html) for package and environment management. You can install Miniconda from [here](https://docs.anaconda.com/miniconda/).
 
-```
-conda env create --file environment.yml
-```
+1. **Clone this repository:**
+    ```bash
+    git clone git@github.com:MrtC101/Thesis_DL_for_BDA.git
+    cd Thesis_DL_for_BDA
+    ```
 
-## Author
+2. **Create a new Conda environment** using the specified Python version and libraries in the `environment.yml` file located in the root folder:
+    ```bash
+    conda env create -f environment.yml
+    ```
 
-- Martín Cogo Belver
-- Tutor: Dra. Ana Carolina Olivera
+3. **Run the web application** on your local machine (default port: 8000):
+    ```bash
+    source ./RUN_WEB.sh
+    ```
 
-## Acknowledgment
-- Mi familia
-- Toko
-- Docentes
-- jefa de carrera
-- Jurado
+Your web application should now be accessible at `http://127.0.0.1:8000`.
+
+## Authors
+
+- Student: ***Martín Cogo Belver***
+- Tutor: ***Dra. Ana Carolina Olivera***

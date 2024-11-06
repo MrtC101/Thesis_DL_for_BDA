@@ -1,13 +1,18 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import enum
 import torch
 from tqdm import tqdm
 from dataclasses import dataclass
 from datetime import datetime
-from utils.dataloaders.train_dataloader import TrainDataLoader
+
+from models.trainable_model import SiamUnet
+from training.model_train.utils import TrainDataLoader
+
 from utils.loggers.console_logger import LoggerSingleton
 from utils.loggers.tensorboard_logger import TensorBoardLogger
-from models.trainable_model import SiamUnet
-from utils.metrics.metric_manager import Level, MetricManager
+from utils.metrics.matrix_computer import Level
+from utils.metrics.metric_manager import MetricManager
 from utils.metrics.loss_manager import LossManager
 from utils.datasets.predicted_dataset import PredictedDataset
 
@@ -35,7 +40,7 @@ class EpochManager:
 
     def __post_init__(self):
         self.model = self.model.to(self.device)
-    
+
     def logging_wrapper(func):
         """Wrapper applied to the epoch_iteration method
           for printing messages"""
@@ -44,8 +49,13 @@ class EpochManager:
             self = args[0]
             epoch = args[1]
             log = LoggerSingleton(name=f"{self.mode.value} Step")
-            log.info(
-                f'{self.mode.value.upper()}  epoch: {epoch}/{self.tot_epochs}')
+            log.info(f'{self.mode.value.upper()} epoch: {epoch}/{self.tot_epochs} lr: {self.optimizer.param_groups[0]["lr"]}')
+            self.tb_logger.add_scalar(
+                f'{self.mode.value}/learning_rate',
+                self.optimizer.param_groups[0]["lr"],
+                epoch
+            )
+
             start_time = datetime.now()
 
             result = func(*args)
@@ -56,6 +66,7 @@ class EpochManager:
                 duration.total_seconds(),
                 epoch
             )
+
             return result
         return decorator
 
@@ -77,9 +88,10 @@ class EpochManager:
         """
         log = LoggerSingleton()
         confusion_matrices = []
-        for batch_idx, (dis_id, tile_id, patch_id, patch) in enumerate(tqdm(self.loader, desc="Step")):
+        for batch_idx, (dis_id, tile_id, patch_id, patch) in \
+                enumerate(tqdm(self.loader, desc="Step")):
             # STEP
-            log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
+            # log.info(f"Step: {batch_idx+1}/{len(self.loader)}")
             # move to device, e.g. GPU
             x_pre = patch['pre_img'].to(device=self.device)
             x_post = patch['post_img'].to(device=self.device)
@@ -91,12 +103,11 @@ class EpochManager:
                 self.optimizer.zero_grad()
             else:
                 self.model.eval()
-            
+
             # Verifica el dispositivo de entrada y el modelo
             logit_masks = self.model(x_pre, x_post)
 
-            loss = self.loss_manager.\
-                compute_loss(logit_masks, x_pre, y_seg, y_cls)
+            loss = self.loss_manager.compute_loss(logit_masks, x_pre, y_seg, y_cls)
 
             if (self.mode == self.mode.TRAINING):
                 loss.backward()  # compute gradients
@@ -106,11 +117,8 @@ class EpochManager:
             pred_masks = self.model.compute_predictions(logit_masks)
 
             step_matrices = self.metric_manager.compute_confusion_matrices(
-                batch_idx,
-                gt_bld_mask=y_seg,
-                gt_dmg_mask=y_cls,
-                pd_bld_mask=pred_masks[0],
-                pd_dmg_mask=pred_masks[2],
+                batch_idx, gt_bld_mask=y_seg, gt_dmg_mask=y_cls,
+                pd_bld_mask=pred_masks[0], pd_dmg_mask=pred_masks[2],
                 levels=[Level.PX_DMG, Level.PX_BLD]
             )
             confusion_matrices.append(step_matrices)
@@ -118,17 +126,13 @@ class EpochManager:
             if (save_path is not None):
                 PredictedDataset.save_pred_patch(pred_masks[2], batch_idx, dis_id,
                                                  tile_id, patch_id, save_path)
-                log.info(
-                    f'Prediction with size {pred_masks[2].size()} saved: {save_path}')
+                log.info(f'Prediction with size {pred_masks[2].size()} saved: {save_path}')
 
         self.loss_manager.log_losses(self.tb_logger, self.mode.value, epoch)
-        self.tb_logger.tb_log_images(
-            self.mode.value, self.loader, self.model, epoch, self.device)
+        self.tb_logger.tb_log_images(self.mode.value, self.loader, self.model, epoch, self.device)
 
-        metrics = self.metric_manager.\
-            compute_epoch_metrics(epoch, confusion_matrices,
-                                  levels=[Level.PX_DMG, Level.PX_BLD])
-        self.metric_manager.log_metrics(phase=self.mode.value,
-                                        tb_log=self.tb_logger,
+        metrics = self.metric_manager.compute_epoch_metrics(epoch, confusion_matrices,
+                                                            levels=[Level.PX_DMG, Level.PX_BLD])
+        self.metric_manager.log_metrics(phase=self.mode.value, tb_log=self.tb_logger,
                                         metrics=metrics)
         return metrics, self.loss_manager.combined_losses.avg

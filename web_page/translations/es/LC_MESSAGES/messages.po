@@ -1,0 +1,92 @@
+# Spanish translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-09-25 21:38-0300\n"
+"PO-Revision-Date: 2024-09-25 21:39-0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: es\n"
+"Language-Team: es <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.16.0\n"
+
+#: templates/base.html:7 templates/base.html:26
+msgid "title"
+msgstr "Clasificación de daños edilicios utilizando imágenes satelitales"
+
+#: templates/base.html:31
+msgid "lang-switch"
+msgstr "EN"
+
+#: templates/base.html:42
+msgid "project"
+msgstr "Proyecto final de carrera de Licenciatura en Ciencias de la Computación"
+
+#: templates/index.html:8
+msgid "process"
+msgstr "Procesar imágenes"
+
+#: templates/index.html:15
+msgid "pre"
+msgstr "Imagen previa al desastre natural"
+
+#: templates/index.html:22
+msgid "post"
+msgstr "Imagen posterior al desastre natural"
+
+#: templates/index.html:31
+msgid "output"
+msgstr "Imagen de salida"
+
+#: templates/index.html:40
+msgid "settings"
+msgstr "Superposición"
+
+#: templates/index.html:49
+msgid "table"
+msgstr "Conteo de edificios por daños"
+
+#: templates/index.html:53
+msgid "level"
+msgstr "Nivel"
+
+#: templates/index.html:54
+msgid "class"
+msgstr "Tipo"
+
+#: templates/base.html:19
+msgid "class-1"
+msgstr "Sin daños"
+
+#: templates/base.html:20
+msgid "class-2"
+msgstr "Daño menor"
+
+#: templates/base.html:21
+msgid "class-3"
+msgstr "Daño mayor"
+
+#: templates/base.html:22
+msgid "class-4"
+msgstr "Destruido"
+
+#: templates/base.html:23
+msgid "class-5"
+msgstr "Sin clasificar"
+
+#: templates/base.html:24
+msgid "saturation"
+msgstr "Saturación"
+
+#: templates/base.html:25
+msgid "apply"
+msgstr "Aplicar"
+

@@ -20,7 +20,7 @@ def random_crop(img: torch.Tensor, max_pad: int = 50) -> torch.Tensor:
 
     Args:
         img (torch.Tensor): The input image tensor to be cropped.
-        max_pad (int, optional): Maximum number of pixels to pad on each 
+        max_pad (int, optional): Maximum number of pixels to pad on each
         side of the image. Default is 50.
 
     Returns:

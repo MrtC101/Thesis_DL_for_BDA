@@ -1,6 +1,8 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import torch
 from models.trainable_model import TrainModel
-from utils.dataloaders.train_dataloader import TrainDataLoader
+from training.model_train.utils import TrainDataLoader
 from utils.visualization.label_mask_visualizer import LabelMaskVisualizer
 from torch.utils.tensorboard import SummaryWriter
 
@@ -26,7 +28,7 @@ class TensorBoardLogger(SummaryWriter):
             current_patch['dmg_mask'] = LabelMaskVisualizer.draw_label_img(pred_dmg_mask)
             for key, img in current_patch.items():
                 tag = f"{prefix}/images/{key}_{idx}"
-                self.add_image(tag, img.permute(2,0,1).numpy(),
+                self.add_image(tag, img.permute(2, 0, 1).numpy(),
                                epoch, dataformats='CHW')
 
         patches = loader.det_img_sample(number=self.num_patches_to_vis,
@@ -43,16 +45,16 @@ class TensorBoardLogger(SummaryWriter):
                 self.add_image(
                     tag, org_patche["post_img"], 0, dataformats='CHW')
                 tag = f"{mode_value}/images/post_img_{idx}"
-                bld_truth = LabelMaskVisualizer.draw_label_img(org_patche["bld_mask"]) 
+                bld_truth = LabelMaskVisualizer.draw_label_img(org_patche["bld_mask"])
                 tag = f"{mode_value}/images/bld_mask_{idx}"
                 print(tag)
-                self.add_image(tag, bld_truth.permute(2,0,1).numpy(),
-                                0, dataformats='CHW')
+                self.add_image(tag, bld_truth.permute(2, 0, 1).numpy(),
+                               0, dataformats='CHW')
                 print(tag)
-                dmg_truth = LabelMaskVisualizer.draw_label_img(org_patche["dmg_mask"]) 
+                dmg_truth = LabelMaskVisualizer.draw_label_img(org_patche["dmg_mask"])
                 tag = f"{mode_value}/images/dmg_mask_{idx}"
-                self.add_image(tag, dmg_truth.permute(2,0,1).numpy(),
-                                0, dataformats='CHW')
+                self.add_image(tag, dmg_truth.permute(2, 0, 1).numpy(),
+                               0, dataformats='CHW')
 
         for idx, (dis_id, tile_id, patch_id, patch) in enumerate(patches):
 

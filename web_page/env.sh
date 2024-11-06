@@ -1,3 +1,5 @@
-export FLASK_APP="/home/mrtc101/Desktop/tesina/repo/to_mendieta/web_page/app.py"
-export SRC_PATH="/home/mrtc101/Desktop/tesina/repo/to_mendieta/src"
-export parallelism="True"
+export BASE_PATH="/home/mrtc101/Desktop/tesina/repo/main"
+export SRC_PATH="${BASE_PATH}/src"
+export APP_PATH="${BASE_PATH}/web_page"
+export FLASK_APP="${APP_PATH}/app.py"
+export WEIGTHS="${APP_PATH}/model_best.pth.tar"

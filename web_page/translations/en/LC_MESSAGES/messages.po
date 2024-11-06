@@ -1,0 +1,92 @@
+# English translations for PROJECT.
+# Copyright (C) 2024 ORGANIZATION
+# This file is distributed under the same license as the PROJECT project.
+# FIRST AUTHOR <EMAIL@ADDRESS>, 2024.
+#
+msgid ""
+msgstr ""
+"Project-Id-Version: PROJECT VERSION\n"
+"Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
+"POT-Creation-Date: 2024-09-25 21:38-0300\n"
+"PO-Revision-Date: 2024-09-25 21:40-0300\n"
+"Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
+"Language: en\n"
+"Language-Team: en <LL@li.org>\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"MIME-Version: 1.0\n"
+"Content-Type: text/plain; charset=utf-8\n"
+"Content-Transfer-Encoding: 8bit\n"
+"Generated-By: Babel 2.16.0\n"
+
+#: templates/base.html:7 templates/base.html:26
+msgid "title"
+msgstr "Building damage assessment using satellite images"
+
+#: templates/base.html:31
+msgid "lang-switch"
+msgstr "ES"
+
+#: templates/base.html:42
+msgid "project"
+msgstr "Undergraduate Final Project for a Bachelor's Degree in Computer Science"
+
+#: templates/index.html:8
+msgid "process"
+msgstr "Process images"
+
+#: templates/index.html:15
+msgid "pre"
+msgstr "Pre-disaster image"
+
+#: templates/index.html:22
+msgid "post"
+msgstr "Post-disaster image"
+
+#: templates/index.html:31
+msgid "output"
+msgstr "Output image"
+
+#: templates/index.html:40
+msgid "settings"
+msgstr "Superposition"
+
+#: templates/index.html:49
+msgid "table"
+msgstr "Building count by damage"
+
+#: templates/index.html:53
+msgid "level"
+msgstr "Level"
+
+#: templates/index.html:54
+msgid "class"
+msgstr "Type"
+
+#: templates/base.html:19
+msgid "class-1"
+msgstr "No damage"
+
+#: templates/base.html:20
+msgid "class-2"
+msgstr "Minor damage"
+
+#: templates/base.html:21
+msgid "class-3"
+msgstr "Major damage"
+
+#: templates/base.html:22
+msgid "class-4"
+msgstr "Destroyed"
+
+#: templates/base.html:23
+msgid "class-5"
+msgstr "Not classified"
+
+#: templates/base.html:24
+msgid "saturation"
+msgstr "Saturation"
+
+#: templates/base.html:25
+msgid "apply"
+msgstr "Apply"
+

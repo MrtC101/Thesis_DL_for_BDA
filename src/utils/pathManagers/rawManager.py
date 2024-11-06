@@ -81,7 +81,7 @@ class ZoneDict(dict):
 
 
 class RawPathManager(dict):
-
+    """ class that implements all methods needed to access the corresponding"""
     def add(self, folder_path: FilePath, file_name: str):
         file_path = folder_path.join(file_name)
         file_path.must_be_file()

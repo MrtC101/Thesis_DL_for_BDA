@@ -13,25 +13,8 @@ from torch.utils.data import Dataset
 
 
 class PatchDataset(Dataset):
-    """
-    Dataset class for loading patches from a JSON file.
-
-    Args:
-        split_name (str): The name of the split to load patches from.
-        splits_json_path (str): The file path to the JSON file containing split information.
-
-    Attributes:
-        split_name (str): The name of the split to load patches from.
-        splits_json_path (str): The file path to the JSON file containing split information.
-        tile_list (list): A list of tuples containing patch information.
-
-    Methods:
-        __len__(): Returns the total number of patches in the dataset.
-        __getitem__(i): Retrieves a specific patch from the dataset.
-        load_patches(disaster_id, tile_id, patch_id, patch): Loads patch data from disk.
-        save_patches(disaster_id, tile_id, patch_list, split_folder): Saves a list of
-          patches to disk.
-    """
+    """`torch.utils.data.Dataset` class that implements the corresponding methods to access tiles
+      from a JSON file with Tiles from the xBD dataset."""
 
     def __init__(self, split_name: FilePath, splits_json_path: FilePath):
         self.split_name = split_name

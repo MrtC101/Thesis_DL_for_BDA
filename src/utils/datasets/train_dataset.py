@@ -15,8 +15,8 @@ if (os.environ.get("SRC_PATH") not in sys.path):
 
 
 class TrainDataset(Dataset):
-    """Class that implements the corresponding methods to }
-    access raw xBD dataset data."""
+    """`torch.utils.data.Dataset` class that implements the corresponding methods to access cropped
+    patches from  from the xBD dataset."""
 
     def __init__(self, split_name: str, splits_json_path: FilePath,
                  mean_stdv_json_path: FilePath):
@@ -53,7 +53,8 @@ class TrainDataset(Dataset):
         # Compute mean and standard deviation for each channel
         mean_rgb = [mean[ch] for ch in ["R", "G", "B"]]
         std_rgb = [stdv[ch] for ch in ["R", "G", "B"]]
-
+        # if 0 then 
+        std_rgb = [s if s != 0 else 1e-6 for s in std_rgb]
         # Define normalization steps
         normalization = transforms.Compose([
             lambda img: img.to(torch.float32) / 255.0,

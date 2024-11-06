@@ -1,35 +1,22 @@
+# Copyright (c) 2024 Martín Cogo Belver. All rights reserved.
+# Licensed under the MIT License.
 import torch
 import numpy as np
 import shapely.geometry
-import concurrent.futures
 import rasterio
-from rasterio.features import shapes
-from rasterio.features import rasterize
+from rasterio.features import shapes, rasterize
 
 
-def assign_label(mask: torch.Tensor,
-                 label_matrix: torch.Tensor,
-                 shapes_list: list[shapely.Polygon]) -> list:
-    bld_list = []
-    for i in range(1, len(shapes_list) + 1):
-        # Encuentra etiquetas únicas para cada edificio
-        labels, count = mask[label_matrix == i].unique(return_counts=True)
-        max_label = labels[count.argmax()].item()
-        bld_list.append((shapes_list[i-1][0], int(max_label)))
-    return bld_list
-
-
-def get_buildings(mask: torch.Tensor, parallelism: bool = False) -> list:
-    """Creación de una lista de cajas delimitadoras para cada edificio en la
-      imagen.
+def get_buildings(mask: torch.Tensor) -> list:
+    """ Creates a list of shapely Polygons with its corresponding damage label extracted from
+    given mask.
 
     Args:
-        mask (torch.Tensor): La máscara de segmentación semántica de múltiples
-          clases.
-        parallel (bool): Si se permite o no el paralelismo.
+        mask : The corresponding segmentation or classification mask to extract buildings.
 
     Returns:
-        list: Tuplas con cajas delimitadoras y las clases.
+        list: list of tuples where first element is the polygon and second
+        is the corresponding label.
     """
     blds_with_cls = []
     transform = rasterio.transform.from_origin(0, mask.shape[0], 1, 1)
@@ -44,31 +31,37 @@ def get_buildings(mask: torch.Tensor, parallelism: bool = False) -> list:
         shapes_list = [(shapely.geometry.shape(shape_geojson), i + 1)
                        for i, (shape_geojson, _) in enumerate(connected_components)]
         print("shapes:", len(shapes_list))
+
         # Crea una matriz de etiquetas basada en las formas de los edificios
-        label_matrix = rasterize(shapes_list, out_shape=mask.shape,
-                                 transform=transform, fill=0,
-                                 dtype=np.uint32)
-        label_matrix = label_matrix[::-1, :].copy()
-        t_label_matrix = torch.from_numpy(label_matrix)
+        instance_mask = rasterize(shapes_list, out_shape=mask.shape, transform=transform, fill=0,
+                                  dtype=np.uint32)
+        instance_mask = instance_mask[::-1, :].copy()
+        instance_mask = torch.from_numpy(instance_mask)
+
         blds_with_cls = []
-        if parallelism:
-            chunk_size = 1000
-            parts = [shapes_list[i:i + chunk_size]
-                     for i in range(0, len(shapes_list), chunk_size)]
-            with concurrent.futures.ThreadPoolExecutor() as executor:
-                futures = [executor.submit(assign_label, mask, t_label_matrix, part)
-                           for part in parts]
-                for future in concurrent.futures.as_completed(futures):
-                    blds_with_cls.extend(future.result())
-        else:
-            blds_with_cls = assign_label(mask, t_label_matrix, shapes_list)
+        for i in range(1, len(shapes_list) + 1):
+            # Encuentra etiquetas únicas para cada edificio
+            labels, count = mask[instance_mask == i].unique(return_counts=True)
+            max_label = labels[count.argmax()].item()
+            blds_with_cls.append((shapes_list[i-1][0], int(max_label)))
     return blds_with_cls
 
 
 def get_instance_mask(shapes_list: list, shape=(1024, 1024)) -> torch.Tensor:
+    """Generates an instance mask, where each `shapely.Polygon` from the
+    `shapes_list` is represented with a unique identifier value.
+
+    Args:
+        shapes_list: A list of `shapely.Polygon` objects to be
+        plotted on the instance mask.
+        shape: The shape of the output mask (height, width).
+
+    Returns:
+        torch.Tensor: A mask where each pixel is assigned a label
+        corresponding to the polygon it belongs to, or zero if no polygon
+        is present.
     """
-        Returns instances mask
-    """
+
     instance_mask = torch.zeros(size=shape, dtype=torch.int32)
     if (len(shapes_list) > 0):
         shapes_list = [(poly[0], i) for i, poly in enumerate(shapes_list)]
