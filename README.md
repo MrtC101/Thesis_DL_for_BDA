@@ -6,6 +6,7 @@ This project involves the development of a preprocessing pipeline for cropping, 
 
 **Jump to:**
 1. [Folder Structure](#master-branch-folder-structure)
+1. [How to run](#how)
 1. [Dataset xBD](#data-sources)
 1. [Preprocessing Pipeline](#data-processing)
 1. [Overview of the model](#overview-of-the-model)
@@ -31,6 +32,108 @@ This project involves the development of a preprocessing pipeline for cropping, 
     |    ├── run_preprocessing.py      <- Script to run the preprocessing pipeline.
     |    └── env.sh                    <- Environment setup script to run src.
     └── web_page/                      <- Showcase webpage source code
+
+## How to Run the Web Page
+
+This project uses [Miniconda](https://docs.conda.io/projects/conda/en/latest/index.html) for package and environment management. You can install Miniconda from [here](https://docs.anaconda.com/miniconda/).
+
+### Steps to Run demo webpage
+
+1. **Clone this repository:**
+    ```bash
+    git clone git@github.com:MrtC101/Thesis_DL_for_BDA.git
+    cd Thesis_DL_for_BDA
+    ```
+
+2. **Create a new Conda environment** using the specified Python version and libraries in the `environment.yml` file located in the root folder:
+    ```bash
+    conda env create -f environment.yml
+    ```
+
+3. **Run the web application** on your local machine (default port: 8000):
+    ```bash
+    source ./run_web.sh
+    ```
+
+Your web application should now be accessible at `http://127.0.0.1:8000`.
+
+## How to run the model training pipeline
+1. Clone this repository.
+```bash
+    git clone git@github.com:MrtC101/Thesis_DL_for_BDA.git
+```
+2. Create a new conda environment with the the python version and corresponding libraries form the environment.yaml file.
+```bash
+    conda env create -f ./environment.yml
+```
+3. Download xBD complete Dataset. From [here]()
+4. Store the xBD dataset in the project folder like 
+
+```
+Example Experiment
+├── data -> Created patches and split json files directory
+└── out -> Experiment results and processing logs
+    ├── config-0 -> configuration 0 results
+    │   ├── 5-fold_0 -> Fold training results
+    │   │   ├── checkpoints -> checkpoints and best epoch weights.
+    │   │   ├── configs -> Configuration used in this training fold
+    │   │   ├── tb_logs -> Logs for tensorboard
+    │   │   └── metrics
+    │   ├── 5-fold_1
+    │   ├── 5-fold_2
+    │   ├── 5-fold_3
+    │   └── 5-fold_4
+    ├── config-1
+    ├── final_model -> Model trained with all the training data and the best configuration 
+    │   ├── checkpoints
+    │   ├── configs
+    │   ├── console_logs -> console output logs.
+    │   ├── metrics -> pixel level metrics over all epochs
+    │   └── test_pred_masks -> Predicted mask for test patches.
+    ├── postprocessing
+    │   ├── hurricane-florence_00000026 -> image patch merge example and metrics from test split.
+    │   └── metrics -> Object level metrics over the hole test split.
+    ├── preprocessing -> Preprocessing logs
+    └── params.yml -> Experiment configuration file
+```
+
+5. Create a experimento or output folder in the root of the proyect folder For expample
+
+```
+.Exp10/
+└── params.yml -> Experiment configuration file
+```
+
+5. Inside the experiment folder store a yaml file like this one
+.Exp10/params.yml
+The content of the file can be copy from the experiment sample folder in the root proyect.
+5. Modify the ./src/env.sh file. like this:
+```bash
+
+```
+6. Run the corresponding training phase you want to run. run the bash file. RUN.sh to start the training
+this script will run all corresponding phases from the model training pipelin. That includes
+- preprocessing of the data folder 
+- Parameter search of the corresponding configuration specified in the ---- environment variable.
+- Run_final_model will train the final machinelearning model with the configuration with greates hf1
+or the only one present.
+- Posprocessing will use the predited output from the test data done by the trained model
+Its important to run each step sequentialy because all phases modify the experiment output folder.
+```bash
+    conda activate develop
+    source ./src/env.sh
+    python -m run_preprocessing.py
+    python -m run_paramsearch.py
+    python -m run_final_model_training.py
+    python -m run_postprocessing.py
+```
+
+1. Create a folder where to store the experiment
+So you can access the web page by "localhost:8000/" in your web browser.
+Run the machine learning model training pipeline. 
+```bash
+    
+```
 
 ## Dataset xBD
 

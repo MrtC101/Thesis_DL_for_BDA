@@ -1,0 +1,29 @@
+hyperparameter: # List of hiperparameters to use in the greed search
+  learning_rate: [0.01, 0.001]
+  hps_epochs: [2, 5]    # Epochs to use to train with the configuration during configuration search.
+  final_epochs: [10]  # Epochs to train the final model (only one)
+  batch_size: [16, 32]    # Batch sizes
+  
+
+train:
+  folds: 5                       # folds to use in k-fold cross validation
+  batch_workers: 0               # Torch dataloader workers
+  freeze_seg: False              # Freeze segmentation branch after load
+  checkpoint: True               # Load last epoch checkpoint
+  RLROP_patience: 50             # ReduceOnPlanteu epochs patience.
+
+visual:
+  num_chips_to_viz: 3            # number of patches to visualize with tensorboard
+  labels_dmg: [0, 1, 2, 3, 4]    # Damage labels to take in count when computing metrics
+  labels_bld: [0, 1]             # Segmentation labels to take in count when computing metric
+
+weights:
+  weights_loss: [1, 1, 1]        # Output weights for each mask output (pre building mask, post building mask and damage mask)
+
+preprocessing:
+  custom_sampling: True         # Use the greedy sampling technic
+  img_num: 3000                 # Number of patches used to split in train, val and test.
+  aug_num: 0                    # Number of new augmented images to add.
+  cutmix: False                 # Use the Cutmix inspired sampling technic
+  disasters:                    # List of xBD disaster IDs to use in the preprocessing step.
+    - all

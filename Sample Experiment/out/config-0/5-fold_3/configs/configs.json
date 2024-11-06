@@ -1,0 +1,48 @@
+{
+    "folds": 5,
+    "batch_workers": 0,
+    "freeze_seg": false,
+    "checkpoint": true,
+    "RLROP_patience": 200,
+    "num_chips_to_viz": 3,
+    "labels_dmg": [
+        0,
+        1,
+        2,
+        3,
+        4
+    ],
+    "labels_bld": [
+        0,
+        1
+    ],
+    "custom_sampling": true,
+    "img_num": 1250,
+    "aug_num": 0,
+    "cutmix": false,
+    "disasters": [
+        "all"
+    ],
+    "weights_loss": [
+        1,
+        1,
+        1
+    ],
+    "weights_dmg": [
+        1.56,
+        6.76,
+        15.22,
+        13.66,
+        13.59
+    ],
+    "weights_seg": [
+        1.56,
+        2.77
+    ],
+    "batch_size": 16,
+    "final_epochs": 200,
+    "hps_epochs": 50,
+    "learning_rate": 1e-06,
+    "configuration_num": 0,
+    "tot_epochs": 50
+}

@@ -1,0 +1,5 @@
+{
+    "tile_splits_json_path": "/home/mcogo/scratch/exp9/data/splits/raw_splits.json",
+    "patch_split_json_path": "/home/mcogo/scratch/exp9/data/splits/sliced_splits.json",
+    "mean_std_json_path": "/home/mcogo/scratch/exp9/data/dataset_statistics/all_tiles_mean_stddev.json"
+}
