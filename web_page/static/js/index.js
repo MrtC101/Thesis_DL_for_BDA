@@ -106,7 +106,7 @@ function set_images(mask_obj, bbs_arr) {
   const out_img = document.createElement('img');
   out_img.src = mask_obj;
   out_img.id = "out-img"
-  out_img.className = "img-fluid img-thumbnail stack-img";
+  out_img.className = "img-fluid stack-img";
   container.appendChild(out_img);
 
   for (const path of bbs_arr) {
@@ -122,12 +122,14 @@ function set_images(mask_obj, bbs_arr) {
 
   const div = document.createElement('div');
   div.innerHTML = `
-    <div class="image-container container-fluid position-relative px-0" style = "z-index: 10;">
+    <div class="container-fluid position-relative image-container px-0" style = "z-index: 10;">
       <div class="img-fluid position-relative my-1">
-        <img id="fake-img" class="img-fluid postition-relative" width="1024" height="1024"/>
+        <img id="fake-img" class="img-fluid" width="1024" height="1024"/>
         <div id="out-lens" class="d-none img-zoom-lens"></div>
-        <div id="out-zoom-div" class="zoom-div position-absolute top-0 start-0" onclick="openZoom('out-preview')">
-            <i class="bi bi-zoom-in zoom-icon bg-primary"></i>
+        <div id="out-zoom-div" class="zoom-div position-absolute top-0 start-0">
+            <div class="zoom-icon bg-primary" onclick="openZoom('out-img')">
+                <i class="bi bi-zoom-in zoom-icon bg-primary"></i>
+            </div>
         </div>
       </div>
     </div>
@@ -212,6 +214,10 @@ async function get_images() {
 
 
 // ZOOMING
+
+function is_touchpad(){
+  return ('ontouchstart' in window || navigator.maxTouchPoints > 0 || navigator.msMaxTouchPoints > 0)
+}
 
 /**
  * Zoom

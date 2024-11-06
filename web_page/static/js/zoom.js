@@ -1,4 +1,13 @@
 function set_len_coords(event, imgID, lenID) {
+    if(is_touchpad() && event instanceof TouchEvent){
+        touch = event.touches[0]
+        x = touch.clientX;
+        y = touch.clientY;    
+    } else {
+        x = event.pageX;
+        y = event.pageY;
+    }
+
     img = document.getElementById(imgID);
     lens = document.getElementById(lenID);
     imgRect = img.getBoundingClientRect();
@@ -6,7 +15,6 @@ function set_len_coords(event, imgID, lenID) {
     img_top = imgRect.top;
 
     /* left coordinate */
-    x = event.pageX;
     x = x - imgRect.left;
     x = x - window.scrollX;
     x = x - (lens.offsetWidth / 2);
@@ -14,7 +22,6 @@ function set_len_coords(event, imgID, lenID) {
     if (x < 0) { x = 0; }
 
     /* top coordinate  */
-    y = event.pageY;
     y = y - imgRect.top;
     y = y - window.scrollY;
     y = y - (lens.offsetWidth / 2);

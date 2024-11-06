@@ -20,7 +20,7 @@ msgstr ""
 
 #: templates/base.html:7 templates/base.html:26
 msgid "title"
-msgstr "Building Damage Assessment"
+msgstr "Building damage assessment using satellite images"
 
 #: templates/base.html:31
 msgid "lang-switch"
@@ -89,3 +89,4 @@ msgstr "Saturation"
 #: templates/base.html:25
 msgid "apply"
 msgstr "Apply"
+

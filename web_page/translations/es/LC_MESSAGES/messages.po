@@ -20,7 +20,7 @@ msgstr ""
 
 #: templates/base.html:7 templates/base.html:26
 msgid "title"
-msgstr "Clasificación de daños en imágenes satelitales"
+msgstr "Clasificación de daños edilicios utilizando imágenes satelitales"
 
 #: templates/base.html:31
 msgid "lang-switch"
@@ -89,3 +89,4 @@ msgstr "Saturación"
 #: templates/base.html:25
 msgid "apply"
 msgstr "Aplicar"
+
